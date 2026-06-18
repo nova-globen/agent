@@ -7,7 +7,7 @@ on:
       - main
 
 jobs:
-  agent-sync:
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,7 +16,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Restore
         run: dotnet restore
@@ -27,5 +27,18 @@ jobs:
       - name: Test
         run: dotnet test --configuration Release --no-build
 
-      - name: Check agent drift
-        run: dotnet run --project src/AgentSync.Cli -- status --fail-on-drift --ci
+      # End-to-end drift check: scaffold a throwaway repo, sync it, and confirm
+      # `status --fail-on-drift --ci` reports no drift (exit 0). This is the same
+      # command consuming repositories run in their own pipelines.
+      - name: Drift check (end-to-end)
+        run: |
+          set -euo pipefail
+          work="$(mktemp -d)"
+          cli="$GITHUB_WORKSPACE/src/AgentSync.Cli"
+          cd "$work"
+          git init -q
+          dotnet run -c Release --project "$cli" -- init >/dev/null
+          dotnet run -c Release --project "$cli" -- sync >/dev/null
+          dotnet run -c Release --project "$cli" -- status --fail-on-drift --ci
+        env:
+          DOTNET_CLI_TELEMETRY_OPTOUT: '1'

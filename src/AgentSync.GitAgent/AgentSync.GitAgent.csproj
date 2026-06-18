@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\AgentSync.Core\AgentSync.Core.csproj" />
+    <ProjectReference Include="..\AgentSync.Cli\AgentSync.Cli.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -9,8 +9,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AssemblyName>agent</AssemblyName>
-    <RootNamespace>AgentSync.Cli</RootNamespace>
+    <AssemblyName>git-agent</AssemblyName>
+    <RootNamespace>AgentSync.GitAgent</RootNamespace>
   </PropertyGroup>
 
 </Project>

@@ -22,6 +22,34 @@ public sealed class CliTestHarness : IDisposable
         return WorkingDirectory;
     }
 
+    public bool MakeRealGitRepo()
+    {
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo("git")
+            {
+                WorkingDirectory = WorkingDirectory,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+            };
+            psi.ArgumentList.Add("init");
+            psi.ArgumentList.Add("-q");
+            using var p = System.Diagnostics.Process.Start(psi);
+            if (p is null)
+            {
+                return false;
+            }
+
+            p.WaitForExit();
+            return p.ExitCode == 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     public CliResult Invoke(params string[] args)
     {
         var stdout = new StringWriter();

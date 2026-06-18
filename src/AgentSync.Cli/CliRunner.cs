@@ -59,6 +59,7 @@ public sealed class CliRunner
             "sync" => RunSync(rest),
             "diff" => RunDiff(rest),
             "validate" => RunValidate(rest),
+            "install-hooks" => RunInstallHooks(rest),
             "doctor" => RunDoctor(rest),
             _ => UnknownCommand(command),
         };
@@ -224,6 +225,47 @@ public sealed class CliRunner
             }),
         };
         _out.WriteLine(JsonSerializer.Serialize(payload, JsonOptions));
+    }
+
+    // --- install-hooks --------------------------------------------------------
+
+    private int RunInstallHooks(string[] args)
+    {
+        foreach (var arg in args)
+        {
+            return UnknownOption("install-hooks", arg);
+        }
+
+        var root = GitRepository.Discover(_workingDirectory);
+        if (root is null)
+        {
+            _err.WriteLine("error: not inside a Git repository.");
+            return ExitCodes.EnvironmentProblem;
+        }
+
+        var result = new InstallHooksService(root).Run();
+
+        if (result.GitConfigured)
+        {
+            _out.WriteLine($"core.hooksPath set to '{result.HooksPath}'.");
+        }
+
+        foreach (var hook in result.Hooks)
+        {
+            var state = !hook.Present ? "missing" : hook.Executable ? "ready" : "not executable";
+            _out.WriteLine($"  {state,-15} {hook.Name}");
+        }
+
+        if (!result.Success)
+        {
+            _out.WriteLine();
+            _out.WriteLine(result.Error ?? "Hooks were not fully installed.");
+            return ExitCodes.EnvironmentProblem;
+        }
+
+        _out.WriteLine();
+        _out.WriteLine("Git hooks installed.");
+        return ExitCodes.Success;
     }
 
     // --- doctor ---------------------------------------------------------------
@@ -540,11 +582,15 @@ public sealed class CliRunner
         _out.WriteLine();
         _out.WriteLine("Usage:");
         _out.WriteLine("  agent <command> [options]");
+        _out.WriteLine("  git agent <command> [options]   (via the git-agent extension)");
         _out.WriteLine();
         _out.WriteLine("Commands:");
         _out.WriteLine("  init                Scaffold .agent/ and .githooks/ (use --force to overwrite).");
-        _out.WriteLine("  status              Report Agent Sync state (--json, --fail-on-drift, --ci).");
+        _out.WriteLine("  status              Report Agent Sync state and drift (--json, --fail-on-drift, --ci).");
+        _out.WriteLine("  sync                Write missing/outdated projections (--check, --write, --force, --json).");
+        _out.WriteLine("  diff                Show canonical-to-projection differences (--json).");
         _out.WriteLine("  validate            Validate config and skills (--json).");
+        _out.WriteLine("  install-hooks       Configure core.hooksPath and make hooks executable.");
         _out.WriteLine("  doctor              Diagnose Git repo, PATH, hooks, and config (--json).");
         _out.WriteLine();
         _out.WriteLine("Global:");

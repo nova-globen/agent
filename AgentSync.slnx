@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/AgentSync.Cli/AgentSync.Cli.csproj" />
     <Project Path="src/AgentSync.Core/AgentSync.Core.csproj" />
+    <Project Path="src/AgentSync.GitAgent/AgentSync.GitAgent.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/AgentSync.Cli.Tests/AgentSync.Cli.Tests.csproj" />
