@@ -1,5 +1,3 @@
-# Example Skill
-
 ## When to use
 
 Use this skill when the developer asks for this workflow.

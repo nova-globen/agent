@@ -5,7 +5,7 @@ up the project, the conventions we follow, and how to get a change merged.
 
 ## Prerequisites
 
-- .NET SDK 8.0 or newer (the repository currently builds and runs on .NET 10).
+- .NET SDK 10 (the project currently targets `net10.0`).
 - Git.
 
 ## Build and test

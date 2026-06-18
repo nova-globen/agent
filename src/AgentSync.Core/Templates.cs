@@ -70,10 +70,11 @@ targets:
     enabled: true
 """;
 
+    // The canonical SKILL.md holds the instruction body only. Display metadata
+    // (name, description, version) lives in skill.yaml, and adapters add a single
+    // target-appropriate heading, so this file must not start with a "# Name" heading.
     public const string ExampleSkillMarkdown =
 """
-# Example Skill
-
 ## When to use
 
 Use this skill when the developer asks for this workflow.

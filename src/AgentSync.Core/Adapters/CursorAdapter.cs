@@ -20,11 +20,11 @@ public sealed class CursorAdapter : ISkillAdapter
         var m = skill.Manifest;
         var name = string.IsNullOrWhiteSpace(m.Name) ? skill.Id : m.Name!.Trim();
         var description = (m.Description ?? string.Empty).Trim();
-        var body = skill.Body.Trim();
+        var body = SkillContent.StripRedundantHeading(skill.Body, name);
 
         var sb = new System.Text.StringBuilder();
         sb.Append("---\n");
-        sb.Append("description: ").Append(description).Append('\n');
+        sb.Append("description: ").Append(Yaml.Scalar(description)).Append('\n');
         sb.Append("globs:\n");
         sb.Append("alwaysApply: false\n");
         sb.Append("---\n\n");

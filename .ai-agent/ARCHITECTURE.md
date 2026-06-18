@@ -2,7 +2,8 @@
 
 ## Preferred Stack
 
-Use .NET 8 or newer.
+The project currently targets .NET 10 (`net10.0`). (Originally specified as ".NET 8 or
+newer".)
 
 Suggested solution layout:
 

@@ -95,7 +95,11 @@ public sealed class StatusService
                 DriftKind.ManualEdit => ("drift-manual-edit", $"Manually edited projection {item.RelativePath} ({item.TargetId}). Run 'agent sync --force' to regenerate."),
                 _ => ("drift-lock", $"Lockfile entry mismatch for {item.RelativePath} ({item.TargetId}). Run 'agent sync'."),
             };
-            issues.Add(new StatusIssue(code, IssueSeverity.Error, message));
+
+            // Policy can downgrade a drift kind from a failing error to an informational
+            // warning; the issue is still reported, but status --fail-on-drift won't fail.
+            var severity = SeverityFor(item.Kind, report.Policy);
+            issues.Add(new StatusIssue(code, severity, message));
         }
 
         foreach (var orphan in report.Orphans)
@@ -103,6 +107,19 @@ public sealed class StatusService
             issues.Add(new StatusIssue("drift-orphan", IssueSeverity.Error,
                 $"Lockfile references a projection no longer planned: {orphan.Path} ({orphan.Target})."));
         }
+    }
+
+    private static IssueSeverity SeverityFor(DriftKind kind, AgentPolicy policy)
+    {
+        var fails = kind switch
+        {
+            DriftKind.Missing => policy.FailOnMissingProjection,
+            DriftKind.Outdated => policy.FailOnOutdatedProjection,
+            DriftKind.ManualEdit => policy.FailOnManualEdit,
+            _ => true, // lock mismatch is always treated as a failure
+        };
+
+        return fails ? IssueSeverity.Error : IssueSeverity.Warning;
     }
 
     private int CountSkills()

@@ -27,7 +27,8 @@ The project must produce:
 - Failure behavior when the tool is required but not installed.
 - Open-source, copyleft-friendly structure.
 
-Use .NET 8 or newer unless the maintainer explicitly changes this decision.
+The project currently targets **.NET 10** (`net10.0`). The original guidance was
+".NET 8 or newer"; .NET 10 is the chosen target. Keep the project files on `net10.0`.
 
 ## Required Commands
 

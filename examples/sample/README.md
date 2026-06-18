@@ -11,7 +11,7 @@ This directory is a snapshot of a repository after running `agent init` followed
   lock.json                               # recorded hashes for each projection
   skills/example-skill/
     skill.yaml                            # skill metadata + enabled targets
-    SKILL.md                              # the canonical instruction body
+    SKILL.md                              # the canonical instruction body (no leading # heading)
 .githooks/                               # pre-commit / pre-push (fail if 'agent' missing)
 
 # Generated projections (kept in sync with the skill above):

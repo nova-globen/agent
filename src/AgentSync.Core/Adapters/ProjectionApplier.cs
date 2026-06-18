@@ -18,7 +18,7 @@ public sealed class ProjectionApplier
 
     public ApplyOutcome Apply(Projection projection, Lockfile lockfile, bool force = false, bool dryRun = false)
     {
-        var absolutePath = Path.Combine(_repoRoot, projection.RelativePath);
+        var absolutePath = RepoPath.Resolve(_repoRoot, projection.RelativePath);
 
         var result = projection.Mode == ProjectionMode.SharedSection
             ? ApplySharedSection(absolutePath, projection, force, dryRun)

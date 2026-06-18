@@ -3,8 +3,6 @@ name: Code Review
 description: Reviews pull requests using project conventions.
 ---
 
-# Code Review
-
 ## When to use
 
 When a pull request needs review.

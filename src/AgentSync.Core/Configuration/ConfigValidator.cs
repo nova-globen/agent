@@ -39,6 +39,13 @@ public static partial class ConfigValidator
                     $"Target '{id}' is enabled but has no 'path'.",
                     source);
             }
+            else if (setting.Enabled && !RepoPath.IsSafeRelative(setting.Path, out var pathError))
+            {
+                result.AddError(
+                    "config.target-unsafe-path",
+                    $"Target '{id}' has an unsafe path: {pathError}",
+                    source);
+            }
         }
     }
 }

@@ -5,43 +5,43 @@
       "skill": "example-skill",
       "target": "agents_md",
       "path": "AGENTS.md",
-      "hash": "sha256:4be40677e3d13e0798d6b008151d7ced815e1a9da4125b0f2ef0fff1a0dc8265"
+      "hash": "sha256:5db0e52f913251fc0b8767de008dbcf0f6563ce1f8e6933896324322d3d628d4"
     },
     "example-skill/claude_md": {
       "skill": "example-skill",
       "target": "claude_md",
       "path": "CLAUDE.md",
-      "hash": "sha256:4be40677e3d13e0798d6b008151d7ced815e1a9da4125b0f2ef0fff1a0dc8265"
+      "hash": "sha256:5db0e52f913251fc0b8767de008dbcf0f6563ce1f8e6933896324322d3d628d4"
     },
     "example-skill/cursor": {
       "skill": "example-skill",
       "target": "cursor",
       "path": ".cursor/rules/example-skill.mdc",
-      "hash": "sha256:1b75c1f4fc34deb72aa0a41d4e56368b9176a934816f26682685bbb4f1b725dc"
+      "hash": "sha256:376381f19954858ca66311ff14322cb186981ed8f574ad15309fa947d2b2b46b"
     },
     "example-skill/copilot": {
       "skill": "example-skill",
       "target": "copilot",
       "path": ".github/copilot-instructions.md",
-      "hash": "sha256:4be40677e3d13e0798d6b008151d7ced815e1a9da4125b0f2ef0fff1a0dc8265"
+      "hash": "sha256:5db0e52f913251fc0b8767de008dbcf0f6563ce1f8e6933896324322d3d628d4"
     },
     "example-skill/gemini": {
       "skill": "example-skill",
       "target": "gemini",
       "path": ".gemini/GEMINI.md",
-      "hash": "sha256:4be40677e3d13e0798d6b008151d7ced815e1a9da4125b0f2ef0fff1a0dc8265"
+      "hash": "sha256:5db0e52f913251fc0b8767de008dbcf0f6563ce1f8e6933896324322d3d628d4"
     },
     "example-skill/openai_skill": {
       "skill": "example-skill",
       "target": "openai_skill",
       "path": ".chatgpt/skills/example-skill/SKILL.md",
-      "hash": "sha256:3b7744708227be19ea5a818f9f2114bff64898dc013bfd40c205f96a2383153e"
+      "hash": "sha256:673900ea2822cf65cf746cb4fcaa8028c8aacf0b42437de0b245050d9c473d47"
     },
     "example-skill/claude_skill": {
       "skill": "example-skill",
       "target": "claude_skill",
       "path": ".claude/skills/example-skill/SKILL.md",
-      "hash": "sha256:3b7744708227be19ea5a818f9f2114bff64898dc013bfd40c205f96a2383153e"
+      "hash": "sha256:673900ea2822cf65cf746cb4fcaa8028c8aacf0b42437de0b245050d9c473d47"
     }
   }
 }

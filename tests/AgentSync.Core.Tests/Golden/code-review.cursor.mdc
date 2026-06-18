@@ -6,8 +6,6 @@ alwaysApply: false
 
 # Code Review
 
-# Code Review
-
 ## When to use
 
 When a pull request needs review.

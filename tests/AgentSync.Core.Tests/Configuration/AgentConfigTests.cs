@@ -78,4 +78,30 @@ public sealed class AgentConfigTests
 
         Assert.Contains(result.Messages, m => m.Code == "config.target-missing-path");
     }
+
+    [Theory]
+    [InlineData("/etc/passwd")]
+    [InlineData("../../escape.md")]
+    [InlineData("C:\\\\Windows\\\\x.md")]
+    public void Validate_UnsafeTargetPath_ReportsError(string unsafePath)
+    {
+        var config = AgentConfig.Parse($"version: 1\ntargets:\n  agents_md:\n    enabled: true\n    path: \"{unsafePath}\"\n");
+        var result = new ValidationResult();
+
+        ConfigValidator.Validate(config, result);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Messages, m => m.Code == "config.target-unsafe-path");
+    }
+
+    [Fact]
+    public void Validate_RelativeTargetPath_IsAccepted()
+    {
+        var config = AgentConfig.Parse("version: 1\ntargets:\n  agents_md:\n    enabled: true\n    path: docs/AGENTS.md\n");
+        var result = new ValidationResult();
+
+        ConfigValidator.Validate(config, result);
+
+        Assert.DoesNotContain(result.Messages, m => m.Code == "config.target-unsafe-path");
+    }
 }

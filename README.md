@@ -48,7 +48,7 @@ left untouched unless you pass `--force`.
 
 ## Install
 
-Agent Sync targets **.NET 8 or newer** and ships two entry points: `agent` and the
+Agent Sync currently targets **.NET 10** and ships two entry points: `agent` and the
 Git extension `git-agent` (so `git agent <command>` works).
 
 ```bash
@@ -72,6 +72,28 @@ agent doctor          # diagnose Git repo, PATH, hooks, and config
 
 # Every command is also available as: git agent <command>
 ```
+
+### `agent sync` behavior
+
+`agent sync` **writes by default** — it creates missing projections and updates
+out-of-date ones. Two flags change that:
+
+- `agent sync` — writes missing/outdated projections. Generated sections that you have
+  hand-edited are detected and left untouched (reported, not overwritten).
+- `agent sync --check` — previews changes without writing anything; exits non-zero if
+  any projection would change or has been manually edited.
+- `agent sync --force` — additionally overwrites manually edited generated projections,
+  regenerating them from the canonical source.
+
+`--write` is the explicit form of the default and can be passed for clarity.
+
+### Skill content conventions
+
+- `skill.yaml` owns display metadata: `name`, `description`, `version`.
+- `SKILL.md` owns the instruction body only — it should **not** start with a
+  `# <skill name>` heading. Each adapter adds one target-appropriate heading derived
+  from `name`, so a leading heading that repeats the skill name is dropped from
+  generated output to avoid duplicate headings.
 
 ### Typical workflow
 

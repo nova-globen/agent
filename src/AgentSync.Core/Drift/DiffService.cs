@@ -65,7 +65,7 @@ public sealed class DiffService
 
     private string? ReadCurrent(Projection projection)
     {
-        var absolutePath = Path.Combine(_layout.RepoRoot, projection.RelativePath);
+        var absolutePath = RepoPath.Resolve(_layout.RepoRoot, projection.RelativePath);
         if (!File.Exists(absolutePath))
         {
             return null;

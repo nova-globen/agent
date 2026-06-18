@@ -37,7 +37,8 @@ public sealed record DriftReport(
     bool ConfigValid,
     ValidationResult Validation,
     IReadOnlyList<DriftItem> Items,
-    IReadOnlyList<OrphanLockEntry> Orphans)
+    IReadOnlyList<OrphanLockEntry> Orphans,
+    AgentPolicy Policy)
 {
     public bool HasDrift =>
         !ConfigValid
@@ -68,8 +69,10 @@ public sealed class DriftDetector
         var workspace = WorkspaceLoader.Load(_layout.RepoRoot);
         if (!workspace.IsValid)
         {
-            return new DriftReport(false, workspace.Validation, Array.Empty<DriftItem>(), Array.Empty<OrphanLockEntry>());
+            return new DriftReport(false, workspace.Validation, Array.Empty<DriftItem>(), Array.Empty<OrphanLockEntry>(), new AgentPolicy());
         }
+
+        var policy = workspace.Config!.Policy;
 
         var projections = _planner.Plan(workspace);
         var lockfile = Lockfile.Load(_layout.LockFile);
@@ -84,12 +87,12 @@ public sealed class DriftDetector
             .Select(kv => new OrphanLockEntry(kv.Value.Skill, kv.Value.Target, kv.Value.Path))
             .ToList();
 
-        return new DriftReport(true, workspace.Validation, items, orphans);
+        return new DriftReport(true, workspace.Validation, items, orphans, policy);
     }
 
     private DriftItem Classify(Projection projection, Lockfile lockfile)
     {
-        var absolutePath = Path.Combine(_layout.RepoRoot, projection.RelativePath);
+        var absolutePath = RepoPath.Resolve(_layout.RepoRoot, projection.RelativePath);
         var desiredHash = ContentHasher.Hash(projection.Body);
         var lockEntry = lockfile.Get(projection.SkillId, projection.TargetId);
         var lockMismatch = lockEntry is null || lockEntry.Hash != desiredHash;

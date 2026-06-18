@@ -1,9 +1,7 @@
-<!-- agent-sync:start id=example-skill target=agents_md hash=sha256:4be40677e3d13e0798d6b008151d7ced815e1a9da4125b0f2ef0fff1a0dc8265 -->
+<!-- agent-sync:start id=example-skill target=agents_md hash=sha256:5db0e52f913251fc0b8767de008dbcf0f6563ce1f8e6933896324322d3d628d4 -->
 ## Example Skill
 
 Describe what this skill helps the agent do.
-
-# Example Skill
 
 ## When to use
 

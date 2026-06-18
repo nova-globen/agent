@@ -8,7 +8,16 @@ public sealed record InstallHooksResult(
     IReadOnlyList<HookStatus> Hooks,
     string? Error)
 {
-    public bool Success => GitConfigured && Error is null && Hooks.All(h => h.Present);
+    /// <summary>
+    /// True only when Git is configured, no error occurred, and every hook is present —
+    /// and, on Unix-like systems, every hook is also executable (the execute bit is not
+    /// meaningful on Windows, so it is not required there).
+    /// </summary>
+    public bool Success =>
+        GitConfigured
+        && Error is null
+        && Hooks.All(h => h.Present)
+        && (OperatingSystem.IsWindows() || Hooks.All(h => h.Executable));
 }
 
 /// <summary>
