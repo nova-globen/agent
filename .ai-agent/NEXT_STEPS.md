@@ -10,7 +10,7 @@ invariants (see `CLAUDE.md` → "Do not accidentally break").
 - Verify the alpha limitations list is current.
 - Verify the GitHub issue templates render and route correctly.
 - Verify install docs (`install.sh` / `install.ps1` commands, manual install).
-- Verify GitHub release assets exist and checksums validate for `v0.1.0-alpha.1`.
+- Verify GitHub release assets exist and checksums validate for `v0.1.0-alpha.2`.
 
 ## Near-term product work
 

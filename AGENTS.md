@@ -168,7 +168,9 @@ and `git agent --version` (both `agent 0.1.0-alpha.1`), `agent init`, `agent syn
 `agent status --fail-on-drift --ci`, `git agent status`, `agent install-hooks`, the
 pre-commit hook running Agent Sync, manual-edit drift detection in `AGENTS.md`, and a
 commit being **blocked** by the hook when drift exists. See
-`.ai-agent/VALIDATION_LOG.md`. More real-world testing on Linux/macOS is still needed.
+`.ai-agent/VALIDATION_LOG.md`. The current release `v0.1.0-alpha.2` is a version-only
+retag of `alpha.1` (no code changes), so this validation carries over. More real-world
+testing on Linux/macOS is still needed.
 
 ### Releases
 

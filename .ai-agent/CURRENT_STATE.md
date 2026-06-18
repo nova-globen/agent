@@ -5,7 +5,8 @@ Compact handoff for AI sessions. Pair with `.ai-agent/NEXT_STEPS.md` and
 
 ## Release
 
-- **Current release:** `v0.1.0-alpha.1`
+- **Current release:** `v0.1.0-alpha.2` (version-only retag of `alpha.1`; no code
+  changes between the two tags)
 - **Release type:** public alpha / developer preview
 - **Repository:** https://github.com/nova-globen/agent (default branch `master`)
 
