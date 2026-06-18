@@ -312,6 +312,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). By participating you agree to the
 [Code of Conduct](CODE_OF_CONDUCT.md). Security reports: see [SECURITY.md](SECURITY.md).
 Maintainers cutting a release: see [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md).
 
+**AI-agent maintainers:** for project context and guardrails, start with
+[CLAUDE.md](CLAUDE.md), [AGENTS.md](AGENTS.md), and
+[.ai-agent/CURRENT_STATE.md](.ai-agent/CURRENT_STATE.md).
+
 ## License
 
 Agent Sync is licensed under the **GNU Affero General Public License v3.0 or later**

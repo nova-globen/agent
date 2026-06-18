@@ -154,13 +154,28 @@ and `CLAUDE.md` here are hand-authored, not generated).
   reported warning so `agent status --fail-on-drift` does not fail (still listed).
 - `agent sync` writes by default; `--check` previews (non-zero on changes), `--force`
   overwrites manually edited generated projections.
+- Adapters must produce **deterministic** output (no timestamps/randomness) so hashing,
+  drift detection, and golden-file tests stay stable.
+- Git hooks must **fail when `agent` is missing** (the scaffolded hooks exit 3 with the
+  required message), never silently pass.
+- `git-agent` delegates to `AgentSync.Cli.CliRunner`; keep the two entry points in sync.
 - Exit codes: 0 success, 1 drift/validation, 2 invalid usage, 3 environment, 4 unexpected.
+
+### Current validated state (v0.1.0-alpha.1)
+
+Manually validated on Windows with the globally installed binaries: `agent --version`
+and `git agent --version` (both `agent 0.1.0-alpha.1`), `agent init`, `agent sync`,
+`agent status --fail-on-drift --ci`, `git agent status`, `agent install-hooks`, the
+pre-commit hook running Agent Sync, manual-edit drift detection in `AGENTS.md`, and a
+commit being **blocked** by the hook when drift exists. See
+`.ai-agent/VALIDATION_LOG.md`. More real-world testing on Linux/macOS is still needed.
 
 ### Releases
 
 - Tag-driven: pushing `v*.*.*` runs `.github/workflows/release.yml`, which publishes
   self-contained `agent`/`git-agent` for linux-x64, linux-arm64, osx-x64, osx-arm64,
   win-x64, generates `checksums.txt`, and creates the GitHub Release via `gh`.
+  Release commands: `git tag v0.1.0 && git push origin v0.1.0` (see `RELEASE_CHECKLIST.md`).
 - Install scripts: `scripts/install.sh` (Linux/macOS) and `scripts/install.ps1`
   (Windows). `scripts/release-smoke.sh` validates naming/mapping and that both binaries
   publish and `git-agent` delegates to `agent`.
