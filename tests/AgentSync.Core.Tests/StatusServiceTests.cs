@@ -15,7 +15,7 @@ public sealed class StatusServiceTests
     }
 
     [Fact]
-    public void Run_AfterInit_IsCleanWithSkillCounted()
+    public void Run_AfterInitBeforeSync_ReportsMissingProjections()
     {
         using var temp = new TempDir();
         new InitService(temp.Path).Run();
@@ -23,8 +23,39 @@ public sealed class StatusServiceTests
         var report = new StatusService(temp.Path).Run();
 
         Assert.True(report.Initialized);
+        Assert.Equal(1, report.SkillCount);
+        // Projections have not been written yet, so drift is expected.
+        Assert.True(report.HasProblems);
+        Assert.Contains(report.Issues, i => i.Code == "drift-missing");
+    }
+
+    [Fact]
+    public void Run_AfterInitAndSync_IsClean()
+    {
+        using var temp = new TempDir();
+        new InitService(temp.Path).Run();
+        new SyncService(temp.Path).Run();
+
+        var report = new StatusService(temp.Path).Run();
+
+        Assert.True(report.Initialized);
         Assert.False(report.HasProblems);
         Assert.Equal(1, report.SkillCount);
+    }
+
+    [Fact]
+    public void Run_DetectsManualEditAfterSync()
+    {
+        using var temp = new TempDir();
+        new InitService(temp.Path).Run();
+        new SyncService(temp.Path).Run();
+        var agents = Path.Combine(temp.Path, "AGENTS.md");
+        File.WriteAllText(agents, File.ReadAllText(agents).Replace("Describe what", "HAND EDIT what"));
+
+        var report = new StatusService(temp.Path).Run();
+
+        Assert.True(report.HasProblems);
+        Assert.Contains(report.Issues, i => i.Code == "drift-manual-edit");
     }
 
     [Fact]

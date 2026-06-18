@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using AgentSync.Core;
 using AgentSync.Core.Configuration;
+using AgentSync.Core.Drift;
 using AgentSync.Core.Projections;
 
 namespace AgentSync.Cli;
@@ -56,6 +57,7 @@ public sealed class CliRunner
             "init" => RunInit(rest),
             "status" => RunStatus(rest),
             "sync" => RunSync(rest),
+            "diff" => RunDiff(rest),
             "validate" => RunValidate(rest),
             "doctor" => RunDoctor(rest),
             _ => UnknownCommand(command),
@@ -391,6 +393,69 @@ public sealed class CliRunner
             }),
         };
         _out.WriteLine(JsonSerializer.Serialize(payload, JsonOptions));
+    }
+
+    // --- diff -----------------------------------------------------------------
+
+    private int RunDiff(string[] args)
+    {
+        var json = false;
+        foreach (var arg in args)
+        {
+            switch (arg)
+            {
+                case "--json":
+                    json = true;
+                    break;
+                default:
+                    return UnknownOption("diff", arg);
+            }
+        }
+
+        var root = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
+        var report = new DiffService(root).Run();
+
+        if (json)
+        {
+            var payload = new
+            {
+                configValid = report.ConfigValid,
+                hasDifferences = report.HasDifferences,
+                entries = report.Entries.Select(e => new
+                {
+                    skill = e.SkillId,
+                    target = e.TargetId,
+                    path = e.RelativePath,
+                    kind = e.Kind.ToString(),
+                    diff = e.Diff,
+                }),
+            };
+            _out.WriteLine(JsonSerializer.Serialize(payload, JsonOptions));
+        }
+        else if (!report.ConfigValid)
+        {
+            _out.WriteLine("Cannot diff: configuration is invalid. Run 'agent validate'.");
+        }
+        else if (!report.HasDifferences)
+        {
+            _out.WriteLine("No differences. All projections are in sync.");
+        }
+        else
+        {
+            foreach (var e in report.Entries)
+            {
+                _out.WriteLine($"# {e.RelativePath} ({e.TargetId}) — {e.Kind}");
+                _out.Write(e.Diff);
+                _out.WriteLine();
+            }
+        }
+
+        if (!report.ConfigValid)
+        {
+            return ExitCodes.DriftOrValidationFailed;
+        }
+
+        return report.HasDifferences ? ExitCodes.DriftOrValidationFailed : ExitCodes.Success;
     }
 
     // --- validate -------------------------------------------------------------

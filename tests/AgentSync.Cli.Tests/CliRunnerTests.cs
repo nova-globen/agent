@@ -91,6 +91,7 @@ public sealed class CliRunnerTests
         using var h = new CliTestHarness();
         h.MakeGitRepo();
         h.Invoke("init");
+        h.Invoke("sync");
 
         var result = h.Invoke("status", "--fail-on-drift");
 
@@ -104,6 +105,7 @@ public sealed class CliRunnerTests
         using var h = new CliTestHarness();
         h.MakeGitRepo();
         h.Invoke("init");
+        h.Invoke("sync");
 
         var result = h.Invoke("status", "--json");
 
