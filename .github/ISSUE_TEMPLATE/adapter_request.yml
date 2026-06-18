@@ -1,0 +1,48 @@
+name: Adapter request
+description: Request support for a new AI-agent target/format.
+title: "[adapter] "
+labels: ["adapter"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Agent Sync projects one canonical skill into multiple targets (AGENTS.md,
+        CLAUDE.md, Cursor rules, Copilot instructions, Gemini instructions, OpenAI/Claude
+        skill folders). Use this to request a new target.
+  - type: input
+    id: tool
+    attributes:
+      label: Which tool/agent is this for?
+      placeholder: e.g. Windsurf, Continue, Aider, Zed, ...
+    validations:
+      required: true
+  - type: textarea
+    id: format
+    attributes:
+      label: Expected file(s) and format
+      description: Where do the instructions live, and what does the file format look like?
+      placeholder: |
+        Path(s): e.g. .windsurf/rules.md
+        Format: markdown / YAML frontmatter / JSON / ...
+        A short example of a valid file is very helpful.
+    validations:
+      required: true
+  - type: dropdown
+    id: shape
+    attributes:
+      label: Is it a shared file or one file per skill?
+      options:
+        - Shared file (multiple skills in one file)
+        - One file per skill
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: docs
+    attributes:
+      label: Link to the tool's documentation for this format
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else?
+      description: Quirks, required fields, naming conventions, etc.

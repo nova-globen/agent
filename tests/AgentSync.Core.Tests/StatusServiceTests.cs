@@ -50,7 +50,7 @@ public sealed class StatusServiceTests
         new InitService(temp.Path).Run();
         new SyncService(temp.Path).Run();
         var agents = Path.Combine(temp.Path, "AGENTS.md");
-        File.WriteAllText(agents, File.ReadAllText(agents).Replace("Describe what", "HAND EDIT what"));
+        File.WriteAllText(agents, File.ReadAllText(agents).Replace("Reviews changes", "HAND EDIT what"));
 
         var report = new StatusService(temp.Path).Run();
 
@@ -76,7 +76,7 @@ public sealed class StatusServiceTests
     {
         using var temp = new TempDir();
         new InitService(temp.Path).Run();
-        Directory.Delete(Path.Combine(temp.Path, ".agent", "skills", "example-skill"), recursive: true);
+        Directory.Delete(Path.Combine(temp.Path, ".agent", "skills", "code-review"), recursive: true);
 
         var report = new StatusService(temp.Path).Run();
 

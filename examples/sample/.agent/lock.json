@@ -1,47 +1,47 @@
 {
   "version": 1,
   "projections": {
-    "example-skill/agents_md": {
-      "skill": "example-skill",
+    "code-review/agents_md": {
+      "skill": "code-review",
       "target": "agents_md",
       "path": "AGENTS.md",
-      "hash": "sha256:5db0e52f913251fc0b8767de008dbcf0f6563ce1f8e6933896324322d3d628d4"
+      "hash": "sha256:56cb5e1f447edefa38a1db62733a32ae1b62e480eee74f65b4b99c71ef50cd71"
     },
-    "example-skill/claude_md": {
-      "skill": "example-skill",
+    "code-review/claude_md": {
+      "skill": "code-review",
       "target": "claude_md",
       "path": "CLAUDE.md",
-      "hash": "sha256:5db0e52f913251fc0b8767de008dbcf0f6563ce1f8e6933896324322d3d628d4"
+      "hash": "sha256:56cb5e1f447edefa38a1db62733a32ae1b62e480eee74f65b4b99c71ef50cd71"
     },
-    "example-skill/cursor": {
-      "skill": "example-skill",
+    "code-review/cursor": {
+      "skill": "code-review",
       "target": "cursor",
-      "path": ".cursor/rules/example-skill.mdc",
-      "hash": "sha256:376381f19954858ca66311ff14322cb186981ed8f574ad15309fa947d2b2b46b"
+      "path": ".cursor/rules/code-review.mdc",
+      "hash": "sha256:7a55529a6f234da584bedc8214403b6586f894002a6f86a6c84fd3d6374ca4f8"
     },
-    "example-skill/copilot": {
-      "skill": "example-skill",
+    "code-review/copilot": {
+      "skill": "code-review",
       "target": "copilot",
       "path": ".github/copilot-instructions.md",
-      "hash": "sha256:5db0e52f913251fc0b8767de008dbcf0f6563ce1f8e6933896324322d3d628d4"
+      "hash": "sha256:56cb5e1f447edefa38a1db62733a32ae1b62e480eee74f65b4b99c71ef50cd71"
     },
-    "example-skill/gemini": {
-      "skill": "example-skill",
+    "code-review/gemini": {
+      "skill": "code-review",
       "target": "gemini",
       "path": ".gemini/GEMINI.md",
-      "hash": "sha256:5db0e52f913251fc0b8767de008dbcf0f6563ce1f8e6933896324322d3d628d4"
+      "hash": "sha256:56cb5e1f447edefa38a1db62733a32ae1b62e480eee74f65b4b99c71ef50cd71"
     },
-    "example-skill/openai_skill": {
-      "skill": "example-skill",
+    "code-review/openai_skill": {
+      "skill": "code-review",
       "target": "openai_skill",
-      "path": ".chatgpt/skills/example-skill/SKILL.md",
-      "hash": "sha256:673900ea2822cf65cf746cb4fcaa8028c8aacf0b42437de0b245050d9c473d47"
+      "path": ".chatgpt/skills/code-review/SKILL.md",
+      "hash": "sha256:1e717309c55c17545830738d3f45f598adbc4e33795eeba4d0d5ead628f632ec"
     },
-    "example-skill/claude_skill": {
-      "skill": "example-skill",
+    "code-review/claude_skill": {
+      "skill": "code-review",
       "target": "claude_skill",
-      "path": ".claude/skills/example-skill/SKILL.md",
-      "hash": "sha256:673900ea2822cf65cf746cb4fcaa8028c8aacf0b42437de0b245050d9c473d47"
+      "path": ".claude/skills/code-review/SKILL.md",
+      "hash": "sha256:1e717309c55c17545830738d3f45f598adbc4e33795eeba4d0d5ead628f632ec"
     }
   }
 }

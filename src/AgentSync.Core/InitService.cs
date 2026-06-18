@@ -30,15 +30,15 @@ public sealed class InitService
         Directory.CreateDirectory(_layout.SkillsDir);
         Directory.CreateDirectory(_layout.HooksDir);
 
-        var exampleSkillDir = Path.Combine(_layout.SkillsDir, "example-skill");
-        Directory.CreateDirectory(exampleSkillDir);
+        var defaultSkillDir = Path.Combine(_layout.SkillsDir, Templates.DefaultSkillId);
+        Directory.CreateDirectory(defaultSkillDir);
 
         var results = new List<InitFileResult>
         {
             WriteFile(_layout.ConfigFile, Templates.AgentYaml, force),
             WriteFile(_layout.LockFile, Templates.LockJson, force),
-            WriteFile(Path.Combine(exampleSkillDir, "skill.yaml"), Templates.ExampleSkillYaml, force),
-            WriteFile(Path.Combine(exampleSkillDir, "SKILL.md"), Templates.ExampleSkillMarkdown, force),
+            WriteFile(Path.Combine(defaultSkillDir, "skill.yaml"), Templates.DefaultSkillYaml, force),
+            WriteFile(Path.Combine(defaultSkillDir, "SKILL.md"), Templates.DefaultSkillMarkdown, force),
             WriteFile(_layout.PreCommitHook, Templates.PreCommitHook, force, executable: true),
             WriteFile(_layout.PrePushHook, Templates.PrePushHook, force, executable: true),
         };

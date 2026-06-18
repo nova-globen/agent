@@ -17,7 +17,7 @@ public sealed class ProjectionPlannerTests
         Assert.Equal(7, plan.Count);
         Assert.Contains(plan, p => p.TargetId == TargetIds.AgentsMd && p.Mode == ProjectionMode.SharedSection);
         Assert.Contains(plan, p => p.TargetId == TargetIds.Cursor && p.Mode == ProjectionMode.WholeFile);
-        Assert.Contains(plan, p => p.RelativePath == ".claude/skills/example-skill/SKILL.md");
+        Assert.Contains(plan, p => p.RelativePath == ".claude/skills/code-review/SKILL.md");
     }
 
     [Fact]
@@ -43,7 +43,7 @@ public sealed class ProjectionPlannerTests
     {
         using var temp = new TempDir();
         new InitService(temp.Path).Run();
-        var skillPath = Path.Combine(temp.Path, ".agent", "skills", "example-skill", "skill.yaml");
+        var skillPath = Path.Combine(temp.Path, ".agent", "skills", "code-review", "skill.yaml");
         var skill = File.ReadAllText(skillPath).Replace(
             "  gemini:\n    enabled: true",
             "  gemini:\n    enabled: false");

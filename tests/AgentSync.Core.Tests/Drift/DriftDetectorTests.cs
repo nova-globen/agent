@@ -55,8 +55,8 @@ public sealed class DriftDetectorTests
         using var temp = new TempDir();
         InitAndSync(temp.Path);
         // Change the canonical SKILL.md so the generated output should differ.
-        var skillMd = Path.Combine(temp.Path, ".agent", "skills", "example-skill", "SKILL.md");
-        File.WriteAllText(skillMd, "# Example Skill\n\nBrand new canonical content.\n");
+        var skillMd = Path.Combine(temp.Path, ".agent", "skills", "code-review", "SKILL.md");
+        File.WriteAllText(skillMd, "# Code Review\n\nBrand new canonical content.\n");
 
         var report = new DriftDetector(temp.Path).Detect();
 
@@ -70,7 +70,7 @@ public sealed class DriftDetectorTests
         using var temp = new TempDir();
         InitAndSync(temp.Path);
         var agents = Path.Combine(temp.Path, "AGENTS.md");
-        File.WriteAllText(agents, File.ReadAllText(agents).Replace("Describe what", "EDITED what"));
+        File.WriteAllText(agents, File.ReadAllText(agents).Replace("Reviews changes", "EDITED what"));
 
         var report = new DriftDetector(temp.Path).Detect();
 
@@ -82,7 +82,7 @@ public sealed class DriftDetectorTests
     {
         using var temp = new TempDir();
         InitAndSync(temp.Path);
-        var cursor = Path.Combine(temp.Path, ".cursor", "rules", "example-skill.mdc");
+        var cursor = Path.Combine(temp.Path, ".cursor", "rules", "code-review.mdc");
         File.WriteAllText(cursor, "totally different\n");
 
         var report = new DriftDetector(temp.Path).Detect();

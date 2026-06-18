@@ -1,5 +1,9 @@
 # Agent Sync
 
+[![CI](https://github.com/nova-globen/agent/actions/workflows/agent-sync-check.yml/badge.svg?branch=master)](https://github.com/nova-globen/agent/actions/workflows/agent-sync-check.yml)
+[![Latest release](https://img.shields.io/github/v/release/nova-globen/agent?include_prereleases&sort=semver)](https://github.com/nova-globen/agent/releases)
+[![License: AGPL-3.0-or-later](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue.svg)](LICENSE)
+
 Agent Sync is a Git-native consistency manager for AI-agent skills, instructions,
 and configuration files. Define a skill once and mirror it into the formats every
 AI coding agent expects — keeping `AGENTS.md`, `CLAUDE.md`, Cursor rules, GitHub
@@ -7,6 +11,41 @@ Copilot instructions, Gemini instructions, and OpenAI/Claude skill folders in sy
 
 The core problem it solves is **agent instruction drift**: the same guidance,
 duplicated by hand across many files, slowly diverging until the agents disagree.
+
+## Status: alpha (developer preview)
+
+Agent Sync is an **alpha / developer preview**. The core workflow — author canonical
+skills, project them to every target, and catch drift via Git hooks and CI — works
+today and has been used end to end. The fundamentals are solid; the surface is still
+settling, so expect some sharp edges and a few breaking changes before a stable v1.
+
+Current limitations:
+
+- Adapters are MVP-level and may evolve.
+- The canonical skill schema may change before stable v1.
+- Manually validated on Windows; needs more real-world testing on Linux and macOS.
+- Install scripts are new and should be tested across more environments.
+- Symlink escape hardening is not yet implemented.
+- Package-manager installation is not available yet.
+- Generated output conventions may change based on feedback.
+
+Feedback from real repositories is the most useful thing right now — see
+[Contributing](#contributing) and the issue templates.
+
+## Who this is for
+
+- Developers using multiple AI coding agents in one repository.
+- Teams maintaining `AGENTS.md`, `CLAUDE.md`, Cursor rules, Copilot instructions,
+  Gemini instructions, or skill folders.
+- Teams that want Git hooks and CI to catch AI-instruction drift automatically.
+
+## What Agent Sync is not
+
+- Not a replacement for Git.
+- Not an AI agent runtime.
+- Not a prompt optimizer.
+- Not a hosted SaaS.
+- Not a package registry.
 
 ## How it works
 
@@ -127,6 +166,45 @@ src/AgentSync.GitAgent/bin/Release/net10.0/git-agent
 
 Put both on your `PATH` to use `agent ...` and `git agent ...`.
 
+## Quick demo
+
+Scaffold a repo, sync the default `code-review` skill into every target, and wire the
+hooks:
+
+```bash
+mkdir agent-sync-demo
+cd agent-sync-demo
+git init
+
+agent init
+agent sync
+agent status --fail-on-drift --ci
+agent install-hooks
+```
+
+Now simulate drift by hand-editing a generated section:
+
+```bash
+# Edit AGENTS.md inside the generated agent-sync marker section
+# (the block between <!-- agent-sync:start ... --> and <!-- agent-sync:end -->).
+agent status --fail-on-drift --ci
+```
+
+Agent Sync reports a **manually edited projection** and exits non-zero. With the hooks
+installed, Git blocks the commit:
+
+```bash
+git commit --allow-empty -m "Should fail because of drift"
+# pre-commit runs 'agent status --fail-on-drift' and aborts the commit
+```
+
+Restore the generated content and you're green again:
+
+```bash
+agent sync --force
+agent status --fail-on-drift --ci
+```
+
 ## Commands
 
 ```bash
@@ -232,6 +310,7 @@ tests/
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). By participating you agree to the
 [Code of Conduct](CODE_OF_CONDUCT.md). Security reports: see [SECURITY.md](SECURITY.md).
+Maintainers cutting a release: see [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md).
 
 ## License
 

@@ -37,7 +37,7 @@ public sealed class PolicyStatusTests
         new InitService(temp.Path).Run();
         new SyncService(temp.Path).Run();
         File.WriteAllText(
-            Path.Combine(temp.Path, ".agent", "skills", "example-skill", "SKILL.md"),
+            Path.Combine(temp.Path, ".agent", "skills", "code-review", "SKILL.md"),
             "## New section\n\nBrand new canonical content.\n");
 
         var withDefault = new StatusService(temp.Path).Run();
@@ -58,7 +58,7 @@ public sealed class PolicyStatusTests
         new InitService(temp.Path).Run();
         new SyncService(temp.Path).Run();
         var agents = Path.Combine(temp.Path, "AGENTS.md");
-        File.WriteAllText(agents, File.ReadAllText(agents).Replace("Describe what", "HAND EDIT what"));
+        File.WriteAllText(agents, File.ReadAllText(agents).Replace("Reviews changes", "HAND EDIT what"));
 
         var withDefault = new StatusService(temp.Path).Run();
         Assert.True(withDefault.HasProblems);

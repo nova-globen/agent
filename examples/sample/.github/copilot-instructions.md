@@ -1,17 +1,24 @@
-<!-- agent-sync:start id=example-skill target=copilot hash=sha256:5db0e52f913251fc0b8767de008dbcf0f6563ce1f8e6933896324322d3d628d4 -->
-## Example Skill
+<!-- agent-sync:start id=code-review target=copilot hash=sha256:56cb5e1f447edefa38a1db62733a32ae1b62e480eee74f65b4b99c71ef50cd71 -->
+## Code Review
 
-Describe what this skill helps the agent do.
+Reviews changes using repository conventions and flags risky edits.
 
 ## When to use
 
-Use this skill when the developer asks for this workflow.
+Use this skill when reviewing pull requests, generated patches, or local changes.
 
 ## Instructions
 
-Follow the repository conventions.
+- Check whether the change follows repository conventions.
+- Look for correctness, security, maintainability, and test coverage risks.
+- Identify generated files that should not be edited by hand.
+- Prefer actionable comments over broad criticism.
 
 ## Output
 
-Return clear, actionable results.
+Return a concise review with:
+- summary
+- risks
+- required fixes
+- optional improvements
 <!-- agent-sync:end -->

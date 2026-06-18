@@ -16,7 +16,7 @@ public sealed class SyncCommandTests
 
         Assert.Equal(ExitCodes.Success, result.ExitCode);
         Assert.True(File.Exists(Path.Combine(h.WorkingDirectory, "AGENTS.md")));
-        Assert.True(File.Exists(Path.Combine(h.WorkingDirectory, ".claude", "skills", "example-skill", "SKILL.md")));
+        Assert.True(File.Exists(Path.Combine(h.WorkingDirectory, ".claude", "skills", "code-review", "SKILL.md")));
     }
 
     [Fact]

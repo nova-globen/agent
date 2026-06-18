@@ -1,0 +1,58 @@
+name: Bug report
+description: Something isn't working the way it should.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Agent Sync is in alpha, so details help a lot.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, including what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Exact commands, ideally startable from `git init`.
+      placeholder: |
+        git init
+        agent init
+        agent sync
+        ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Agent Sync version
+      description: Output of `agent --version`.
+      placeholder: agent 0.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Other (note in description)
+    validations:
+      required: true
+  - type: input
+    id: install-method
+    attributes:
+      label: How did you install it?
+      placeholder: install.sh / install.ps1 / manual download / build from source
+  - type: textarea
+    id: output
+    attributes:
+      label: Relevant output
+      description: Command output or logs. `--json` output is especially helpful.
+      render: shell

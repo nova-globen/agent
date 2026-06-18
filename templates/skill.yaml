@@ -1,6 +1,6 @@
-id: example-skill
-name: Example Skill
-description: Describe what this skill helps the agent do.
+id: code-review
+name: Code Review
+description: Reviews changes using repository conventions and flags risky edits.
 version: 0.1.0
 
 targets:

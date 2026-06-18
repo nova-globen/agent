@@ -16,18 +16,18 @@ public sealed class SkillTests
     [Fact]
     public void Parse_ReadsManifestFields()
     {
-        var manifest = SkillManifest.Parse(Templates.ExampleSkillYaml);
+        var manifest = SkillManifest.Parse(Templates.DefaultSkillYaml);
 
-        Assert.Equal("example-skill", manifest.Id);
-        Assert.Equal("Example Skill", manifest.Name);
+        Assert.Equal("code-review", manifest.Id);
+        Assert.Equal("Code Review", manifest.Name);
         Assert.True(manifest.Targets[TargetIds.ClaudeMd].Enabled);
     }
 
     [Fact]
     public void Validate_ValidSkill_IsValid()
     {
-        var manifest = SkillManifest.Parse(Templates.ExampleSkillYaml);
-        var skill = MakeSkill("example-skill", manifest);
+        var manifest = SkillManifest.Parse(Templates.DefaultSkillYaml);
+        var skill = MakeSkill("code-review", manifest);
         var result = new ValidationResult();
 
         SkillValidator.Validate(skill, result);

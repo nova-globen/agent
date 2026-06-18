@@ -56,7 +56,7 @@ public sealed class WorkspaceLoaderTests
         using var temp = new TempDir();
         new InitService(temp.Path).Run();
         // Remove the default example skill to control the set precisely.
-        Directory.Delete(Path.Combine(temp.Path, ".agent", "skills", "example-skill"), recursive: true);
+        Directory.Delete(Path.Combine(temp.Path, ".agent", "skills", "code-review"), recursive: true);
         WriteSkill(temp.Path, "first", "shared-id");
         WriteSkill(temp.Path, "second", "shared-id");
 

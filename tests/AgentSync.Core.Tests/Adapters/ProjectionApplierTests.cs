@@ -19,7 +19,7 @@ public sealed class ProjectionApplierTests
 
         Assert.All(outcomes, o => Assert.Equal(ProjectionChange.Created, o.Change));
         Assert.True(File.Exists(Path.Combine(temp.Path, "AGENTS.md")));
-        Assert.True(File.Exists(Path.Combine(temp.Path, ".cursor", "rules", "example-skill.mdc")));
+        Assert.True(File.Exists(Path.Combine(temp.Path, ".cursor", "rules", "code-review.mdc")));
         Assert.Equal(plan.Count, lockfile.Projections.Count);
     }
 
@@ -51,7 +51,7 @@ public sealed class ProjectionApplierTests
         applier.ApplyAll(plan, lockfile);
 
         // Tamper with a whole-file (cursor) projection.
-        var cursorPath = Path.Combine(temp.Path, ".cursor", "rules", "example-skill.mdc");
+        var cursorPath = Path.Combine(temp.Path, ".cursor", "rules", "code-review.mdc");
         File.WriteAllText(cursorPath, "hand edited\n");
         var cursorProj = plan.First(p => p.TargetId == TargetIds.Cursor);
 
@@ -61,7 +61,7 @@ public sealed class ProjectionApplierTests
 
         var forced = applier.Apply(cursorProj, lockfile, force: true);
         Assert.Equal(ProjectionChange.Updated, forced.Change);
-        Assert.Contains("# Example Skill", File.ReadAllText(cursorPath));
+        Assert.Contains("# Code Review", File.ReadAllText(cursorPath));
     }
 
     [Fact]
@@ -92,7 +92,7 @@ public sealed class ProjectionApplierTests
         applier.ApplyAll(plan, lockfile);
 
         var agentsPath = Path.Combine(temp.Path, "AGENTS.md");
-        var tampered = File.ReadAllText(agentsPath).Replace("Describe what this skill", "HAND EDITED skill");
+        var tampered = File.ReadAllText(agentsPath).Replace("Reviews changes", "HAND EDITED skill");
         File.WriteAllText(agentsPath, tampered);
 
         var proj = plan.First(p => p.TargetId == TargetIds.AgentsMd);

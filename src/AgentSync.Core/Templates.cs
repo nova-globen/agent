@@ -46,11 +46,14 @@ policy:
   allow_target_specific_overrides: true
 """;
 
-    public const string ExampleSkillYaml =
+    /// <summary>Directory name (and id) of the skill scaffolded by <c>agent init</c>.</summary>
+    public const string DefaultSkillId = "code-review";
+
+    public const string DefaultSkillYaml =
 """
-id: example-skill
-name: Example Skill
-description: Describe what this skill helps the agent do.
+id: code-review
+name: Code Review
+description: Reviews changes using repository conventions and flags risky edits.
 version: 0.1.0
 
 targets:
@@ -73,19 +76,26 @@ targets:
     // The canonical SKILL.md holds the instruction body only. Display metadata
     // (name, description, version) lives in skill.yaml, and adapters add a single
     // target-appropriate heading, so this file must not start with a "# Name" heading.
-    public const string ExampleSkillMarkdown =
+    public const string DefaultSkillMarkdown =
 """
 ## When to use
 
-Use this skill when the developer asks for this workflow.
+Use this skill when reviewing pull requests, generated patches, or local changes.
 
 ## Instructions
 
-Follow the repository conventions.
+- Check whether the change follows repository conventions.
+- Look for correctness, security, maintainability, and test coverage risks.
+- Identify generated files that should not be edited by hand.
+- Prefer actionable comments over broad criticism.
 
 ## Output
 
-Return clear, actionable results.
+Return a concise review with:
+- summary
+- risks
+- required fixes
+- optional improvements
 """;
 
     public const string LockJson =

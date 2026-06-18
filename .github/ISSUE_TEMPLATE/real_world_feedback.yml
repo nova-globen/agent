@@ -1,0 +1,50 @@
+name: Real-world repo feedback
+description: Tell us how Agent Sync worked (or didn't) on a real repository.
+title: "[feedback] "
+labels: ["feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is exactly what the alpha needs. Thanks for trying it on a real repo — no
+        detail is too small.
+  - type: textarea
+    id: agents
+    attributes:
+      label: Which AI agents/tools do you use?
+      placeholder: e.g. Claude Code, Cursor, GitHub Copilot, Gemini, ChatGPT skills, ...
+    validations:
+      required: true
+  - type: textarea
+    id: targets
+    attributes:
+      label: Which generated targets did you enable?
+      placeholder: agents_md, claude_md, cursor, copilot, gemini, openai_skill, claude_skill
+    validations:
+      required: true
+  - type: textarea
+    id: repo
+    attributes:
+      label: Repository type, language, and framework
+      placeholder: e.g. TypeScript monorepo (pnpm), .NET service, Python data pipeline, ...
+    validations:
+      required: true
+  - type: textarea
+    id: worked
+    attributes:
+      label: Did sync / status / hooks / CI work?
+      description: What worked as expected? Note OS and how you installed Agent Sync.
+    validations:
+      required: true
+  - type: textarea
+    id: broke
+    attributes:
+      label: What broke or felt confusing?
+      description: Errors, surprising output, unclear docs, anything that slowed you down.
+    validations:
+      required: true
+  - type: textarea
+    id: wishlist
+    attributes:
+      label: Anything you wish it did?
+      description: Optional — adapters, options, or workflow improvements.

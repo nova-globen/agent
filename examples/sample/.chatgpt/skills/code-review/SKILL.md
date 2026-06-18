@@ -1,7 +1,7 @@
-<!-- agent-sync:start id=code-review target=claude_md hash=sha256:56cb5e1f447edefa38a1db62733a32ae1b62e480eee74f65b4b99c71ef50cd71 -->
-## Code Review
-
-Reviews changes using repository conventions and flags risky edits.
+---
+name: Code Review
+description: Reviews changes using repository conventions and flags risky edits.
+---
 
 ## When to use
 
@@ -21,4 +21,3 @@ Return a concise review with:
 - risks
 - required fixes
 - optional improvements
-<!-- agent-sync:end -->
