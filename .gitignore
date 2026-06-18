@@ -1,0 +1,19 @@
+# .NET build output
+bin/
+obj/
+
+# Test / coverage artifacts
+[Tt]est[Rr]esults/
+*.trx
+*.coverage
+coverage*.json
+coverage*.xml
+
+# IDE
+.vs/
+.idea/
+*.user
+
+# OS
+.DS_Store
+Thumbs.db
