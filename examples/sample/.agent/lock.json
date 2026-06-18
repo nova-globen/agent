@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "projections": {
+    "example-skill/agents_md": {
+      "skill": "example-skill",
+      "target": "agents_md",
+      "path": "AGENTS.md",
+      "hash": "sha256:4be40677e3d13e0798d6b008151d7ced815e1a9da4125b0f2ef0fff1a0dc8265"
+    },
+    "example-skill/claude_md": {
+      "skill": "example-skill",
+      "target": "claude_md",
+      "path": "CLAUDE.md",
+      "hash": "sha256:4be40677e3d13e0798d6b008151d7ced815e1a9da4125b0f2ef0fff1a0dc8265"
+    },
+    "example-skill/cursor": {
+      "skill": "example-skill",
+      "target": "cursor",
+      "path": ".cursor/rules/example-skill.mdc",
+      "hash": "sha256:1b75c1f4fc34deb72aa0a41d4e56368b9176a934816f26682685bbb4f1b725dc"
+    },
+    "example-skill/copilot": {
+      "skill": "example-skill",
+      "target": "copilot",
+      "path": ".github/copilot-instructions.md",
+      "hash": "sha256:4be40677e3d13e0798d6b008151d7ced815e1a9da4125b0f2ef0fff1a0dc8265"
+    },
+    "example-skill/gemini": {
+      "skill": "example-skill",
+      "target": "gemini",
+      "path": ".gemini/GEMINI.md",
+      "hash": "sha256:4be40677e3d13e0798d6b008151d7ced815e1a9da4125b0f2ef0fff1a0dc8265"
+    },
+    "example-skill/openai_skill": {
+      "skill": "example-skill",
+      "target": "openai_skill",
+      "path": ".chatgpt/skills/example-skill/SKILL.md",
+      "hash": "sha256:3b7744708227be19ea5a818f9f2114bff64898dc013bfd40c205f96a2383153e"
+    },
+    "example-skill/claude_skill": {
+      "skill": "example-skill",
+      "target": "claude_skill",
+      "path": ".claude/skills/example-skill/SKILL.md",
+      "hash": "sha256:3b7744708227be19ea5a818f9f2114bff64898dc013bfd40c205f96a2383153e"
+    }
+  }
+}

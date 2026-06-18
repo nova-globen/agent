@@ -1,0 +1,18 @@
+---
+name: Example Skill
+description: Describe what this skill helps the agent do.
+---
+
+# Example Skill
+
+## When to use
+
+Use this skill when the developer asks for this workflow.
+
+## Instructions
+
+Follow the repository conventions.
+
+## Output
+
+Return clear, actionable results.
