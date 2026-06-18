@@ -36,5 +36,6 @@ invariants (see `CLAUDE.md` → "Do not accidentally break").
 - MCP config projection (project skills/config into MCP server definitions).
 - More agent target adapters (community-requested tools).
 - Skill schema versioning and migrations (so v1 can evolve safely).
+- Add adapter-version tracking and unsupported-adapter-version drift detection.
 - Init templates by ecosystem (language/framework-specific starter skills).
 - A proper documentation site.

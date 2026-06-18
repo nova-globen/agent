@@ -88,7 +88,7 @@ Actual paths must be configurable in `.agent/agent.yaml`.
 
 ## Drift Detection
 
-`agent status` must detect missing projections, outdated projections, manually edited generated projections, missing canonical skills, invalid config, missing lockfile entries, and unsupported adapter versions.
+`agent status` detects missing projections, outdated projections, manually edited generated projections, missing canonical skills / no skills, invalid config, missing lockfile entries, and orphaned lockfile entries.
 
 For CI usage:
 

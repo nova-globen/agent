@@ -16,7 +16,8 @@ Compact handoff for AI sessions. Pair with `.ai-agent/NEXT_STEPS.md` and
   (`src/AgentSync.GitAgent`, delegates to `AgentSync.Cli.CliRunner`).
 - **Commands implemented:** `init`, `sync`, `status`, `diff`, `validate`, `doctor`,
   `install-hooks` — all available via both `agent` and `git agent`.
-- **Tests:** ~192 (Core + CLI) passing; `dotnet build -c Release` clean.
+- **Tests:** Core and CLI test suites passing as of v0.1.0-alpha.1; run `dotnet test`
+  for the current count. `dotnet build -c Release` clean.
 - **Release automation:** `.github/workflows/release.yml` (tag `v*.*.*`) publishes
   self-contained binaries for linux-x64/arm64, osx-x64/arm64, win-x64, plus
   `checksums.txt`; `scripts/install.sh` and `scripts/install.ps1` install from releases.
