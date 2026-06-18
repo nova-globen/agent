@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using AgentSync.Core;
 using AgentSync.Core.Configuration;
+using AgentSync.Core.Projections;
 
 namespace AgentSync.Cli;
 
@@ -54,6 +55,7 @@ public sealed class CliRunner
             "--help" or "-h" or "help" => RunHelp(),
             "init" => RunInit(rest),
             "status" => RunStatus(rest),
+            "sync" => RunSync(rest),
             "validate" => RunValidate(rest),
             "doctor" => RunDoctor(rest),
             _ => UnknownCommand(command),
@@ -268,6 +270,127 @@ public sealed class CliRunner
         }
 
         return report.AllOk ? ExitCodes.Success : ExitCodes.EnvironmentProblem;
+    }
+
+    // --- sync -----------------------------------------------------------------
+
+    private int RunSync(string[] args)
+    {
+        var force = false;
+        var check = false;
+        var json = false;
+        foreach (var arg in args)
+        {
+            switch (arg)
+            {
+                case "--force":
+                    force = true;
+                    break;
+                case "--check":
+                    check = true;
+                    break;
+                case "--write":
+                    check = false;
+                    break;
+                case "--json":
+                    json = true;
+                    break;
+                default:
+                    return UnknownOption("sync", arg);
+            }
+        }
+
+        var root = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
+        var report = new SyncService(root).Run(force, dryRun: check);
+
+        if (json)
+        {
+            WriteSyncJson(report);
+        }
+        else
+        {
+            WriteSyncHuman(report, check);
+        }
+
+        if (!report.ConfigValid)
+        {
+            return ExitCodes.DriftOrValidationFailed;
+        }
+
+        // In check mode, pending changes or manual edits are a non-zero (drift) result.
+        if (check && (report.AnyChanges || report.AnyManualEdits))
+        {
+            return ExitCodes.DriftOrValidationFailed;
+        }
+
+        // In write mode, manual edits we refused to overwrite are a problem.
+        if (!check && report.AnyManualEdits)
+        {
+            return ExitCodes.DriftOrValidationFailed;
+        }
+
+        return ExitCodes.Success;
+    }
+
+    private void WriteSyncHuman(SyncReport report, bool check)
+    {
+        _out.WriteLine(check ? "Agent Sync sync (check)" : "Agent Sync sync");
+        _out.WriteLine();
+
+        if (!report.ConfigValid)
+        {
+            foreach (var m in report.Validation.Messages.Where(m => m.Severity == ValidationSeverity.Error))
+            {
+                _out.WriteLine($"  [ERROR] {m.Message}");
+            }
+            _out.WriteLine();
+            _out.WriteLine("Cannot sync: configuration is invalid. Run 'agent validate'.");
+            return;
+        }
+
+        if (report.Outcomes.Count == 0)
+        {
+            _out.WriteLine("No projections configured.");
+            return;
+        }
+
+        foreach (var o in report.Outcomes)
+        {
+            var verb = o.Change switch
+            {
+                ProjectionChange.Created => check ? "would create" : "created",
+                ProjectionChange.Updated => check ? "would update" : "updated",
+                ProjectionChange.SkippedManualEdit => "manual edit (skipped)",
+                _ => "up to date",
+            };
+            _out.WriteLine($"  {verb,-22} {o.Projection.RelativePath} ({o.Projection.TargetId})");
+        }
+
+        if (report.AnyManualEdits)
+        {
+            _out.WriteLine();
+            _out.WriteLine("Some projections were manually edited and left untouched. Use --force to overwrite.");
+        }
+    }
+
+    private void WriteSyncJson(SyncReport report)
+    {
+        var payload = new
+        {
+            configValid = report.ConfigValid,
+            dryRun = report.DryRun,
+            anyChanges = report.AnyChanges,
+            anyManualEdits = report.AnyManualEdits,
+            outcomes = report.Outcomes.Select(o => new
+            {
+                skill = o.Projection.SkillId,
+                target = o.Projection.TargetId,
+                path = o.Projection.RelativePath,
+                change = o.Change.ToString(),
+                manualEdit = o.ManualEditDetected,
+            }),
+        };
+        _out.WriteLine(JsonSerializer.Serialize(payload, JsonOptions));
     }
 
     // --- validate -------------------------------------------------------------

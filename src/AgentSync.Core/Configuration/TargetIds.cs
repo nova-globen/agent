@@ -14,7 +14,8 @@ public static class TargetIds
     public const string OpenAiSkill = "openai_skill";
     public const string ClaudeSkill = "claude_skill";
 
-    public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.Ordinal)
+    /// <summary>All known targets in a stable, deterministic order.</summary>
+    public static readonly IReadOnlyList<string> Ordered = new[]
     {
         AgentsMd,
         ClaudeMd,
@@ -24,6 +25,8 @@ public static class TargetIds
         OpenAiSkill,
         ClaudeSkill,
     };
+
+    public static readonly IReadOnlySet<string> All = new HashSet<string>(Ordered, StringComparer.Ordinal);
 
     public static bool IsKnown(string id) => All.Contains(id);
 }

@@ -22,4 +22,8 @@
     <ProjectReference Include="..\..\src\AgentSync.Core\AgentSync.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="Golden\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
