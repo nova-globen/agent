@@ -18,14 +18,21 @@ coverage*.xml
 .DS_Store
 Thumbs.db
 
-# Release artifacts (produced by the release workflow / local publish)
+# Release artifacts (produced by the release workflow / local publish).
+# Only the release output directories are ignored, so archives/checksums there are
+# excluded without globally ignoring every *.zip/*.tar.gz elsewhere in the repo.
 artifacts/
 dist/
 release/
 staging/
-*.tar.gz
-*.zip
-checksums.txt
+artifacts/**/*.tar.gz
+artifacts/**/*.zip
+dist/**/*.tar.gz
+dist/**/*.zip
+release/**/*.tar.gz
+release/**/*.zip
+dist/checksums.txt
+release/checksums.txt
 
 # Agent session data (local only)
 .ai-agent/sessions/

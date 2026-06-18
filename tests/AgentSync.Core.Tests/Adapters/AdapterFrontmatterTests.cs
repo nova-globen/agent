@@ -69,6 +69,23 @@ public sealed class AdapterFrontmatterTests
         Assert.Equal("false", map["alwaysApply"]?.ToString());
     }
 
+    [Fact]
+    public void GeneratedFrontmatter_WithColonHashQuotesNewline_ParsesWithYamlDotNet()
+    {
+        // A single value exercising all four hazardous characters at once.
+        const string name = "Name: with \"colon\" # and\nnewline";
+        const string description = "Desc: has \"quotes\" # hash\nsecond line";
+        var skill = SkillWith(name, description);
+
+        var skillFolder = ParseFrontmatter(new SkillFolderAdapter(TargetIds.ClaudeSkill).Render(skill));
+        Assert.Equal(name, skillFolder["name"]);
+        Assert.Equal(description, skillFolder["description"]);
+
+        var cursor = ParseFrontmatter(new CursorAdapter().Render(skill));
+        Assert.Equal(description, cursor["description"]);
+        Assert.Equal("false", cursor["alwaysApply"]?.ToString());
+    }
+
     [Theory]
     [InlineData("Plain Value", "Plain Value")]            // safe → unquoted
     [InlineData("has: colon", "\"has: colon\"")]          // quoted

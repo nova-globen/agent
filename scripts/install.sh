@@ -26,6 +26,7 @@ need curl
 need tar
 need uname
 need mktemp
+need install
 
 # Detect OS.
 os_raw="$(uname -s)"
