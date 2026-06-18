@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using AgentSync.Core;
+using AgentSync.Core.Configuration;
 
 namespace AgentSync.Cli;
 
@@ -53,6 +54,7 @@ public sealed class CliRunner
             "--help" or "-h" or "help" => RunHelp(),
             "init" => RunInit(rest),
             "status" => RunStatus(rest),
+            "validate" => RunValidate(rest),
             "doctor" => RunDoctor(rest),
             _ => UnknownCommand(command),
         };
@@ -268,6 +270,73 @@ public sealed class CliRunner
         return report.AllOk ? ExitCodes.Success : ExitCodes.EnvironmentProblem;
     }
 
+    // --- validate -------------------------------------------------------------
+
+    private int RunValidate(string[] args)
+    {
+        var json = false;
+        foreach (var arg in args)
+        {
+            switch (arg)
+            {
+                case "--json":
+                    json = true;
+                    break;
+                default:
+                    return UnknownOption("validate", arg);
+            }
+        }
+
+        var root = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
+        var workspace = WorkspaceLoader.Load(root);
+        var messages = workspace.Validation.Messages;
+
+        if (json)
+        {
+            var payload = new
+            {
+                valid = workspace.IsValid,
+                skills = workspace.Skills.Count,
+                messages = messages.Select(m => new
+                {
+                    code = m.Code,
+                    severity = m.Severity.ToString().ToLowerInvariant(),
+                    message = m.Message,
+                    source = m.Source,
+                }),
+            };
+            _out.WriteLine(JsonSerializer.Serialize(payload, JsonOptions));
+        }
+        else
+        {
+            _out.WriteLine("Agent Sync validate");
+            _out.WriteLine();
+            _out.WriteLine($"Skills: {workspace.Skills.Count}");
+            _out.WriteLine();
+
+            if (messages.Count == 0)
+            {
+                _out.WriteLine("Configuration and skills are valid.");
+            }
+            else
+            {
+                foreach (var m in messages)
+                {
+                    var marker = m.Severity == ValidationSeverity.Error ? "ERROR" : "WARN";
+                    var where = string.IsNullOrEmpty(m.Source) ? "" : $"{m.Source}: ";
+                    _out.WriteLine($"  [{marker}] {where}{m.Message}");
+                }
+
+                _out.WriteLine();
+                _out.WriteLine(workspace.IsValid
+                    ? "Valid (with warnings)."
+                    : "Validation failed.");
+            }
+        }
+
+        return workspace.IsValid ? ExitCodes.Success : ExitCodes.DriftOrValidationFailed;
+    }
+
     // --- helpers --------------------------------------------------------------
 
     private int UnknownOption(string command, string option)
@@ -287,6 +356,7 @@ public sealed class CliRunner
         _out.WriteLine("Commands:");
         _out.WriteLine("  init                Scaffold .agent/ and .githooks/ (use --force to overwrite).");
         _out.WriteLine("  status              Report Agent Sync state (--json, --fail-on-drift, --ci).");
+        _out.WriteLine("  validate            Validate config and skills (--json).");
         _out.WriteLine("  doctor              Diagnose Git repo, PATH, hooks, and config (--json).");
         _out.WriteLine();
         _out.WriteLine("Global:");
