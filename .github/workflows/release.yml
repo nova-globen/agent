@@ -1,0 +1,148 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag to build (e.g. v0.1.0). Used for manual test runs."
+        required: false
+        default: "v0.0.0-dev"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Determine version
+        id: version
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_REF_TYPE:-}" = "tag" ]; then
+            tag="${GITHUB_REF_NAME}"
+          else
+            tag="${{ github.event.inputs.version }}"
+          fi
+          # Strip a leading 'v' for the numeric .NET version; keep the tag for names.
+          version="${tag#v}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Building $tag (version $version)"
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test --configuration Release --no-build
+
+      - name: Publish artifacts
+        id: publish
+        run: |
+          set -euo pipefail
+          tag="${{ steps.version.outputs.tag }}"
+          version="${{ steps.version.outputs.version }}"
+          runtimes="linux-x64 linux-arm64 osx-x64 osx-arm64 win-x64"
+          mkdir -p dist staging
+
+          for rid in $runtimes; do
+            stage="staging/$rid"
+            rm -rf "$stage"
+            mkdir -p "$stage"
+
+            for proj in src/AgentSync.Cli src/AgentSync.GitAgent; do
+              dotnet publish "$proj" \
+                -c Release \
+                -r "$rid" \
+                --self-contained true \
+                -p:Version="${version}" \
+                -p:PublishSingleFile=true \
+                -p:IncludeNativeLibrariesForSelfExtract=true \
+                -p:DebugType=none \
+                -o "$stage"
+            done
+
+            cp LICENSE README.md "$stage/"
+            # Drop publish metadata that should not ship in the archive.
+            rm -f "$stage"/*.pdb "$stage"/*.xml
+
+            archive="agent-sync-${tag}-${rid}"
+            if [ "$rid" = "win-x64" ]; then
+              ( cd "$stage" && zip -q -r "../../dist/${archive}.zip" agent.exe git-agent.exe LICENSE README.md )
+            else
+              # Ensure the executables are marked executable inside the tarball.
+              chmod +x "$stage/agent" "$stage/git-agent"
+              tar -C "$stage" -czf "dist/${archive}.tar.gz" agent git-agent LICENSE README.md
+            fi
+          done
+
+          ( cd dist && sha256sum * > checksums.txt )
+          echo "Artifacts:"
+          ls -1 dist
+
+      - name: Create GitHub Release
+        if: ${{ github.event_name == 'push' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${{ steps.version.outputs.tag }}"
+          {
+            echo "## Agent Sync ${tag}"
+            echo
+            echo "Self-contained builds of the \`agent\` and \`git-agent\` executables."
+            echo
+            echo "### Install (Linux/macOS)"
+            echo '```bash'
+            echo "curl -fsSL https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.sh | bash -s -- ${tag}"
+            echo '```'
+            echo
+            echo "### Install (Windows PowerShell)"
+            echo '```powershell'
+            echo "irm https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.ps1 | iex"
+            echo '```'
+            echo
+            echo "### Assets"
+            for f in dist/agent-sync-*; do echo "- \`$(basename "$f")\`"; done
+            echo "- \`checksums.txt\`"
+            echo
+            echo "### Verify checksums"
+            echo '```bash'
+            echo "sha256sum -c checksums.txt"
+            echo '```'
+            echo
+            echo "See the [installation section of the README](https://github.com/nova-globen/agent#installation) for manual install and build-from-source instructions."
+          } > release-notes.md
+
+          gh release create "$tag" \
+            dist/agent-sync-*.tar.gz \
+            dist/agent-sync-*.zip \
+            dist/checksums.txt \
+            --title "Agent Sync ${tag}" \
+            --notes-file release-notes.md
+
+      - name: Upload workflow artifacts (manual runs)
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-sync-${{ steps.version.outputs.tag }}
+          path: dist/*

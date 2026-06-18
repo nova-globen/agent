@@ -46,15 +46,83 @@ to clobber your hand-written prose:
 A hand-edited section is detected (its content no longer matches the hash) and is
 left untouched unless you pass `--force`.
 
-## Install
+## Installation
 
-Agent Sync currently targets **.NET 10** and ships two entry points: `agent` and the
-Git extension `git-agent` (so `git agent <command>` works).
+Agent Sync ships two entry points: `agent` and the Git extension `git-agent` (so
+`git agent <command>` works). Releases include self-contained builds, so no .NET
+runtime is required to run them.
+
+### Recommended: install from GitHub Releases
+
+Linux/macOS:
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.sh | bash
+```
+
+Install a specific version:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.sh | bash -s -- v0.1.0
+```
+
+By default this installs into `$HOME/.agent-sync/bin`. Override with
+`AGENT_SYNC_INSTALL_DIR=/custom/bin`. The script prints how to add the directory to
+your `PATH` if needed.
+
+Windows PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.ps1 | iex
+```
+
+Prefer to review the script before running it (recommended):
+
+```powershell
+irm https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.ps1 -OutFile install.ps1
+# review install.ps1, then:
+.\install.ps1            # or: .\install.ps1 -Version v0.1.0
+```
+
+Override the Windows install directory with `$env:AGENT_SYNC_INSTALL_DIR`. Installs
+into `%USERPROFILE%\.agent-sync\bin` by default.
+
+### Manual install
+
+1. Go to the [GitHub Releases](https://github.com/nova-globen/agent/releases) page.
+2. Download the archive for your OS/architecture, e.g.
+   `agent-sync-v0.1.0-linux-x64.tar.gz` (or `...-win-x64.zip` on Windows).
+3. Extract it.
+4. Put both `agent` and `git-agent` (or `agent.exe` and `git-agent.exe`) on your `PATH`.
+5. Verify:
+
+   ```bash
+   agent --version
+   git agent --version
+   ```
+
+Optionally verify the download against `checksums.txt`:
+
+```bash
+sha256sum -c checksums.txt
+```
+
+### Build from source
+
+Agent Sync currently targets **.NET 10** (`net10.0`).
+
+```bash
+git clone https://github.com/nova-globen/agent.git
+cd agent
 dotnet build --configuration Release
-# the build produces 'agent' and 'git-agent' binaries under
-# src/AgentSync.Cli/bin/Release and src/AgentSync.GitAgent/bin/Release
+dotnet test
+```
+
+The build produces the executables at:
+
+```text
+src/AgentSync.Cli/bin/Release/net10.0/agent
+src/AgentSync.GitAgent/bin/Release/net10.0/git-agent
 ```
 
 Put both on your `PATH` to use `agent ...` and `git agent ...`.

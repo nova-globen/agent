@@ -17,3 +17,15 @@ coverage*.xml
 # OS
 .DS_Store
 Thumbs.db
+
+# Release artifacts (produced by the release workflow / local publish)
+artifacts/
+dist/
+release/
+staging/
+*.tar.gz
+*.zip
+checksums.txt
+
+# Agent session data (local only)
+.ai-agent/sessions/
