@@ -277,6 +277,7 @@ agent diff            # show canonical-to-projection differences
 agent validate        # validate config and skills
 agent import skill    # import an existing SKILL.md / skill folder into .agent/skills
 agent skill           # manage canonical skills: add | edit | delete | list | show
+agent target          # manage projection targets: add | edit | delete | list | show
 agent install-hooks   # configure core.hooksPath and make hooks executable
 agent doctor          # diagnose Git repo, PATH, hooks, and config
 
@@ -353,6 +354,25 @@ Every mutation re-validates the workspace and reminds you to run `agent sync`.
 `skill delete` refuses to remove a skill that has already been projected unless you pass
 `--force`; generated sections in shared files are left in place for you to clean up or
 re-sync.
+
+## Managing targets
+
+Configure which projection targets are enabled and where they live, without editing
+`.agent/agent.yaml` by hand:
+
+```bash
+agent target list                       # or: agent targets
+agent target show cursor                # add --json for machine-readable output
+agent target add gemini --path .gemini/GEMINI.md
+agent target edit cursor --path .cursor/rules --enabled true
+agent target delete gemini              # refused if projections exist; preview with --dry-run
+agent target delete gemini --force      # also prunes the target's lockfile entries
+```
+
+Target ids must be known adapter ids (`agents_md`, `claude_md`, `cursor`, `copilot`,
+`gemini`, `openai_skill`, `claude_skill`) and paths must stay inside the repository.
+Edits round-trip `agent.yaml` through the parser, so hand-written comments in that file
+are not preserved.
 
 ## Drift detection
 

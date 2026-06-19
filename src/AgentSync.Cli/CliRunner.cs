@@ -64,6 +64,8 @@ public sealed class CliRunner
             "import" => RunImport(rest),
             "skill" => RunSkill(rest),
             "skills" => RunSkillList(rest),
+            "target" => RunTarget(rest),
+            "targets" => RunTargetList(rest),
             "install-hooks" => RunInstallHooks(rest),
             "doctor" => RunDoctor(rest),
             _ => UnknownCommand(command),
@@ -1049,6 +1051,248 @@ public sealed class CliRunner
         _ => ExitCodes.DriftOrValidationFailed,
     };
 
+    // --- target CRUD ----------------------------------------------------------
+
+    private int RunTarget(string[] args)
+    {
+        if (args.Length == 0)
+        {
+            _err.WriteLine("error: 'target' requires a subcommand: add | edit | delete | list | show.");
+            return ExitCodes.InvalidUsage;
+        }
+
+        var sub = args[0];
+        var rest = args.Skip(1).ToArray();
+        return sub switch
+        {
+            "add" => RunTargetAdd(rest),
+            "edit" => RunTargetEdit(rest),
+            "delete" => RunTargetDelete(rest),
+            "list" => RunTargetList(rest),
+            "show" => RunTargetShow(rest),
+            _ => UnknownSubcommand("target", sub),
+        };
+    }
+
+    private int RunTargetAdd(string[] args)
+    {
+        string? id = null;
+        string? path = null;
+        var enabled = true;
+
+        for (var i = 0; i < args.Length; i++)
+        {
+            var arg = args[i];
+            switch (arg)
+            {
+                case "--path":
+                    if (!TryValue(args, ref i, "--path", out path)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--enabled":
+                    if (!TryValue(args, ref i, "--enabled", out var e)) return ExitCodes.InvalidUsage;
+                    if (!TryParseBool(e!, out enabled)) return ExitCodes.InvalidUsage;
+                    break;
+                default:
+                    if (arg.StartsWith('-')) return UnknownOption("target add", arg);
+                    if (id is not null) { _err.WriteLine($"error: unexpected argument '{arg}'."); return ExitCodes.InvalidUsage; }
+                    id = arg;
+                    break;
+            }
+        }
+
+        if (id is null)
+        {
+            _err.WriteLine("error: 'target add' requires a <target-id>.");
+            return ExitCodes.InvalidUsage;
+        }
+
+        var root = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
+        return RenderAuthoring($"target add {id}", new TargetWriter(root).Add(id, path, enabled));
+    }
+
+    private int RunTargetEdit(string[] args)
+    {
+        string? id = null;
+        string? path = null;
+        bool? enabled = null;
+
+        for (var i = 0; i < args.Length; i++)
+        {
+            var arg = args[i];
+            switch (arg)
+            {
+                case "--path":
+                    if (!TryValue(args, ref i, "--path", out path)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--enabled":
+                    if (!TryValue(args, ref i, "--enabled", out var e)) return ExitCodes.InvalidUsage;
+                    if (!TryParseBool(e!, out var b)) return ExitCodes.InvalidUsage;
+                    enabled = b;
+                    break;
+                default:
+                    if (arg.StartsWith('-')) return UnknownOption("target edit", arg);
+                    if (id is not null) { _err.WriteLine($"error: unexpected argument '{arg}'."); return ExitCodes.InvalidUsage; }
+                    id = arg;
+                    break;
+            }
+        }
+
+        if (id is null)
+        {
+            _err.WriteLine("error: 'target edit' requires a <target-id>.");
+            return ExitCodes.InvalidUsage;
+        }
+
+        var root = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
+        return RenderAuthoring($"target edit {id}", new TargetWriter(root).Edit(id, path, enabled));
+    }
+
+    private int RunTargetDelete(string[] args)
+    {
+        string? id = null;
+        var force = false;
+        var dryRun = false;
+
+        for (var i = 0; i < args.Length; i++)
+        {
+            var arg = args[i];
+            switch (arg)
+            {
+                case "--force":
+                    force = true;
+                    break;
+                case "--dry-run":
+                    dryRun = true;
+                    break;
+                default:
+                    if (arg.StartsWith('-')) return UnknownOption("target delete", arg);
+                    if (id is not null) { _err.WriteLine($"error: unexpected argument '{arg}'."); return ExitCodes.InvalidUsage; }
+                    id = arg;
+                    break;
+            }
+        }
+
+        if (id is null)
+        {
+            _err.WriteLine("error: 'target delete' requires a <target-id>.");
+            return ExitCodes.InvalidUsage;
+        }
+
+        var root = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
+        return RenderAuthoring($"target delete {id}", new TargetWriter(root).Delete(id, force, dryRun));
+    }
+
+    private int RunTargetList(string[] args)
+    {
+        var json = false;
+        foreach (var arg in args)
+        {
+            if (arg == "--json") json = true;
+            else return UnknownOption("target list", arg);
+        }
+
+        var root = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
+        var workspace = WorkspaceLoader.Load(root);
+        var config = workspace.Config;
+
+        if (json)
+        {
+            var payload = TargetIds.Ordered.Select(id =>
+            {
+                var setting = config is not null && config.Targets.TryGetValue(id, out var found) ? found : null;
+                return new
+                {
+                    id,
+                    configured = setting is not null,
+                    enabled = setting?.Enabled ?? false,
+                    path = setting?.Path,
+                };
+            });
+            _out.WriteLine(JsonSerializer.Serialize(payload, JsonOptions));
+        }
+        else
+        {
+            _out.WriteLine("Agent Sync targets");
+            _out.WriteLine();
+            foreach (var id in TargetIds.Ordered)
+            {
+                var setting = config is not null && config.Targets.TryGetValue(id, out var found) ? found : null;
+                var state = setting is null ? "not configured"
+                    : setting.Enabled ? $"enabled  -> {setting.Path}"
+                    : "disabled";
+                _out.WriteLine($"  {id,-14} {state}");
+            }
+        }
+
+        return ExitCodes.Success;
+    }
+
+    private int RunTargetShow(string[] args)
+    {
+        string? id = null;
+        var json = false;
+        foreach (var arg in args)
+        {
+            if (arg == "--json") json = true;
+            else if (arg.StartsWith('-')) return UnknownOption("target show", arg);
+            else if (id is null) id = arg;
+            else { _err.WriteLine($"error: unexpected argument '{arg}'."); return ExitCodes.InvalidUsage; }
+        }
+
+        if (id is null)
+        {
+            _err.WriteLine("error: 'target show' requires a <target-id>.");
+            return ExitCodes.InvalidUsage;
+        }
+
+        if (!TargetIds.IsKnown(id))
+        {
+            _err.WriteLine($"error: unknown target '{id}'.");
+            return ExitCodes.InvalidUsage;
+        }
+
+        var root = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
+        var workspace = WorkspaceLoader.Load(root);
+        var setting = workspace.Config is not null && workspace.Config.Targets.TryGetValue(id, out var found) ? found : null;
+
+        if (json)
+        {
+            _out.WriteLine(JsonSerializer.Serialize(new
+            {
+                id,
+                configured = setting is not null,
+                enabled = setting?.Enabled ?? false,
+                path = setting?.Path,
+            }, JsonOptions));
+        }
+        else
+        {
+            _out.WriteLine($"Target: {id}");
+            _out.WriteLine($"  configured: {(setting is not null ? "yes" : "no")}");
+            _out.WriteLine($"  enabled:    {setting?.Enabled ?? false}");
+            _out.WriteLine($"  path:       {setting?.Path ?? "(none)"}");
+        }
+
+        return ExitCodes.Success;
+    }
+
+    private bool TryParseBool(string value, out bool result)
+    {
+        switch (value.ToLowerInvariant())
+        {
+            case "true":
+                result = true;
+                return true;
+            case "false":
+                result = false;
+                return true;
+            default:
+                result = false;
+                _err.WriteLine($"error: expected true or false, got '{value}'.");
+                return false;
+        }
+    }
+
     // --- helpers --------------------------------------------------------------
 
     private bool TryValue(string[] args, ref int i, string option, out string? value)
@@ -1094,6 +1338,7 @@ public sealed class CliRunner
         _out.WriteLine("  validate            Validate config and skills (--json).");
         _out.WriteLine("  import skill        Import a SKILL.md/skill folder into .agent/skills (--id, --name, --target, --dry-run, --force, --json).");
         _out.WriteLine("  skill               Manage canonical skills: add | edit | delete | list | show.");
+        _out.WriteLine("  target              Manage projection targets: add | edit | delete | list | show.");
         _out.WriteLine("  install-hooks       Configure core.hooksPath and make hooks executable.");
         _out.WriteLine("  doctor              Diagnose Git repo, PATH, hooks, and config (--json).");
         _out.WriteLine();
