@@ -1154,7 +1154,8 @@ public sealed class CliRunner
         {
             _out.WriteLine("Agent Sync UI is not installed.");
             _out.WriteLine("The headless CLI is working.");
-            _out.WriteLine("Install the Agent Sync UI package or download the local web UI from GitHub Releases.");
+            _out.WriteLine("Download agent-sync-ui (the optional local web UI) from GitHub Releases and put it on PATH:");
+            _out.WriteLine("  https://github.com/nova-globen/agent/releases");
             return ExitCodes.EnvironmentProblem;
         }
 

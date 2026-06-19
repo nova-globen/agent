@@ -25,8 +25,11 @@ compatible and the GUI optional (the headless CLI must not depend on the UI).
   drive `AgentSyncApp` via view-models (`AgentSync.Ui.Web/ViewModels/*`); file-writing
   actions use explicit submit buttons and destructive ones (delete, force sync, install
   hooks) require a second confirmation step (Milestone UI-2 done).
-- **Separate GUI packaging** — `agent-sync-ui` ships as its own release artifacts,
-  independent of the CLI / `dotnet tool` release (Milestone UI-3, not yet done).
+- **Separate GUI packaging** — `agent-sync-ui` ships as its own
+  `agent-sync-ui-<tag>-<rid>` release artifacts via a separate `release-ui` job
+  (`needs: release`), independent of the CLI / `dotnet tool` release; UI checksums are
+  merged into `checksums.txt` and a UI build failure never blocks the CLI release
+  (Milestone UI-3 done).
 
 > The earlier MAUI/OpenMaui GUI direction was dropped in favour of the localhost web UI;
 > the MAUI project and the OpenMaui spike doc were removed.

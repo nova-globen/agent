@@ -179,20 +179,27 @@ After a successful non-dry-run mutation the screen refreshes its view of reposit
 
 ## Packaging
 
+Packaging is implemented (Milestone UI-3):
+
 - The **CLI release remains independent** and GUI-free; CLI artifact names
   (`agent-sync-<tag>-<rid>.{tar.gz,zip}` + `checksums.txt`) are unchanged.
 - The **`dotnet tool` packages stay CLI-only.**
-- `agent-sync-ui` ships **separately**, as a self-contained executable per OS/runtime,
-  as an optional archive in GitHub Releases, and possibly a future package-manager
-  package. Proposed (future) names:
+- `agent-sync-ui` ships **separately** from a dedicated **`release-ui` job** in
+  `release.yml` (`needs: release`), as a self-contained, single-file executable per RID,
+  archived **with its `wwwroot`/static-web-assets manifest** plus LICENSE/README:
 
   ```text
-  agent-sync-ui-<version>-<rid>.tar.gz
-  agent-sync-ui-<version>-win-x64.zip
+  agent-sync-ui-<tag>-<rid>.tar.gz
+  agent-sync-ui-<tag>-win-x64.zip
   ```
 
-- `agent ui` tells users how to install the GUI when it is missing.
-- A GUI release must not break or block the CLI release.
+  The UI checksums are merged into the release's `checksums.txt` (CLI entries preserved).
+- Because `release-ui` runs only after the CLI release job succeeds, a UI build failure is
+  visible but **cannot block or alter** the CLI release / NuGet packages.
+- `agent ui` tells users how to install the GUI when it is missing (download
+  `agent-sync-ui` from GitHub Releases and put it on `PATH`).
+- `scripts/release-smoke.sh` validates the UI publish shape, invalid-args usage, and a
+  live `/healthz`/`401` check — headlessly, no browser.
 
 ## Implementation status
 
@@ -206,9 +213,13 @@ After a successful non-dry-run mutation the screen refreshes its view of reposit
 - **`AgentSync.Ui.Web` — FluentUI Blazor host (Interactive Server), UI-2 wired.** Binds
   `127.0.0.1`, strict option parsing (`WebOptions.TryParse`), token middleware that
   exchanges the token into an HttpOnly cookie and strips it from the URL, unauthenticated
-  `/healthz`; all screens drive `AgentSyncApp` with confirmation before destructive
-  actions. Builds with the standard SDK (no special workloads).
-- **Remaining:** add separate GUI release artifacts (Milestone UI-3 in `ROADMAP.md`).
+  `/healthz`; screens drive `AgentSyncApp` via view-models (file-writing actions explicit;
+  destructive ones confirmed). Builds with the standard SDK (no special workloads).
+- **Packaging (UI-3) — implemented.** A separate `release-ui` job publishes
+  `agent-sync-ui-<tag>-<rid>` archives independently of the CLI release; checksums merged;
+  CLI / `dotnet tool` release unchanged; release smoke covers it headlessly.
+- **Remaining:** nothing for UI-1…UI-3. Future polish only (e.g. package-manager
+  distribution of the UI), tracked in `NEXT_STEPS.md`.
 
 ## Tests
 

@@ -126,6 +126,11 @@ jobs:
             for f in dist/agent-sync-*; do echo "- \`$(basename "$f")\`"; done
             echo "- \`checksums.txt\`"
             echo
+            echo "### Optional local web UI"
+            echo "The optional \`agent-sync-ui\` (launched by \`agent ui\`) ships as separate,"
+            echo "self-contained \`agent-sync-ui-${tag}-<rid>\` archives, attached to this release"
+            echo "by the separate UI packaging job. The CLI does not require it."
+            echo
             echo "### Verify checksums"
             echo '```bash'
             echo "sha256sum -c checksums.txt"
@@ -232,3 +237,110 @@ jobs:
           path: |
             dist/*
             nupkgs/*.nupkg
+
+  # The optional local web UI (`agent-sync-ui`) ships as SEPARATE artifacts. This job runs
+  # only after the CLI release job succeeds (`needs: release`), so a UI build failure can
+  # never block or alter the already-published CLI release / NuGet packages — it just shows
+  # up as a failed (visible, not silent) optional job. The CLI artifacts and the `dotnet
+  # tool` packages stay UI-free.
+  release-ui:
+    name: Release UI (optional, separate)
+    needs: release
+    runs-on: ubuntu-latest
+
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Determine version
+        id: version
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_REF_TYPE:-}" = "tag" ]; then
+            tag="${GITHUB_REF_NAME}"
+          else
+            tag="${{ github.event.inputs.version }}"
+          fi
+          version="${tag#v}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Building UI for $tag (version $version)"
+
+      - name: Publish UI artifacts
+        run: |
+          set -euo pipefail
+          tag="${{ steps.version.outputs.tag }}"
+          version="${{ steps.version.outputs.version }}"
+          runtimes="linux-x64 linux-arm64 osx-x64 osx-arm64 win-x64"
+          mkdir -p dist-ui staging-ui
+
+          for rid in $runtimes; do
+            stage="staging-ui/$rid"
+            rm -rf "$stage"
+            mkdir -p "$stage"
+
+            # Self-contained, same convention as the CLI artifacts. Blazor static web
+            # assets (wwwroot + the *.staticwebassets.endpoints.json manifest) are emitted
+            # alongside the single-file host and must travel with it, so the whole publish
+            # directory is archived.
+            dotnet publish src/AgentSync.Ui.Web/AgentSync.Ui.Web.csproj \
+              -c Release \
+              -r "$rid" \
+              --self-contained true \
+              -p:Version="${version}" \
+              -p:PublishSingleFile=true \
+              -p:IncludeNativeLibrariesForSelfExtract=true \
+              -p:DebugType=none \
+              -o "$stage"
+
+            cp LICENSE README.md "$stage/"
+            rm -f "$stage"/*.pdb "$stage"/*.xml
+
+            archive="agent-sync-ui-${tag}-${rid}"
+            if [ "$rid" = "win-x64" ]; then
+              ( cd "$stage" && zip -q -r "../../dist-ui/${archive}.zip" . )
+            else
+              chmod +x "$stage/agent-sync-ui"
+              tar -C "$stage" -czf "dist-ui/${archive}.tar.gz" .
+            fi
+          done
+
+          echo "UI artifacts:"
+          ls -1 dist-ui
+
+      - name: Attach UI assets to the release
+        if: ${{ github.event_name == 'push' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${{ steps.version.outputs.tag }}"
+
+          # Merge the UI checksums into the release's existing checksums.txt without
+          # disturbing the CLI entries (idempotent: drop any prior UI lines first).
+          gh release download "$tag" -p checksums.txt -O checksums.txt || : > checksums.txt
+          grep -v 'agent-sync-ui-' checksums.txt > checksums.merged || :
+          ( cd dist-ui && sha256sum agent-sync-ui-* ) >> checksums.merged
+          mv checksums.merged checksums.txt
+
+          gh release upload "$tag" \
+            dist-ui/agent-sync-ui-*.tar.gz \
+            dist-ui/agent-sync-ui-*.zip \
+            checksums.txt \
+            --clobber
+
+      - name: Upload UI workflow artifacts (manual runs)
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-sync-ui-${{ steps.version.outputs.tag }}
+          path: dist-ui/*

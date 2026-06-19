@@ -29,14 +29,17 @@ Compact handoff for AI sessions. Pair with `.ai-agent/NEXT_STEPS.md` and
   the URL on first use. All screens are wired with mutations; file-writing actions use
   explicit submit buttons and destructive ones (delete, force sync, install hooks) require
   a second confirmation. The CLI never references the UI/web/FluentUI assemblies
-  (test-guarded). **Separate GUI release packaging is not wired yet** (Milestone UI-3).
+  (test-guarded). **Separate GUI release packaging is implemented** (Milestone UI-3) — see
+  "Release automation".
 - **Tests:** all suites pass; run `dotnet test` for the current count.
-  `dotnet build -c Release` clean.
+  `dotnet build -c Release` clean. `scripts/release-smoke.sh` also validates UI packaging
+  headlessly (publish shape, invalid-args usage, live `/healthz` + `401`).
 - **Release automation:** `.github/workflows/release.yml` (tag `v*.*.*`) publishes
   self-contained CLI binaries for linux-x64/arm64, osx-x64/arm64, win-x64, plus
   `checksums.txt`; `scripts/install.sh` and `scripts/install.ps1` install from releases.
-  The `dotnet tool` packages stay CLI-only. (Separate `agent-sync-ui` artifacts are
-  Milestone UI-3, not yet wired.)
+  The `dotnet tool` packages stay CLI-only. A **separate `release-ui` job** (`needs:
+  release`) publishes the optional `agent-sync-ui-<tag>-<rid>` archives and merges their
+  checksums in; it can fail independently without affecting the CLI release.
 - **CI:** `.github/workflows/agent-sync-check.yml` builds/tests on push (`main`/`master`)
   and PRs, and runs an end-to-end drift check in a throwaway repo.
 - This repo does **not** dogfood Agent Sync on its own hand-authored `AGENTS.md` /

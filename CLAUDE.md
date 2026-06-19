@@ -59,11 +59,11 @@ Specs live under `.ai-agent/features/` (`IMPORTS.md`, `CRUD_COMMANDS.md`,
   confirmation step. Page interaction logic lives in `AgentSync.Ui.Web/ViewModels/*`
   (unit-tested); no repository logic lives in Razor components. Builds with the standard
   SDK (no special workloads).
-
-**In progress / not shipped:**
-
-- **GUI packaging** — `agent-sync-ui` does not yet ship as separate release artifacts
-  (Milestone UI-3).
+- **GUI packaging (Milestone UI-3)** — a separate `release-ui` job in `release.yml`
+  (`needs: release`) publishes self-contained `agent-sync-ui-<tag>-<rid>` archives (with
+  their `wwwroot`/static-web-assets manifest) independently of the CLI release, merging
+  the UI checksums into `checksums.txt`. A UI build failure is visible but never blocks the
+  CLI release; the CLI artifact names and CLI-only `dotnet tool` packages are unchanged.
 
 The earlier MAUI/OpenMaui direction was **dropped**; the localhost web UI replaces it.
 Keep existing CLI behavior backward compatible; keep the CLI/`git-agent`/hooks/CI/

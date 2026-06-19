@@ -401,7 +401,34 @@ are not preserved.
 Agent Sync is a CLI first. An optional GUI is a **separate, independent product**: a
 local web UI you run on your own machine. The CLI, the Git extension, the Git hooks, CI
 usage, the container images, and the `dotnet tool` packages never depend on it or on any
-UI assemblies — the CLI still works fully if the UI is not installed.
+UI assemblies — the CLI still works fully if the UI is not installed. Installing the CLI
+(GitHub Releases or `dotnet tool`) **never** installs the UI.
+
+### Installing the optional UI
+
+The UI ships as its own self-contained `agent-sync-ui-<version>-<rid>` archives on the
+[GitHub Releases](https://github.com/nova-globen/agent/releases) page, separate from the
+CLI archives. Download the one for your OS/architecture, extract it, and put
+`agent-sync-ui` on your `PATH` (or point `AGENT_SYNC_UI` at the executable):
+
+Linux/macOS:
+
+```bash
+# Download e.g. agent-sync-ui-v0.1.0-alpha.4-linux-x64.tar.gz from GitHub Releases, then:
+tar -xzf agent-sync-ui-*-linux-x64.tar.gz -C ~/.agent-sync/bin   # a dir on your PATH
+agent ui
+```
+
+Windows PowerShell:
+
+```powershell
+# Download agent-sync-ui-<version>-win-x64.zip from GitHub Releases, extract it, and put
+# agent-sync-ui.exe on your PATH, then:
+agent ui
+```
+
+Keep the whole extracted folder together — the executable ships with its static web
+assets (`wwwroot` and a manifest) alongside it.
 
 ```bash
 agent ui    # locates and launches the separately installed web UI (agent-sync-ui)
@@ -421,9 +448,11 @@ without affecting the CLI.
 The UI is a Blazor web app built with Microsoft FluentUI Blazor components. It binds to
 **`127.0.0.1`** only (never `0.0.0.0`), uses a random port, and gates every request with
 the session token (valid for the lifetime of the UI process). It is a local, single-repo
-tool only — it makes no claim to remote/server/team use. It ships as **separate release
-artifacts** on its own cadence — the CLI release and the `dotnet tool` packages never
-include it. See `.ai-agent/features/UI_LOCALHOST_BLAZOR.md` and `RELEASE_CHECKLIST.md`.
+tool only — it makes no claim to remote/server/team use. The release workflow builds it in
+a **separate, optional job** that publishes the `agent-sync-ui-<version>-<rid>` archives
+independently of the CLI artifacts — the CLI release and the `dotnet tool` packages never
+include it, and a UI build failure never blocks a CLI release. See
+`.ai-agent/features/UI_LOCALHOST_BLAZOR.md` and `RELEASE_CHECKLIST.md`.
 
 The screens drive the same services as the CLI through `AgentSync.Ui.Abstractions`
 (`AgentSyncApp`) — no repository logic lives in the Razor components. File-writing

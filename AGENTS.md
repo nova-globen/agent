@@ -112,7 +112,7 @@ The tool must not overwrite user-authored content outside managed sections.
 
 ---
 
-## Major feature wave (import + CRUD shipped; UI in progress)
+## Major feature wave (import + CRUD + UI shipped)
 
 Specs live under `.ai-agent/features/`. Status:
 
@@ -139,8 +139,9 @@ Specs live under `.ai-agent/features/`. Status:
   use explicit submit buttons and destructive ones (delete skill/target, force sync,
   install hooks) require a second confirmation step. Page interaction lives in
   `AgentSync.Ui.Web/ViewModels/*` (testable); no repository logic lives in Razor
-  components. Separate GUI packaging remains (`features/UI_LOCALHOST_BLAZOR.md`,
-  Milestone UI-3).
+  components. **GUI packaging is implemented**: a separate `release-ui` job publishes
+  `agent-sync-ui-<tag>-<rid>` archives independently of the CLI release
+  (`features/UI_LOCALHOST_BLAZOR.md`, Milestone UI-3).
 
 > The earlier .NET MAUI / OpenMaui GUI direction was **dropped** in favour of the
 > localhost web UI; the MAUI project and the OpenMaui spike doc were removed.

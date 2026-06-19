@@ -22,6 +22,18 @@ checksums.txt
 Each archive contains `agent`, `git-agent`, `LICENSE`, and `README.md`
 (`agent.exe` / `git-agent.exe` on Windows).
 
+The optional local web UI ships as **separate** assets on the same release (built by the
+`release-ui` job; see "GUI packaging" below), and its checksums are merged into the same
+`checksums.txt`:
+
+```text
+agent-sync-ui-<tag>-linux-x64.tar.gz
+agent-sync-ui-<tag>-linux-arm64.tar.gz
+agent-sync-ui-<tag>-osx-x64.tar.gz
+agent-sync-ui-<tag>-osx-arm64.tar.gz
+agent-sync-ui-<tag>-win-x64.zip
+```
+
 ## NuGet (.NET tool) packages
 
 The release also publishes two .NET tool packages to NuGet.org:
@@ -54,33 +66,47 @@ The local web UI (`AgentSync.Ui.Web`, executable `agent-sync-ui`) is a **separat
 optional product** and is **not** part of the CLI release described above:
 
 - The CLI release (binaries above) and the `AgentSync` / `AgentSync.Git` `dotnet tool`
-  packages stay **UI-free** — they must publish without any web-UI dependency.
-  `AgentSync.Cli` references neither `AgentSync.Ui.Web` nor FluentUI.
-- A CLI release must be able to ship **without** any GUI artifact. The UI ships on its
-  own cadence as separate, self-contained downloads, built with the standard SDK (no
-  special workloads), per runtime — for example:
-
-  ```bash
-  dotnet publish src/AgentSync.Ui.Web -c Release -r linux-x64  --self-contained true
-  dotnet publish src/AgentSync.Ui.Web -c Release -r osx-arm64  --self-contained true
-  dotnet publish src/AgentSync.Ui.Web -c Release -r win-x64    --self-contained true
-  ```
-
-  Proposed (future) artifact names, kept distinct from the CLI archives:
+  packages stay **UI-free** — they publish without any web-UI dependency. `AgentSync.Cli`
+  references neither `AgentSync.Ui.Web` nor FluentUI.
+- The UI ships as separate, self-contained, single-file downloads per runtime, with the
+  same RID set and tag as the CLI, but **distinct** artifact names:
 
   ```text
-  agent-sync-ui-<version>-<rid>.tar.gz
-  agent-sync-ui-<version>-win-x64.zip
+  agent-sync-ui-<tag>-linux-x64.tar.gz
+  agent-sync-ui-<tag>-linux-arm64.tar.gz
+  agent-sync-ui-<tag>-osx-x64.tar.gz
+  agent-sync-ui-<tag>-osx-arm64.tar.gz
+  agent-sync-ui-<tag>-win-x64.zip
   ```
 
+  Each archive contains the `agent-sync-ui` executable **plus its static web assets**
+  (`wwwroot/` and the `*.staticwebassets.endpoints.json` manifest), `LICENSE`, and
+  `README.md`. Keep the folder together; the executable needs those assets at runtime.
+
+- This is wired in `release.yml` as a **separate `release-ui` job** that `needs: release`.
+  Because it runs only after the CLI release job succeeds, a UI build failure shows up as a
+  failed (visible, never silent) optional job but **cannot block or alter** the
+  already-published CLI release / NuGet packages. The job appends the UI checksums into the
+  release's `checksums.txt` without disturbing the CLI entries.
+
 - `agent ui` discovers an installed `agent-sync-ui` on `PATH` (or via `AGENT_SYNC_UI`),
-  picks a free port, generates a session token, and launches it bound to `127.0.0.1`;
-  it does not bundle the UI. Install docs must keep the CLI install and the UI install
-  clearly separate.
-- The GUI release pipeline is intentionally **not** wired into `release.yml` yet
-  (Milestone UI-3), so the CLI release remains reliable and never depends on the UI. Add
-  it as a separate workflow/job (allowed to fail independently) so a UI build can never
-  block a CLI release.
+  picks a free port, generates a per-launch session token, polls `/healthz`, and launches
+  it bound to `127.0.0.1`; it does not bundle the UI. Install docs keep the CLI install and
+  the UI install clearly separate.
+
+### Verifying a release
+
+- [ ] CLI artifacts present: `agent-sync-<tag>-<rid>.{tar.gz,zip}` for every RID.
+- [ ] UI artifacts present: `agent-sync-ui-<tag>-<rid>.{tar.gz,zip}` for every RID.
+- [ ] `checksums.txt` lists **both** the CLI and UI artifacts; `sha256sum -c checksums.txt`
+      passes after downloading them all.
+- [ ] The `AgentSync` / `AgentSync.Git` `dotnet tool` packages contain **no** UI assemblies.
+- [ ] With `agent-sync-ui` on `PATH`, `agent ui` launches it; `agent ui --no-open` prints
+      the loopback token URL.
+- [ ] `GET /healthz` returns `200 ok`; `GET /` without a token returns `401`; a valid
+      `?token=` request 302-redirects to the same path with the token stripped from the URL.
+- [ ] No browser is required in CI (`scripts/release-smoke.sh` covers the UI checks
+      headlessly).
 
 ## Process
 
