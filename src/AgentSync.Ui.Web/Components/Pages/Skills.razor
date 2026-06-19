@@ -1,0 +1,35 @@
+@page "/skills"
+@inject AgentSyncApp App
+
+<PageTitle>Agent Sync — Skills</PageTitle>
+
+<FluentStack Orientation="Orientation.Vertical" VerticalGap="8">
+    <FluentLabel Typo="Typography.H3">Skills</FluentLabel>
+
+    @if (_skills is null || _skills.Count == 0)
+    {
+        <FluentLabel>No skills defined.</FluentLabel>
+    }
+    else
+    {
+        @foreach (var skill in _skills)
+        {
+            <FluentCard>
+                <FluentLabel><strong>@skill.Id</strong> — @skill.Manifest.Name</FluentLabel>
+                <FluentLabel>@skill.Manifest.Description</FluentLabel>
+                <FluentLabel>Targets: @string.Join(", ", skill.EnabledTargets)</FluentLabel>
+            </FluentCard>
+        }
+    }
+
+    <FluentLabel Typo="Typography.Body">
+        Add/edit/delete (placeholder): wired to App.AddSkill / EditSkill / DeleteSkill with
+        an explicit confirmation before any destructive action.
+    </FluentLabel>
+</FluentStack>
+
+@code {
+    private IReadOnlyList<Skill>? _skills;
+
+    protected override void OnInitialized() => _skills = App.ListSkills();
+}

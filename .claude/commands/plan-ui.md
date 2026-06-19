@@ -1,18 +1,22 @@
-Plan the Agent Sync GUI (`agent ui`) — do not implement yet; produce a plan first.
+Plan/extend the Agent Sync GUI (`agent ui`) — produce a plan before implementing.
 
-1. Read `.ai-agent/features/UI_MAUI_BLAZOR.md` and `.ai-agent/features/ROADMAP.md`
-   (Milestones F/F2/G/H).
-2. Honor the locked decision (UI_MAUI_BLAZOR.md → "Decision"):
-   - CLI and GUI are **separate**; the GUI is **optional**.
-   - **Do not add MAUI/OpenMaui references to `AgentSync.Cli`** (or `AgentSync.GitAgent`,
-     hooks, CI, containers, `dotnet tool` packages).
-   - `agent ui` is a **launcher/discovery command** that starts an external
-     `agent-sync-ui` executable and fails gracefully when it is absent.
-   - GUI operations call shared services (`AgentSync.Core` / `AgentSync.Ui.Abstractions`);
+1. Read `.ai-agent/features/UI_LOCALHOST_BLAZOR.md` and `.ai-agent/features/ROADMAP.md`
+   (Milestones UI-1 … UI-3).
+2. Honor the decision (UI_LOCALHOST_BLAZOR.md → "Decision"):
+   - The GUI is a **separate, optional localhost Blazor Web UI** (`agent-sync-ui`) built
+     with **Microsoft FluentUI Blazor components**. It is **not** MAUI/OpenMaui — that
+     direction was dropped.
+   - The CLI/Git extension stay **headless**; hooks, CI, containers, and `dotnet tool`
+     packages stay GUI-free. **Do not** make `AgentSync.Cli` reference `AgentSync.Ui.Web`
+     or FluentUI.
+   - `agent ui` is a **launcher/discovery command** that starts `agent-sync-ui` with
+     `--repo`/`--port`/`--token`, opens the loopback URL, and fails gracefully (exit 3)
+     when the GUI is absent.
+   - The host binds **`127.0.0.1`** with a **random port** and a **short-lived session
+     token**; never bind `0.0.0.0`. Destructive actions need explicit confirmation.
+   - UI operations call shared services (`AgentSync.Ui.Abstractions` → `AgentSync.Core`);
      **no repository mutation logic in Razor components**.
-   - Official GUI = MAUI Blazor Hybrid for **Windows/macOS**.
-   - **Treat OpenMaui Linux support as a spike, not committed product behavior.**
-3. Produce a concrete implementation plan (project split, launch contract, build
-   isolation) **before writing any code**. Do not relitigate the locked decision.
-4. Planning only — do not scaffold the UI projects unless explicitly asked. No
-   AI/Claude trailers in commits.
+3. Produce a concrete implementation plan (which screens/mutations to wire, confirmation
+   flow, packaging) **before writing code**. Do not relitigate the decision.
+4. Keep the headless build/test green and free of UI dependencies. No AI/Claude trailers
+   in commits.

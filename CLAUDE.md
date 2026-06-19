@@ -28,7 +28,7 @@ Repository: https://github.com/nova-globen/agent
 ## Planned major features
 
 Specs live under `.ai-agent/features/` (`IMPORTS.md`, `CRUD_COMMANDS.md`,
-`UI_MAUI_BLAZOR.md`, `OPENMAUI_LINUX_SPIKE.md`, `ROADMAP.md`).
+`UI_LOCALHOST_BLAZOR.md`, `ROADMAP.md`).
 
 **Implemented:**
 
@@ -39,24 +39,28 @@ Specs live under `.ai-agent/features/` (`IMPORTS.md`, `CRUD_COMMANDS.md`,
 - **Skill/target CRUD** — `agent skill add/edit/delete/list/show` (+ `skills`) and
   `agent target add/edit/delete/list/show` (+ `targets`). Logic in
   `src/AgentSync.Core/Authoring/`.
-- **`agent ui`** — a **launcher/discovery command only**: `AgentSync.Core.UiLauncher`
-  locates and starts a separately installed GUI executable (`agent-sync-ui`) and fails
-  gracefully (exit 3) when absent. `AgentSync.Cli` has **no** compile-time MAUI/OpenMaui
-  reference (guarded by a test).
+- **`agent ui`** — a **launcher/discovery command only**: `AgentSync.Core.UiLauncher` /
+  `UiSession` locate and start a separately installed `agent-sync-ui` with
+  `--repo`/`--port`/`--token`, print the loopback URL, and exit 3 with install guidance
+  when absent. `AgentSync.Cli` has **no** compile-time UI reference (guarded by a test).
 - **`AgentSync.Ui.Abstractions`** — UI-independent application service (`AgentSyncApp`)
-  over Core; the GUI binds to it (no repository logic in Razor components).
+  over Core; the UI binds to it (no repository logic in Razor components).
+- **`AgentSync.Ui.Web`** — a minimal **localhost Blazor Web UI** host (executable
+  `agent-sync-ui`) using **Microsoft FluentUI Blazor components**. Binds `127.0.0.1`,
+  random port, short-lived session token (`SessionGate`/`TokenCheck`). Dashboard +
+  read-only screens wired; builds with the standard SDK (no special workloads).
 
-**Partially done / not shipped:**
+**In progress / not shipped:**
 
-- **GUI app** — `src/AgentSync.Ui.Maui` is a MAUI Blazor Hybrid skeleton **excluded from
-  `AgentSync.slnx`**, so the headless build/test never need the MAUI workload. MVP
-  capabilities are covered + tested via `AgentSyncApp`; the rendered MAUI MVP and
-  packaging still need a MAUI-workload build (could not be built/verified in CI here).
-- **Linux GUI** — **deferred**, experimental OpenMaui spike only; do not claim Linux GUI
-  support until a tested build/package/runtime exists (`OPENMAUI_LINUX_SPIKE.md`).
+- **UI feature wiring** — mutations (skill/target CRUD, imports, sync) are tested on
+  `AgentSyncApp` but not yet wired into the web UI with confirmations; some screens are
+  placeholders (Milestone UI-2).
+- **GUI packaging** — `agent-sync-ui` does not yet ship as separate release artifacts
+  (Milestone UI-3).
 
+The earlier MAUI/OpenMaui direction was **dropped**; the localhost web UI replaces it.
 Keep existing CLI behavior backward compatible; keep the CLI/`git-agent`/hooks/CI/
-`dotnet tool`/containers free of any GUI (MAUI/OpenMaui) dependency.
+`dotnet tool`/containers free of any UI (web host / FluentUI) dependency.
 
 ## CLI entry points
 
@@ -79,7 +83,7 @@ agent import skill    # import a SKILL.md / skill folder into .agent/skills
 agent import agent    # import an existing instruction file/folder into canonical skills
 agent skill ...       # add | edit | delete | list | show  (alias: agent skills)
 agent target ...      # add | edit | delete | list | show  (alias: agent targets)
-agent ui              # launch the optional, separately-installed desktop GUI
+agent ui              # launch the optional, separately-installed local web UI (agent-sync-ui)
 ```
 
 ## Core product invariant

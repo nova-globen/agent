@@ -112,7 +112,7 @@ The tool must not overwrite user-authored content outside managed sections.
 
 ---
 
-## Major feature wave (mostly implemented; GUI rendering pending)
+## Major feature wave (import + CRUD shipped; UI in progress)
 
 Specs live under `.ai-agent/features/`. Status:
 
@@ -123,34 +123,36 @@ Specs live under `.ai-agent/features/`. Status:
 - **CRUD — implemented.** `agent skill add/edit/delete/list/show` (+ `skills`) and
   `agent target add/edit/delete/list/show` (+ `targets`). Logic in
   `src/AgentSync.Core/Authoring/` (`features/CRUD_COMMANDS.md`).
-- **`agent ui` — implemented as a launcher.** It starts a separately installed GUI
-  executable (`agent-sync-ui`) via `AgentSync.Core.UiLauncher` and fails gracefully when
-  absent. No compile-time MAUI/OpenMaui reference from the CLI (guarded by a test).
-- **GUI app — skeleton + tested service layer.** `AgentSync.Ui.Abstractions`
-  (`AgentSyncApp`) is implemented and tested; `AgentSync.Ui.Maui` is a MAUI Blazor Hybrid
-  skeleton **excluded from `AgentSync.slnx`**. The rendered MVP + packaging need a
-  MAUI-workload build (`features/UI_MAUI_BLAZOR.md`).
-- **Linux GUI — deferred**, experimental OpenMaui spike only; do not claim support until
-  tested and packaged (`features/OPENMAUI_LINUX_SPIKE.md`).
+- **`agent ui` — implemented as a launcher.** It starts a separately installed
+  `agent-sync-ui` via `AgentSync.Core.UiLauncher` / `UiSession`
+  (`--repo`/`--port`/`--token`), prints the loopback URL, and exits 3 with install
+  guidance when absent. No compile-time UI reference from the CLI (guarded by a test).
+- **Localhost web UI — minimal host implemented.** `AgentSync.Ui.Abstractions`
+  (`AgentSyncApp`) is the UI-independent service layer; `AgentSync.Ui.Web` (executable
+  `agent-sync-ui`) is an ASP.NET Core + Blazor host using **Microsoft FluentUI Blazor
+  components**, bound to `127.0.0.1` with a random port and short-lived session token.
+  Dashboard + read-only screens are wired; mutation wiring + packaging remain
+  (`features/UI_LOCALHOST_BLAZOR.md`, Milestones UI-2/UI-3).
+
+> The earlier .NET MAUI / OpenMaui GUI direction was **dropped** in favour of the
+> localhost web UI; the MAUI project and the OpenMaui spike doc were removed.
 
 Guidance for continuing this wave:
 
-- Work **milestone-based** — see `features/ROADMAP.md`. Land one milestone at a time
-  with tests.
+- Work **milestone-based** — see `features/ROADMAP.md` (Milestones UI-1 … UI-3). Land
+  one milestone at a time with tests.
 - **Keep existing CLI behavior backward compatible.** These are additive commands;
   don't change current command semantics or exit codes.
-- **Future UI work must be milestone-based** (see `features/ROADMAP.md`, Milestones
-  F/F2/G/H) — land one milestone at a time with tests.
-- **The UI must not make the CLI depend on MAUI/OpenMaui.** The headless stack —
-  `AgentSync.Cli`, `AgentSync.Core`, `AgentSync.GitAgent`, Git hooks, CI, the
+- **The UI must not make the CLI depend on the web host / FluentUI.** The headless
+  stack — `AgentSync.Cli`, `AgentSync.Core`, `AgentSync.GitAgent`, Git hooks, CI, the
   `dotnet tool` packages, and container images — must build, test, run, and ship without
-  any GUI workload and must **never** reference MAUI, OpenMaui, or desktop-UI packages.
-- **`agent ui` should launch an external GUI executable** (`agent-sync-ui`) and fail
-  gracefully with install guidance when it is absent — it is a launcher, not a UI host.
-- **Linux GUI is experimental** pending the OpenMaui (`open-maui/maui-linux`)
-  evaluation; do not claim Linux GUI support until it is tested and packaged.
-- **The CLI remains the primary supported interface** on every platform; the GUI is an
-  optional convenience layer on top.
+  any UI dependency and must **never** reference `AgentSync.Ui.Web` or FluentUI.
+- **`agent ui` is a launcher**: it starts the external `agent-sync-ui` and fails
+  gracefully with install guidance when absent.
+- **The web UI binds `127.0.0.1`** with a random port and a short-lived session token;
+  never `0.0.0.0`. Destructive actions require explicit confirmation; no repository
+  mutation logic in Razor components.
+- **The CLI remains the primary supported interface**; the GUI is an optional layer.
 - Preserve the core invariants below and in `CLAUDE.md` (path safety, marker handling,
   manual-edit protection, `net10.0`, `git-agent` delegation).
 
@@ -174,15 +176,17 @@ and `CLAUDE.md` here are hand-authored, not generated).
 - `src/AgentSync.Core` — all domain logic (config, skills, projections, adapters,
   drift, services). Keep behavior here. Includes `Import/` (skill + agent import) and
   `Authoring/` (skill + target CRUD writers), and `UiLauncher` (discovers/launches the
-  external GUI; no MAUI reference).
+  external `agent-sync-ui`; no UI reference), and `UiSession` (free port + session token).
 - `src/AgentSync.Cli` — the `agent` binary (`AssemblyName=agent`); logic lives in the
   public `CliRunner` so tests drive it without spawning a process.
 - `src/AgentSync.GitAgent` — the `git-agent` binary (`AssemblyName=git-agent`); its
   `Program` just calls `new CliRunner().Run(args)`, so `git agent <cmd>` == `agent <cmd>`.
 - `src/AgentSync.Ui.Abstractions` — UI-independent application service (`AgentSyncApp`)
-  over Core, for the GUI; no MAUI dependency; in `AgentSync.slnx` and unit-tested.
-- `src/AgentSync.Ui.Maui` — MAUI Blazor Hybrid GUI skeleton (executable `agent-sync-ui`),
-  **excluded from `AgentSync.slnx`** (build separately; needs the MAUI workload).
+  over Core, for the UI; no web/UI dependency; in `AgentSync.slnx` and unit-tested.
+- `src/AgentSync.Ui.Web` — localhost Blazor Web UI host (executable `agent-sync-ui`)
+  using Microsoft FluentUI Blazor components; binds `127.0.0.1` with a session token;
+  references `AgentSync.Ui.Abstractions`/`AgentSync.Core` only. In `AgentSync.slnx`;
+  builds with the standard SDK (no special workloads). The CLI never references it.
 
 ### Key design points
 

@@ -1,20 +1,21 @@
 # Feature roadmap: imports, CRUD, and UI
 
-> **Status: planned, not implemented.** Milestone-based plan for the next feature wave.
-> Implement one milestone at a time, add tests, keep CLI behavior backward compatible,
-> and keep the GUI optional (headless CLI must never depend on MAUI). Detailed specs:
+> Milestone-based plan for the feature wave. Implement one milestone at a time, add
+> tests, keep CLI behavior backward compatible, and keep the GUI optional (the headless
+> CLI must never depend on the UI). Detailed specs:
 > [`IMPORTS.md`](IMPORTS.md), [`CRUD_COMMANDS.md`](CRUD_COMMANDS.md),
-> [`UI_MAUI_BLAZOR.md`](UI_MAUI_BLAZOR.md).
+> [`UI_LOCALHOST_BLAZOR.md`](UI_LOCALHOST_BLAZOR.md). Import (A–C) and CRUD (D–E) are
+> implemented; the UI is a separate **localhost Blazor Web UI** (milestones UI-1 … UI-3).
 
-Dependency order: **A → B → C** (import), **D → E** (CRUD), **F → F2 → G → H** (UI).
-CRUD (D/E) and import (A–C) are independent and can interleave; the UI (F–H) should
-come after the import + CRUD services exist, since the GUI reuses them. F2 (OpenMaui
-Linux spike) is experimental and never blocks the others or any CLI release.
+Dependency order: **A → B → C** (import), **D → E** (CRUD), **UI-1 → UI-2 → UI-3** (UI).
+CRUD and import are independent and can interleave; the UI comes after the import + CRUD
+services exist, since it reuses them via `AgentSync.Ui.Abstractions`.
 
 Guardrails for every milestone (from `CLAUDE.md` → "Do not accidentally break"):
 keep `net10.0`; keep `git-agent` delegating to `CliRunner`; keep `sync` write-by-default;
 don't weaken `RepoPath`; don't overwrite manual edits without `--force`; keep release
-artifact names stable; adapters/importers stay deterministic.
+artifact names stable; adapters/importers stay deterministic; keep the CLI/`git-agent`/
+hooks/CI/`dotnet tool`/containers free of any UI dependency.
 
 ---
 
@@ -97,96 +98,47 @@ artifact names stable; adapters/importers stay deterministic.
   `status` reports the now-orphaned projections clearly.
 - **Risks:** YAML round-trip dropping comments; orphaned generated files after disable.
 
-## Milestone F — UI architecture spike
+## Milestone UI-1 — Localhost UI host  ✅ implemented
 
-> Architecture is already decided (see `UI_MAUI_BLAZOR.md` → "Decision"): separate
-> optional GUI; CLI/git-agent/hooks/CI/`dotnet tool`/containers never depend on
-> MAUI/OpenMaui; Windows+macOS official, Linux experimental and non-blocking. This
-> milestone *proves out* the architecture and the primary (Windows/macOS) path.
-
-- **Goal:** prove the GUI architecture without tying the CLI to GUI dependencies.
+- **Goal:** a separate, optional localhost Blazor Web UI host driven by the launcher.
 - **Scope:**
-  - Decide the exact project split (`AgentSync.Ui.Maui`, optional
-    `AgentSync.Ui.Abstractions`).
-  - Create the shared UI-independent app-service / view-model boundary if needed.
-  - Confirm the `agent ui` launcher strategy (locate + launch external executable).
-  - Confirm the GUI executable name: **`agent-sync-ui`**.
-  - Confirm the Windows/macOS MAUI Blazor Hybrid path.
-  - Confirm `AgentSync.Cli` does **not** reference MAUI/OpenMaui.
-- **Files likely touched:** new `src/AgentSync.Ui.Maui/` prototype; optional
-  `src/AgentSync.Ui.Abstractions/`; solution wiring (`AgentSync.slnx` + a solution
-  filter that excludes UI from the default CI build).
-- **Commands added:** none yet (or a stub `agent ui` that reports "GUI not installed"
-  and exits 3).
-- **Acceptance criteria:**
-  - A written architecture decision.
-  - The CLI remains buildable/testable without MAUI workloads.
-  - The UI project can be excluded from the normal headless build/test path.
-  - The `agent ui` launch contract is documented.
-- **Risks:** MAUI workload friction in CI; accidental coupling of Core/CLI to MAUI.
+  - Add `AgentSync.Ui.Web` (ASP.NET Core + Blazor, FluentUI components) →
+    executable `agent-sync-ui`.
+  - Bind to `127.0.0.1`; accept `--repo`, `--port`, `--token` (optional `--no-open`).
+  - Session-token middleware (`SessionGate` / `TokenCheck`); deny without a valid token.
+  - Show the dashboard + read-only status/skills/targets through `AgentSyncApp`.
+  - `agent ui` launcher: free port + token + repo → `agent-sync-ui`; print loopback URL;
+    exit-3 with install guidance when absent. No CLI compile-time UI reference.
+- **Files touched:** `src/AgentSync.Ui.Web/`, `src/AgentSync.Core/UiLauncher.cs`
+  (port/token/`UiSession`), `src/AgentSync.Cli/CliRunner.cs`, `AgentSync.slnx`, tests.
+- **Acceptance criteria (met):** headless build/test green with **no** GUI workload;
+  the CLI references neither `AgentSync.Ui.Web` nor FluentUI (test-guarded); host binds
+  loopback and rejects missing/invalid tokens; launcher passes repo/port/token.
 
-## Milestone F2 — OpenMaui Linux spike (experimental)
+## Milestone UI-2 — UI feature wiring
 
-- **Goal:** evaluate **`open-maui/maui-linux`** for Linux GUI support. Experimental;
-  must not gate any CLI release.
-- **Scope:**
-  - Create a minimal experimental project or branch if appropriate
-    (`src/AgentSync.Ui.Linux.OpenMaui/`), kept out of the default build path.
-  - Test the OpenMaui template/package.
-  - Test X11/Wayland basics.
-  - Test whether Blazor Hybrid (or an equivalent Razor-based UI) is realistic.
-  - Test calling `AgentSync.Core`.
-  - Document build / runtime / packaging constraints (per the "OpenMaui Linux
-    evaluation" section of `UI_MAUI_BLAZOR.md`).
-- **Commands added:** none (Linux `agent ui` keeps returning the graceful
-  experimental/exit-3 message until this proves out).
-- **Acceptance criteria:**
-  - A clear recommendation: **accept** experimental Linux GUI, **defer**, or **reject**.
-  - No production CLI dependency on OpenMaui.
-  - No release-workflow dependency on OpenMaui.
-  - No Linux GUI support claim unless build **and** runtime are proven.
-- **Risks:** OpenMaui maturity/instability; packaging across distros; never claim Linux
-  support without a tested artifact; do not let this block CLI releases.
+- **Goal:** wire the remaining screens to `AgentSyncApp` with confirmations.
+- **Scope:** Skills CRUD; Imports (dry-run preview then confirm); Targets CRUD;
+  Status/drift "fix" actions; Diff viewer; Sync / validate / hooks. Destructive actions
+  require explicit confirmation; no repository logic in Razor components.
+- **Acceptance criteria:** each action goes through `AgentSyncApp`; mutations confirmed;
+  headless build/test stays green; logic tested at the `AgentSyncApp` layer.
 
-## Milestone G — GUI MVP
+## Milestone UI-3 — GUI packaging
 
-- **Goal:** implement the optional desktop GUI for supported platforms.
-- **Scope:**
-  - Windows/macOS first.
-  - Linux **only if** Milestone F2 accepts OpenMaui as an experimental path.
-  - Screens: Dashboard, Skills, Imports, Targets, Drift/Status, Diff, Hooks/CI,
-    Settings, Logs (wired to Core/CRUD/import services).
-- **Files likely touched:** `src/AgentSync.Ui.Maui/` (Razor pages/components), app
-  services in `AgentSync.Ui.Abstractions`; tests.
-- **Commands added:** `agent ui` launches `agent-sync-ui`; graceful exit-3 when
-  absent/headless.
-- **Acceptance criteria:**
-  - The GUI can open a repo and show status.
-  - The GUI can run safe (read-only) operations through shared services.
-  - The GUI performs mutations only with explicit confirmation.
-  - The CLI remains independent.
-  - The headless build/test remains green without UI workloads.
-- **Risks:** logic leaking into components; blocking the CLI; platform rendering quirks.
+- **Goal:** ship `agent-sync-ui` as **separate** release artifacts.
+- **Scope:** self-contained `agent-sync-ui` per runtime; optional GitHub Release archives
+  (`agent-sync-ui-<version>-<rid>.tar.gz` / `...-win-x64.zip`); `agent ui` install
+  guidance; keep the CLI / `dotnet tool` release independent and unchanged.
+- **Files likely touched:** `.github/workflows/release.yml` (a separate GUI job),
+  `RELEASE_CHECKLIST.md`, `README.md` / install docs.
+- **Acceptance criteria:** the CLI release ships without the GUI; the GUI ships
+  independently; CLI artifact names unchanged; a GUI build never blocks a CLI release.
 
-## Milestone H — GUI release packaging
-
-- **Goal:** decide and implement packaging for the GUI app **separately** from the CLI.
-- **Scope:**
-  - Separate GUI release artifacts.
-  - Keep the CLI / `dotnet tool` release independent.
-  - Optional: `agent ui` points users to the GUI installer.
-  - Linux GUI artifact only if the OpenMaui path is accepted and tested.
-- **Files likely touched:** `.github/workflows/release.yml`, `RELEASE_CHECKLIST.md`,
-  `README.md` / install docs, `docs/PROMOTION.md`.
-- **Acceptance criteria:**
-  - The CLI release can ship **without** the GUI.
-  - The GUI release can ship **independently**.
-  - Install docs clearly distinguish CLI and GUI; CLI artifact names unchanged
-    (`agent-sync-<tag>-<rid>.{tar.gz,zip}` + `checksums.txt`).
-  - Windows/macOS GUI artifacts are official; any Linux GUI artifact is labeled
-    experimental; no official Linux-GUI claim without a tested Linux artifact.
-- **Risks:** MAUI/OpenMaui packaging per platform; release pipeline complexity; keeping
-  the alpha honest about which platforms have an *official* vs *experimental* GUI.
+> **Historical (rejected):** an earlier plan used .NET MAUI Blazor Hybrid (Windows/macOS)
+> plus an experimental OpenMaui Linux spike. That direction was dropped in favour of the
+> single cross-platform localhost web UI above; the MAUI project and OpenMaui spike doc
+> were removed.
 
 ---
 
@@ -196,6 +148,6 @@ artifact names stable; adapters/importers stay deterministic.
 - `agent`, `git-agent`, and `git agent ...` unchanged for existing commands.
 - `RepoPath`, marker handling, and manual-edit protection unchanged or strengthened.
 - The headless stack — CLI, `git-agent`, hooks, CI, `dotnet tool` packages, and
-  container images — builds/tests/runs/ships with no MAUI/OpenMaui dependency.
+  container images — builds/tests/runs/ships with no UI (web host / FluentUI) dependency.
 - Docs (`README.md`, `AGENTS.md`, `CLAUDE.md`, `.ai-agent/*`) updated as each milestone
   lands; alpha positioning kept honest.

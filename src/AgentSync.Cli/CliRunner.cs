@@ -1133,17 +1133,22 @@ public sealed class CliRunner
         {
             _out.WriteLine("Agent Sync UI is not installed.");
             _out.WriteLine("The headless CLI is working.");
-            _out.WriteLine("Install the GUI package or download the desktop app from GitHub Releases.");
+            _out.WriteLine("Install the Agent Sync UI package or download the local web UI from GitHub Releases.");
             return ExitCodes.EnvironmentProblem;
         }
 
-        if (!_uiLauncher.Launch(executable, repoPath))
+        var port = UiSession.FindFreePort();
+        var token = UiSession.NewToken();
+        var url = UiSession.Url(port, token);
+
+        if (!_uiLauncher.Launch(new UiLaunchRequest(executable, repoPath, port, token)))
         {
             _err.WriteLine("error: failed to launch the Agent Sync UI.");
             return ExitCodes.EnvironmentProblem;
         }
 
         _out.WriteLine($"Launching Agent Sync UI for {repoPath}...");
+        _out.WriteLine($"Open {url}");
         return ExitCodes.Success;
     }
 
@@ -1436,7 +1441,7 @@ public sealed class CliRunner
         _out.WriteLine("  import agent        Import an existing instruction file/folder (AGENTS.md, CLAUDE.md, Cursor, ...) (--type, --split, --id, --dry-run, --force, --json).");
         _out.WriteLine("  skill               Manage canonical skills: add | edit | delete | list | show.");
         _out.WriteLine("  target              Manage projection targets: add | edit | delete | list | show.");
-        _out.WriteLine("  ui                  Launch the optional desktop GUI (separate install; CLI stays GUI-free).");
+        _out.WriteLine("  ui                  Launch the optional local web UI (separate install; CLI stays GUI-free).");
         _out.WriteLine("  install-hooks       Configure core.hooksPath and make hooks executable.");
         _out.WriteLine("  doctor              Diagnose Git repo, PATH, hooks, and config (--json).");
         _out.WriteLine();

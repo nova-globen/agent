@@ -15,21 +15,19 @@ public sealed class UiCommandTests
             _launchSucceeds = launchSucceeds;
         }
 
-        public string? LaunchedExe { get; private set; }
-        public string? LaunchedRepo { get; private set; }
+        public UiLaunchRequest? Request { get; private set; }
 
         public string? Locate() => _path;
 
-        public bool Launch(string executablePath, string repoPath)
+        public bool Launch(UiLaunchRequest request)
         {
-            LaunchedExe = executablePath;
-            LaunchedRepo = repoPath;
+            Request = request;
             return _launchSucceeds;
         }
     }
 
     [Fact]
-    public void Ui_NotInstalled_ReportsCleanlyAndExits3()
+    public void Ui_NotInstalled_ReportsLocalWebUiAndExits3()
     {
         using var h = new CliTestHarness();
         h.MakeGitRepo();
@@ -40,10 +38,11 @@ public sealed class UiCommandTests
         Assert.Equal(ExitCodes.EnvironmentProblem, result.ExitCode);
         Assert.Contains("Agent Sync UI is not installed.", result.StdOut);
         Assert.Contains("The headless CLI is working.", result.StdOut);
+        Assert.Contains("local web UI", result.StdOut);
     }
 
     [Fact]
-    public void Ui_Installed_LaunchesAndPassesRepoPath()
+    public void Ui_Installed_LaunchesWithRepoPortToken()
     {
         using var h = new CliTestHarness();
         h.MakeGitRepo();
@@ -52,9 +51,37 @@ public sealed class UiCommandTests
         var result = h.InvokeWithUi(launcher, "ui");
 
         Assert.Equal(ExitCodes.Success, result.ExitCode);
+        Assert.NotNull(launcher.Request);
+        Assert.Equal("/opt/agent-sync-ui", launcher.Request!.ExecutablePath);
+        Assert.Equal(h.WorkingDirectory, launcher.Request.RepoPath);
+        Assert.True(launcher.Request.Port > 0);
+        Assert.False(string.IsNullOrWhiteSpace(launcher.Request.Token));
+    }
+
+    [Fact]
+    public void Ui_PrintsLoopbackUrlWithPortAndToken()
+    {
+        using var h = new CliTestHarness();
+        h.MakeGitRepo();
+        var launcher = new FakeUiLauncher(path: "/opt/agent-sync-ui");
+
+        var result = h.InvokeWithUi(launcher, "ui");
+
+        var req = launcher.Request!;
+        Assert.Contains($"http://127.0.0.1:{req.Port}/?token={req.Token}", result.StdOut);
         Assert.Contains("Launching Agent Sync UI", result.StdOut);
-        Assert.Equal("/opt/agent-sync-ui", launcher.LaunchedExe);
-        Assert.Equal(h.WorkingDirectory, launcher.LaunchedRepo);
+    }
+
+    [Fact]
+    public void Ui_DoesNotLeakTokenToStdErr()
+    {
+        using var h = new CliTestHarness();
+        h.MakeGitRepo();
+        var launcher = new FakeUiLauncher(path: "/opt/agent-sync-ui");
+
+        var result = h.InvokeWithUi(launcher, "ui");
+
+        Assert.DoesNotContain(launcher.Request!.Token, result.StdErr);
     }
 
     [Fact]
@@ -79,7 +106,7 @@ public sealed class UiCommandTests
 
         Assert.Equal(ExitCodes.Success, result.ExitCode);
         Assert.Contains("not inside a Git repository", result.StdOut);
-        Assert.Equal(h.WorkingDirectory, launcher.LaunchedRepo);
+        Assert.Equal(h.WorkingDirectory, launcher.Request!.RepoPath);
     }
 
     [Fact]
@@ -95,7 +122,7 @@ public sealed class UiCommandTests
     }
 
     [Fact]
-    public void Cli_DoesNotReferenceMauiOrOpenMaui()
+    public void Cli_DoesNotReferenceUiHostOrGuiFrameworks()
     {
         foreach (var assembly in new[] { typeof(CliRunner).Assembly, typeof(UiLauncher).Assembly })
         {
@@ -103,7 +130,8 @@ public sealed class UiCommandTests
             {
                 var name = referenced.Name ?? string.Empty;
                 Assert.DoesNotContain("maui", name, StringComparison.OrdinalIgnoreCase);
-                Assert.DoesNotContain("openmaui", name, StringComparison.OrdinalIgnoreCase);
+                Assert.DoesNotContain("fluentui", name, StringComparison.OrdinalIgnoreCase);
+                Assert.DoesNotContain("AgentSync.Ui.Web", name, StringComparison.OrdinalIgnoreCase);
             }
         }
     }

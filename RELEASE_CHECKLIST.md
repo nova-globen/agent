@@ -50,28 +50,37 @@ publishing account must be allowed to register that id).
 
 ## GUI packaging (separate and optional)
 
-The desktop GUI (`AgentSync.Ui.Maui`, executable `agent-sync-ui`) is a **separate,
+The local web UI (`AgentSync.Ui.Web`, executable `agent-sync-ui`) is a **separate,
 optional product** and is **not** part of the CLI release described above:
 
 - The CLI release (binaries above) and the `AgentSync` / `AgentSync.Git` `dotnet tool`
-  packages stay **GUI-free** — they must publish without the MAUI/OpenMaui workload.
-  `AgentSync.Ui.Maui` is excluded from `AgentSync.slnx`, so the standard build/test/pack
-  steps never touch it.
-- A CLI release must be able to ship **without** any GUI artifact. The GUI ships on its
-  own cadence as separate downloads, built on a MAUI-workload runner:
-  - Windows: `dotnet publish src/AgentSync.Ui.Maui -f net10.0-windows10.0.19041.0` →
-    MSIX/unpackaged `agent-sync-ui.exe`.
-  - macOS: `dotnet publish src/AgentSync.Ui.Maui -f net10.0-maccatalyst` → `.app`/`.pkg`.
-  - Linux: **experimental only** via the OpenMaui spike — do not publish or advertise a
-    Linux GUI artifact until the spike is accepted and a tested artifact exists
-    (`.ai-agent/features/OPENMAUI_LINUX_SPIKE.md`).
-- `agent ui` discovers an installed `agent-sync-ui` on `PATH` (or via `AGENT_SYNC_UI`);
-  it does not bundle the GUI. Install docs must keep the CLI install and the GUI install
+  packages stay **UI-free** — they must publish without any web-UI dependency.
+  `AgentSync.Cli` references neither `AgentSync.Ui.Web` nor FluentUI.
+- A CLI release must be able to ship **without** any GUI artifact. The UI ships on its
+  own cadence as separate, self-contained downloads, built with the standard SDK (no
+  special workloads), per runtime — for example:
+
+  ```bash
+  dotnet publish src/AgentSync.Ui.Web -c Release -r linux-x64  --self-contained true
+  dotnet publish src/AgentSync.Ui.Web -c Release -r osx-arm64  --self-contained true
+  dotnet publish src/AgentSync.Ui.Web -c Release -r win-x64    --self-contained true
+  ```
+
+  Proposed (future) artifact names, kept distinct from the CLI archives:
+
+  ```text
+  agent-sync-ui-<version>-<rid>.tar.gz
+  agent-sync-ui-<version>-win-x64.zip
+  ```
+
+- `agent ui` discovers an installed `agent-sync-ui` on `PATH` (or via `AGENT_SYNC_UI`),
+  picks a free port, generates a session token, and launches it bound to `127.0.0.1`;
+  it does not bundle the UI. Install docs must keep the CLI install and the UI install
   clearly separate.
-- The GUI release pipeline is intentionally **not** wired into `release.yml` yet, so the
-  CLI release remains reliable and never depends on a GUI workload. Add it as a separate
-  workflow/job (allowed to fail independently) when the rendered MVP is built and tested
-  on a workload-equipped runner.
+- The GUI release pipeline is intentionally **not** wired into `release.yml` yet
+  (Milestone UI-3), so the CLI release remains reliable and never depends on the UI. Add
+  it as a separate workflow/job (allowed to fail independently) so a UI build can never
+  block a CLI release.
 
 ## Process
 

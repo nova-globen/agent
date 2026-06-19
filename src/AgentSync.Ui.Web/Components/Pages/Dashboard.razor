@@ -1,0 +1,28 @@
+@page "/"
+@inject AgentSyncApp App
+
+<PageTitle>Agent Sync — Dashboard</PageTitle>
+
+<FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
+    <FluentLabel Typo="Typography.H3">Dashboard</FluentLabel>
+
+    <FluentCard>
+        <FluentStack Orientation="Orientation.Vertical" VerticalGap="4">
+            <FluentLabel><strong>Repository:</strong> @_state?.RepoPath</FluentLabel>
+            <FluentLabel><strong>Git repository:</strong> @(_state?.IsGitRepository == true ? "yes" : "no")</FluentLabel>
+            <FluentLabel><strong>Initialized:</strong> @(_state?.Initialized == true ? "yes" : "no")</FluentLabel>
+            <FluentLabel><strong>Skills:</strong> @(_state?.SkillCount)</FluentLabel>
+            <FluentLabel><strong>Drift / problems:</strong> @(_state?.HasProblems == true ? "yes" : "no")</FluentLabel>
+        </FluentStack>
+    </FluentCard>
+
+    <FluentLabel>CI command: <code>@AgentSyncApp.CiCommand</code></FluentLabel>
+</FluentStack>
+
+@code {
+    private RepositoryState? _state;
+
+    // Read-only view of state; mutations happen only via confirmed actions that call the
+    // application service, never inline in markup.
+    protected override void OnInitialized() => _state = App.GetState();
+}

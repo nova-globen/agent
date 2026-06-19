@@ -1,25 +1,33 @@
 using System.Diagnostics;
+using System.Net;
+using System.Net.Sockets;
+using System.Security.Cryptography;
 
 namespace AgentSync.Core;
 
+/// <summary>A request to launch the local web UI: which executable, repo, port, and session token.</summary>
+public sealed record UiLaunchRequest(string ExecutablePath, string RepoPath, int Port, string Token);
+
 /// <summary>
 /// Locates and launches the external Agent Sync GUI executable. The GUI is a separate,
-/// optional product surface: the CLI discovers and starts it by process, and must never
-/// reference the GUI (MAUI/OpenMaui) projects at compile time.
+/// optional product surface — a localhost Blazor web host. The CLI discovers and starts
+/// it by process and must never reference the UI project at compile time.
 /// </summary>
 public interface IUiLauncher
 {
     /// <summary>Returns the path to an installed GUI executable, or <c>null</c> if none is found.</summary>
     string? Locate();
 
-    /// <summary>Starts the GUI executable for <paramref name="repoPath"/>. Returns false on failure.</summary>
-    bool Launch(string executablePath, string repoPath);
+    /// <summary>Starts the GUI executable. Returns false on failure.</summary>
+    bool Launch(UiLaunchRequest request);
 }
 
 /// <summary>
 /// Default <see cref="IUiLauncher"/>: discovers <c>agent-sync-ui</c> via the
 /// <c>AGENT_SYNC_UI</c> override, then next to the running binary, then on <c>PATH</c>,
-/// and launches it with <c>--repo &lt;path&gt;</c>.
+/// and launches it with <c>--repo &lt;path&gt; --port &lt;port&gt; --token &lt;token&gt;</c>.
+/// The launched host is the localhost Blazor web UI; the CLI knows only the executable
+/// name and the launch protocol.
 /// </summary>
 public sealed class UiLauncher : IUiLauncher
 {
@@ -66,13 +74,17 @@ public sealed class UiLauncher : IUiLauncher
         return null;
     }
 
-    public bool Launch(string executablePath, string repoPath)
+    public bool Launch(UiLaunchRequest request)
     {
         try
         {
-            var psi = new ProcessStartInfo(executablePath) { UseShellExecute = false };
+            var psi = new ProcessStartInfo(request.ExecutablePath) { UseShellExecute = false };
             psi.ArgumentList.Add("--repo");
-            psi.ArgumentList.Add(repoPath);
+            psi.ArgumentList.Add(request.RepoPath);
+            psi.ArgumentList.Add("--port");
+            psi.ArgumentList.Add(request.Port.ToString());
+            psi.ArgumentList.Add("--token");
+            psi.ArgumentList.Add(request.Token);
             using var process = Process.Start(psi);
             return process is not null;
         }
@@ -86,4 +98,34 @@ public sealed class UiLauncher : IUiLauncher
         => OperatingSystem.IsWindows()
             ? new[] { ExecutableName + ".exe", ExecutableName }
             : new[] { ExecutableName };
+}
+
+/// <summary>
+/// Helpers for a local UI session: a free loopback port, a short-lived session token,
+/// and the access URL. The token gates local browser access to the web UI.
+/// </summary>
+public static class UiSession
+{
+    /// <summary>Finds a free TCP port on the loopback interface.</summary>
+    public static int FindFreePort()
+    {
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        try
+        {
+            return ((IPEndPoint)listener.LocalEndpoint).Port;
+        }
+        finally
+        {
+            listener.Stop();
+        }
+    }
+
+    /// <summary>Generates a cryptographically random, short-lived session token.</summary>
+    public static string NewToken()
+        => Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
+
+    /// <summary>Builds the loopback access URL the browser should open.</summary>
+    public static string Url(int port, string token)
+        => $"http://127.0.0.1:{port}/?token={token}";
 }

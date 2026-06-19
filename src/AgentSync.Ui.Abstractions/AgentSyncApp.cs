@@ -15,14 +15,15 @@ public sealed record RepositoryState(
     bool HasProblems);
 
 /// <summary>
-/// UI-independent application service over <see cref="AgentSync.Core"/>. The desktop GUI
-/// (and any other shell) drives Agent Sync through this facade so that no repository
-/// logic lives in Razor components and no business logic is duplicated from the CLI.
+/// UI-independent application service over <see cref="AgentSync.Core"/>. The localhost
+/// web UI (and any other shell) drives Agent Sync through this facade so that no
+/// repository logic lives in Razor components and no business logic is duplicated from
+/// the CLI.
 /// </summary>
 /// <remarks>
-/// This type has no MAUI/OpenMaui dependency and is fully unit-testable without a
-/// renderer. Mutating methods (Sync with force, AddSkill, DeleteSkill, target edits)
-/// must only be called after the UI obtains explicit user confirmation.
+/// This type has no web/UI dependency and is fully unit-testable without a renderer.
+/// Mutating methods (Sync with force, AddSkill, DeleteSkill, target edits) must only be
+/// called after the UI obtains explicit user confirmation.
 /// </remarks>
 public sealed class AgentSyncApp
 {

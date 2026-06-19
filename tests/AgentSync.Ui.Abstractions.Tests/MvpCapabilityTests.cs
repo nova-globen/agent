@@ -6,10 +6,10 @@ using AgentSync.Ui.Abstractions;
 namespace AgentSync.Ui.Abstractions.Tests;
 
 /// <summary>
-/// Covers the Milestone H (GUI MVP) acceptance criteria at the layer the GUI actually
-/// uses: every screen action goes through <see cref="AgentSyncApp"/>. The MAUI rendering
-/// layer requires the MAUI workload and is verified separately; these tests prove the
-/// capabilities the screens depend on, with no renderer.
+/// Covers the GUI MVP capabilities at the layer the UI actually uses: every screen
+/// action goes through <see cref="AgentSyncApp"/>. The localhost web UI
+/// (<c>AgentSync.Ui.Web</c>) renders these; these tests prove the capabilities the
+/// screens depend on, with no renderer.
 /// </summary>
 public sealed class MvpCapabilityTests : IDisposable
 {

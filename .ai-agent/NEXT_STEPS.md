@@ -3,33 +3,28 @@
 Future work, organized by horizon. Keep alpha positioning honest; preserve the core
 invariants (see `CLAUDE.md` → "Do not accidentally break").
 
-## Next major feature wave
+## Feature wave (import + CRUD shipped; UI in progress)
 
-Planned (not yet implemented) — implementation-ready specs live under
-`.ai-agent/features/`. Build milestone by milestone; keep CLI behavior backward
-compatible and the GUI optional (headless CLI must not depend on MAUI).
+Implementation-ready specs live under `.ai-agent/features/`. Keep CLI behavior backward
+compatible and the GUI optional (the headless CLI must not depend on the UI).
 
-- **Import a skill file/folder** — `agent import skill` (see `features/IMPORTS.md` §A).
-- **Import an agent/instruction file/folder** — `agent import agent` for existing
-  `AGENTS.md` / `CLAUDE.md` / Copilot / Gemini / Cursor / skill folders
-  (`features/IMPORTS.md` §B).
-- **Skill CRUD commands** — `agent skill add/edit/delete/list/show`
-  (`features/CRUD_COMMANDS.md`).
-- **Target CRUD commands** — `agent target add/edit/delete/list/show`
-  (`features/CRUD_COMMANDS.md`).
-- **`agent ui` launcher command** — a launcher/discovery command that starts a
-  *separately installed* GUI executable (`agent-sync-ui`); fails gracefully when the GUI
-  isn't installed (`features/UI_MAUI_BLAZOR.md`).
-- **Separate, optional GUI app** — GUI code lives in its own project(s); the CLI,
-  `git-agent`, hooks, CI, containers, and the `dotnet tool` packages stay GUI-free and
-  must not depend on MAUI/OpenMaui.
-- **MAUI Blazor Hybrid for Windows/macOS** — the official primary GUI path
-  (`AgentSync.Ui.Maui`), reusing `AgentSync.Core` services.
-- **OpenMaui Linux spike** — evaluate `open-maui/maui-linux` for an *experimental*
-  Linux GUI (Milestone F2); never claimed as supported without a tested build/package/
-  runtime; never blocks CLI releases.
-- **Separate GUI packaging** — GUI release artifacts ship independently from the CLI /
-  `dotnet tool` release.
+- **Import** — `agent import skill` and `agent import agent` (implemented;
+  `features/IMPORTS.md`).
+- **Skill/target CRUD** — `agent skill …` / `agent target …` (implemented;
+  `features/CRUD_COMMANDS.md`).
+- **`agent ui` launcher** — launches a *separately installed* `agent-sync-ui` with
+  `--repo`/`--port`/`--token`, opens the loopback URL, exit-3 with install guidance when
+  absent (implemented; `features/UI_LOCALHOST_BLAZOR.md`).
+- **Localhost Blazor Web UI** — `AgentSync.Ui.Web` (executable `agent-sync-ui`) using
+  **Microsoft FluentUI Blazor components**, bound to `127.0.0.1` with a random port and a
+  short-lived session token. Minimal host implemented (dashboard + read-only screens);
+  remaining work: wire mutations with confirmations and finish placeholder screens
+  (Milestone UI-2).
+- **Separate GUI packaging** — `agent-sync-ui` ships as its own release artifacts,
+  independent of the CLI / `dotnet tool` release (Milestone UI-3, not yet done).
+
+> The earlier MAUI/OpenMaui GUI direction was dropped in favour of the localhost web UI;
+> the MAUI project and the OpenMaui spike doc were removed.
 
 Milestone breakdown and acceptance criteria: `features/ROADMAP.md`.
 

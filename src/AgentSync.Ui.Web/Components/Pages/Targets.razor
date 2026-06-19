@@ -1,0 +1,30 @@
+@page "/targets"
+@inject AgentSyncApp App
+
+<PageTitle>Agent Sync — Targets</PageTitle>
+
+<FluentStack Orientation="Orientation.Vertical" VerticalGap="8">
+    <FluentLabel Typo="Typography.H3">Targets</FluentLabel>
+
+    @foreach (var id in TargetIds.Ordered)
+    {
+        var setting = _config is not null && _config.Targets.TryGetValue(id, out var s) ? s : null;
+        <FluentCard>
+            <FluentLabel>
+                <strong>@id</strong> —
+                @(setting is null ? "not configured" : setting.Enabled ? $"enabled → {setting.Path}" : "disabled")
+            </FluentLabel>
+        </FluentCard>
+    }
+
+    <FluentLabel Typo="Typography.Body">
+        Add/edit/delete (placeholder): wired to App.AddTarget / EditTarget / DeleteTarget
+        with an explicit confirmation before disabling or deleting a target.
+    </FluentLabel>
+</FluentStack>
+
+@code {
+    private AgentConfig? _config;
+
+    protected override void OnInitialized() => _config = App.GetConfig();
+}

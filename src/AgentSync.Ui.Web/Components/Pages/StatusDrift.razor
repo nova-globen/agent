@@ -1,0 +1,35 @@
+@page "/status"
+@inject AgentSyncApp App
+
+<PageTitle>Agent Sync — Status</PageTitle>
+
+<FluentStack Orientation="Orientation.Vertical" VerticalGap="8">
+    <FluentLabel Typo="Typography.H3">Status / Drift</FluentLabel>
+
+    @if (_status is not null)
+    {
+        <FluentLabel>Initialized: @_status.Initialized — Skills: @_status.SkillCount</FluentLabel>
+
+        @if (_status.Issues.Count == 0)
+        {
+            <FluentLabel>No issues detected.</FluentLabel>
+        }
+        else
+        {
+            @foreach (var issue in _status.Issues)
+            {
+                <FluentLabel>[@issue.Severity] @issue.Message</FluentLabel>
+            }
+        }
+    }
+
+    <FluentLabel Typo="Typography.Body">
+        Sync / Sync --force (placeholder): wired to App.Sync after explicit confirmation.
+    </FluentLabel>
+</FluentStack>
+
+@code {
+    private StatusReport? _status;
+
+    protected override void OnInitialized() => _status = App.Status();
+}

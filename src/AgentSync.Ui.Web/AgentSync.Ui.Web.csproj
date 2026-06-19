@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <!-- The executable the CLI's `agent ui` discovers and launches. -->
+    <AssemblyName>agent-sync-ui</AssemblyName>
+    <RootNamespace>AgentSync.Ui.Web</RootNamespace>
+
+    <!-- A separate, optional product; not packed as a dotnet tool. -->
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.12.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AgentSync.Ui.Abstractions\AgentSync.Ui.Abstractions.csproj" />
+    <ProjectReference Include="..\AgentSync.Core\AgentSync.Core.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -4,10 +4,12 @@
     <Project Path="src/AgentSync.Core/AgentSync.Core.csproj" />
     <Project Path="src/AgentSync.GitAgent/AgentSync.GitAgent.csproj" />
     <Project Path="src/AgentSync.Ui.Abstractions/AgentSync.Ui.Abstractions.csproj" />
+    <Project Path="src/AgentSync.Ui.Web/AgentSync.Ui.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/AgentSync.Cli.Tests/AgentSync.Cli.Tests.csproj" />
     <Project Path="tests/AgentSync.Core.Tests/AgentSync.Core.Tests.csproj" />
     <Project Path="tests/AgentSync.Ui.Abstractions.Tests/AgentSync.Ui.Abstractions.Tests.csproj" />
+    <Project Path="tests/AgentSync.Ui.Web.Tests/AgentSync.Ui.Web.Tests.csproj" />
   </Folder>
 </Solution>

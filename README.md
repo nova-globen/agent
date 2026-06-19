@@ -92,9 +92,9 @@ Agent Sync ships two entry points: `agent` and the Git extension `git-agent` (so
 `git agent <command>` works). Releases include self-contained builds, so no .NET
 runtime is required to run them.
 
-The CLI is the primary, fully supported interface. The optional desktop GUI is a
-**separate download** (see [Optional GUI](#optional-gui)); installing the CLI never
-pulls in the GUI, and the `dotnet tool` packages are CLI-only.
+The CLI is the primary, fully supported interface. The optional local web UI is a
+**separate download** (see [Optional local web UI](#optional-local-web-ui)); installing
+the CLI never pulls in the UI, and the `dotnet tool` packages are CLI-only.
 
 ### Recommended: install from GitHub Releases
 
@@ -282,7 +282,7 @@ agent validate        # validate config and skills
 agent import skill    # import an existing SKILL.md / skill folder into .agent/skills
 agent skill           # manage canonical skills: add | edit | delete | list | show
 agent target          # manage projection targets: add | edit | delete | list | show
-agent ui              # launch the optional desktop GUI (separate install)
+agent ui              # launch the optional local web UI (separate install)
 agent install-hooks   # configure core.hooksPath and make hooks executable
 agent doctor          # diagnose Git repo, PATH, hooks, and config
 
@@ -396,22 +396,27 @@ Target ids must be known adapter ids (`agents_md`, `claude_md`, `cursor`, `copil
 Edits round-trip `agent.yaml` through the parser, so hand-written comments in that file
 are not preserved.
 
-## Optional GUI
+## Optional local web UI
 
-Agent Sync ships as a CLI first. An optional desktop GUI is a **separate, independent
-product**: the CLI, the Git extension, the Git hooks, CI usage, the container images,
-and the `dotnet tool` packages never depend on it or on any GUI workload.
+Agent Sync is a CLI first. An optional GUI is a **separate, independent product**: a
+local web UI you run on your own machine. The CLI, the Git extension, the Git hooks, CI
+usage, the container images, and the `dotnet tool` packages never depend on it or on any
+UI assemblies — the CLI still works fully if the UI is not installed.
 
 ```bash
-agent ui    # locates and launches the separately installed GUI (agent-sync-ui)
+agent ui    # locates and launches the separately installed web UI (agent-sync-ui)
 ```
 
-If the GUI is not installed, `agent ui` says so and points you at the install/download
-and exits without affecting the CLI. The GUI is built with .NET MAUI Blazor Hybrid for
-Windows/macOS and ships as **separate release artifacts** on its own cadence — the CLI
-release and the `dotnet tool` packages never include it or depend on a GUI workload. A
-Linux GUI is being evaluated experimentally (OpenMaui) and is not yet a supported
-artifact. See `.ai-agent/features/UI_MAUI_BLAZOR.md` and `RELEASE_CHECKLIST.md`.
+`agent ui` discovers the `agent-sync-ui` executable, picks a free port, generates a
+short-lived session token, launches the host, and opens your browser at
+`http://127.0.0.1:<port>/?token=<token>` (it also prints that URL). If the UI is not
+installed, it says so and exits without affecting the CLI.
+
+The UI is a Blazor web app built with Microsoft FluentUI Blazor components. It binds to
+**`127.0.0.1`** only (never `0.0.0.0`), uses a random port, and gates access with the
+session token. It ships as **separate release artifacts** on its own cadence — the CLI
+release and the `dotnet tool` packages never include it. See
+`.ai-agent/features/UI_LOCALHOST_BLAZOR.md` and `RELEASE_CHECKLIST.md`.
 
 ## Drift detection
 

@@ -1,0 +1,14 @@
+@inherits LayoutComponentBase
+@inject AgentSyncApp App
+
+<FluentStack Orientation="Orientation.Vertical" VerticalGap="0">
+    <FluentLabel Typo="Typography.H4" Style="padding: 12px 16px;">
+        Agent Sync — @App.RepoRoot
+    </FluentLabel>
+    <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="16">
+        <NavMenu />
+        <div style="flex: 1; padding: 16px;">
+            @Body
+        </div>
+    </FluentStack>
+</FluentStack>
