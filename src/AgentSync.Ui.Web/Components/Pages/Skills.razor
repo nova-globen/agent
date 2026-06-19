@@ -3,9 +3,26 @@
 
 <PageTitle>Agent Sync — Skills</PageTitle>
 
-<FluentStack Orientation="Orientation.Vertical" VerticalGap="8">
+<FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
     <FluentLabel Typo="Typography.H3">Skills</FluentLabel>
 
+    @* ---- Add skill ---- *@
+    <FluentCard>
+        <FluentStack Orientation="Orientation.Vertical" VerticalGap="6">
+            <FluentLabel Typo="Typography.H4">Add a skill</FluentLabel>
+            <FluentTextField @bind-Value="_add.Id" Label="Id (kebab-case)" Placeholder="docs-review" />
+            <FluentTextField @bind-Value="_add.Name" Label="Name" Placeholder="Docs Review" />
+            <FluentTextField @bind-Value="_add.Description" Label="Description" />
+            <FluentTextField @bind-Value="_add.Version" Label="Version (optional)" Placeholder="0.1.0" />
+            <FluentLabel Typo="Typography.Body">New skills enable all known targets by default; tune them with Edit.</FluentLabel>
+            <div>
+                <FluentButton Appearance="Appearance.Accent" OnClick="AddSkill" Disabled="@string.IsNullOrWhiteSpace(_add.Id)">Add skill</FluentButton>
+            </div>
+            <AuthoringResultView Result="_addResult" />
+        </FluentStack>
+    </FluentCard>
+
+    @* ---- Existing skills ---- *@
     @if (_skills is null || _skills.Count == 0)
     {
         <FluentLabel>No skills defined.</FluentLabel>
@@ -15,21 +32,208 @@
         @foreach (var skill in _skills)
         {
             <FluentCard>
-                <FluentLabel><strong>@skill.Id</strong> — @skill.Manifest.Name</FluentLabel>
-                <FluentLabel>@skill.Manifest.Description</FluentLabel>
-                <FluentLabel>Targets: @string.Join(", ", skill.EnabledTargets)</FluentLabel>
+                <FluentStack Orientation="Orientation.Vertical" VerticalGap="4">
+                    <FluentLabel><strong>@skill.Id</strong> — @skill.Manifest.Name</FluentLabel>
+                    <FluentLabel>@skill.Manifest.Description</FluentLabel>
+                    <FluentLabel>Version: @(string.IsNullOrWhiteSpace(skill.Manifest.Version) ? "—" : skill.Manifest.Version)</FluentLabel>
+                    <FluentLabel>Targets: @string.Join(", ", skill.EnabledTargets)</FluentLabel>
+
+                    <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8">
+                        <FluentButton OnClick="@(() => BeginEdit(skill))">Edit</FluentButton>
+                        <FluentButton OnClick="@(() => BeginDelete(skill.Id))">Delete</FluentButton>
+                    </FluentStack>
+
+                    @* ---- Inline edit form ---- *@
+                    @if (_editId == skill.Id)
+                    {
+                        <FluentCard Style="margin-top: 8px;">
+                            <FluentStack Orientation="Orientation.Vertical" VerticalGap="6">
+                                <FluentLabel Typo="Typography.H4">Edit @skill.Id</FluentLabel>
+                                <FluentTextField @bind-Value="_edit.Name" Label="Name" />
+                                <FluentTextField @bind-Value="_edit.Description" Label="Description" />
+                                <FluentTextField @bind-Value="_edit.Version" Label="Version" />
+                                <FluentTextArea @bind-Value="_edit.BodyFile" Label="Body file path (optional)" Placeholder="path/to/SKILL.md" />
+                                <FluentLabel><strong>Enabled targets:</strong></FluentLabel>
+                                <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="12" Wrap="true">
+                                    @foreach (var target in TargetIds.Ordered)
+                                    {
+                                        <FluentCheckbox @bind-Value="_edit.Targets[target]" Label="@target" />
+                                    }
+                                </FluentStack>
+                                <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8">
+                                    <FluentButton Appearance="Appearance.Accent" OnClick="SaveEdit">Save</FluentButton>
+                                    <FluentButton OnClick="CancelEdit">Cancel</FluentButton>
+                                </FluentStack>
+                                <AuthoringResultView Result="_editResult" />
+                            </FluentStack>
+                        </FluentCard>
+                    }
+
+                    @* ---- Inline delete confirmation ---- *@
+                    @if (_deleteId == skill.Id)
+                    {
+                        <FluentCard Style="margin-top: 8px;">
+                            <FluentStack Orientation="Orientation.Vertical" VerticalGap="6">
+                                <FluentLabel Typo="Typography.H4">Delete @skill.Id?</FluentLabel>
+                                <FluentLabel>
+                                    This removes the canonical skill under <code>.agent/skills/@skill.Id</code>.
+                                    Already-generated sections in shared files (AGENTS.md, CLAUDE.md, …) are left
+                                    in place until you prune or re-sync. Use <strong>Force</strong> to delete a
+                                    skill that has already been projected (also prunes its lockfile entries).
+                                </FluentLabel>
+                                <FluentCheckbox @bind-Value="_deleteDryRun" Label="Dry run (preview only — nothing written)" />
+                                <FluentCheckbox @bind-Value="_deleteForce" Label="Force (delete even if projected; prune lockfile)" />
+                                <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8">
+                                    <FluentButton Appearance="Appearance.Accent" OnClick="ConfirmDelete">Confirm delete</FluentButton>
+                                    <FluentButton OnClick="CancelDelete">Cancel</FluentButton>
+                                </FluentStack>
+                                <AuthoringResultView Result="_deleteResult" />
+                            </FluentStack>
+                        </FluentCard>
+                    }
+                </FluentStack>
             </FluentCard>
         }
     }
-
-    <FluentLabel Typo="Typography.Body">
-        Add/edit/delete (placeholder): wired to App.AddSkill / EditSkill / DeleteSkill with
-        an explicit confirmation before any destructive action.
-    </FluentLabel>
 </FluentStack>
 
 @code {
     private IReadOnlyList<Skill>? _skills;
 
-    protected override void OnInitialized() => _skills = App.ListSkills();
+    // Add
+    private SkillForm _add = new();
+    private AuthoringResult? _addResult;
+
+    // Edit
+    private string? _editId;
+    private EditForm _edit = new();
+    private AuthoringResult? _editResult;
+
+    // Delete
+    private string? _deleteId;
+    private bool _deleteDryRun;
+    private bool _deleteForce;
+    private AuthoringResult? _deleteResult;
+
+    protected override void OnInitialized() => Refresh();
+
+    private void Refresh() => _skills = App.ListSkills();
+
+    private void AddSkill()
+    {
+        _addResult = App.AddSkill(
+            _add.Id.Trim(),
+            Blank(_add.Name),
+            Blank(_add.Description),
+            Blank(_add.Version),
+            targets: null);
+
+        if (_addResult.Status == AuthoringStatus.Ok)
+        {
+            _add = new SkillForm();
+            Refresh();
+        }
+    }
+
+    private void BeginEdit(Skill skill)
+    {
+        _deleteId = null;
+        _editId = skill.Id;
+        _editResult = null;
+        _edit = new EditForm
+        {
+            Name = skill.Manifest.Name ?? string.Empty,
+            Description = skill.Manifest.Description ?? string.Empty,
+            Version = skill.Manifest.Version ?? string.Empty,
+            BodyFile = string.Empty,
+            Targets = TargetIds.Ordered.ToDictionary(
+                t => t,
+                t => skill.EnabledTargets.Contains(t),
+                StringComparer.Ordinal),
+        };
+    }
+
+    private void CancelEdit()
+    {
+        _editId = null;
+        _editResult = null;
+    }
+
+    private void SaveEdit()
+    {
+        if (_editId is null)
+        {
+            return;
+        }
+
+        var current = _skills?.FirstOrDefault(s => s.Id == _editId);
+        var currentlyEnabled = current?.EnabledTargets.ToHashSet(StringComparer.Ordinal) ?? new HashSet<string>(StringComparer.Ordinal);
+
+        var enable = _edit.Targets.Where(kv => kv.Value && !currentlyEnabled.Contains(kv.Key)).Select(kv => kv.Key).ToList();
+        var disable = _edit.Targets.Where(kv => !kv.Value && currentlyEnabled.Contains(kv.Key)).Select(kv => kv.Key).ToList();
+
+        _editResult = App.EditSkill(
+            _editId,
+            Blank(_edit.Name),
+            Blank(_edit.Description),
+            Blank(_edit.Version),
+            Blank(_edit.BodyFile),
+            enable.Count > 0 ? enable : null,
+            disable.Count > 0 ? disable : null);
+
+        if (_editResult.Status == AuthoringStatus.Ok)
+        {
+            Refresh();
+        }
+    }
+
+    private void BeginDelete(string id)
+    {
+        _editId = null;
+        _deleteId = id;
+        _deleteDryRun = false;
+        _deleteForce = false;
+        _deleteResult = null;
+    }
+
+    private void CancelDelete()
+    {
+        _deleteId = null;
+        _deleteResult = null;
+    }
+
+    private void ConfirmDelete()
+    {
+        if (_deleteId is null)
+        {
+            return;
+        }
+
+        _deleteResult = App.DeleteSkill(_deleteId, _deleteForce, _deleteDryRun);
+
+        if (_deleteResult.Status == AuthoringStatus.Ok && !_deleteDryRun)
+        {
+            _deleteId = null;
+            Refresh();
+        }
+    }
+
+    private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private sealed class SkillForm
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string Version { get; set; } = string.Empty;
+    }
+
+    private sealed class EditForm
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string Version { get; set; } = string.Empty;
+        public string BodyFile { get; set; } = string.Empty;
+        public Dictionary<string, bool> Targets { get; set; } = new(StringComparer.Ordinal);
+    }
 }

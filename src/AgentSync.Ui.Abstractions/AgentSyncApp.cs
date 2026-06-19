@@ -1,3 +1,4 @@
+using System.Reflection;
 using AgentSync.Core;
 using AgentSync.Core.Authoring;
 using AgentSync.Core.Configuration;
@@ -13,6 +14,9 @@ public sealed record RepositoryState(
     bool Initialized,
     int SkillCount,
     bool HasProblems);
+
+/// <summary>A row in the targets view: whether a known target is configured, enabled, and where.</summary>
+public sealed record TargetView(string Id, bool Configured, bool Enabled, string? Path);
 
 /// <summary>
 /// UI-independent application service over <see cref="AgentSync.Core"/>. The localhost
@@ -55,6 +59,38 @@ public sealed class AgentSyncApp
 
     public AgentConfig? GetConfig() => WorkspaceLoader.Load(RepoRoot).Config;
 
+    /// <summary>Every known target with its configured/enabled state, in deterministic order.</summary>
+    public IReadOnlyList<TargetView> ListTargets()
+    {
+        var config = GetConfig();
+        return TargetIds.Ordered.Select(id =>
+        {
+            if (config is not null && config.Targets.TryGetValue(id, out var setting))
+            {
+                return new TargetView(id, Configured: true, setting.Enabled, setting.Path);
+            }
+
+            return new TargetView(id, Configured: false, Enabled: false, Path: null);
+        }).ToList();
+    }
+
+    /// <summary>The Agent Sync version this UI/build reports.</summary>
+    public static string AppVersion
+    {
+        get
+        {
+            var info = typeof(AgentSyncApp).Assembly
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+            if (!string.IsNullOrEmpty(info))
+            {
+                var plus = info.IndexOf('+');
+                return plus >= 0 ? info[..plus] : info;
+            }
+
+            return typeof(AgentSyncApp).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+        }
+    }
+
     public StatusReport Status() => new StatusService(RepoRoot).Run();
 
     public DriftReport Drift() => new DriftDetector(RepoRoot).Detect();
@@ -91,6 +127,9 @@ public sealed class AgentSyncApp
 
     public AuthoringResult DeleteTarget(string id, bool force, bool dryRun)
         => new TargetWriter(RepoRoot).Delete(id, force, dryRun);
+
+    /// <summary>Wires Git hooks (core.hooksPath + hook scripts). UI must confirm before calling.</summary>
+    public InstallHooksResult InstallHooks() => new InstallHooksService(RepoRoot).Run();
 
     /// <summary>The CI command users can copy from the GUI.</summary>
     public static string CiCommand => "agent status --fail-on-drift --ci";

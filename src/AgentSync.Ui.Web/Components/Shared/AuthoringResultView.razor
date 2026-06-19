@@ -1,0 +1,47 @@
+@* Renders the outcome of an AgentSyncApp CRUD mutation: status, changes, validation. *@
+
+@if (Result is not null)
+{
+    <FluentCard Style="margin-top: 8px;">
+        <FluentStack Orientation="Orientation.Vertical" VerticalGap="4">
+            <FluentLabel>
+                <strong>Result:</strong> @Result.Status@(Result.DryRun ? " (dry run — nothing written)" : "")
+            </FluentLabel>
+
+            @if (!string.IsNullOrWhiteSpace(Result.Message))
+            {
+                <FluentLabel>@Result.Message</FluentLabel>
+            }
+
+            @if (Result.Changes.Count > 0)
+            {
+                <FluentLabel><strong>Changes:</strong></FluentLabel>
+                <ul style="margin: 0;">
+                    @foreach (var change in Result.Changes)
+                    {
+                        <li><code>@change</code></li>
+                    }
+                </ul>
+            }
+
+            @if (Result.Validation.Count > 0)
+            {
+                <FluentLabel><strong>Validation:</strong></FluentLabel>
+                @foreach (var message in Result.Validation)
+                {
+                    <FluentLabel>[@message.Severity] @message.Message</FluentLabel>
+                }
+            }
+
+            @if (Result.RecommendSync && Result.Status == AuthoringStatus.Ok && !Result.DryRun)
+            {
+                <FluentLabel>Next: run <code>agent sync</code> (or the Status screen) to project the change.</FluentLabel>
+            }
+        </FluentStack>
+    </FluentCard>
+}
+
+@code {
+    [Parameter]
+    public AuthoringResult? Result { get; set; }
+}

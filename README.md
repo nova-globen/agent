@@ -420,10 +420,20 @@ without affecting the CLI.
 
 The UI is a Blazor web app built with Microsoft FluentUI Blazor components. It binds to
 **`127.0.0.1`** only (never `0.0.0.0`), uses a random port, and gates every request with
-the session token (valid for the lifetime of the UI process). It ships as **separate
-release artifacts** on its own cadence — the CLI release and the `dotnet tool` packages
-never include it. See `.ai-agent/features/UI_LOCALHOST_BLAZOR.md` and
-`RELEASE_CHECKLIST.md`.
+the session token (valid for the lifetime of the UI process). It is a local, single-repo
+tool only — it makes no claim to remote/server/team use. It ships as **separate release
+artifacts** on its own cadence — the CLI release and the `dotnet tool` packages never
+include it. See `.ai-agent/features/UI_LOCALHOST_BLAZOR.md` and `RELEASE_CHECKLIST.md`.
+
+The screens drive the same services as the CLI through `AgentSync.Ui.Abstractions`
+(`AgentSyncApp`) — no repository logic lives in the Razor components, and every
+destructive or file-writing action (delete, force-sync, disable a target, install hooks)
+requires an explicit in-page confirmation. Functional screens: **Dashboard** (state +
+quick actions), **Skills** (add / edit / enable-disable targets / delete), **Imports**
+(import skill and import agent, with dry-run preview), **Targets** (add / edit / delete),
+**Status / Drift** (status, drift, validate, and sync / force-sync), **Diff**, and
+**Hooks / CI** (copyable CI command + confirmed install-hooks). Separate GUI release
+artifacts are not built yet (Milestone UI-3).
 
 ## Drift detection
 

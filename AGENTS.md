@@ -129,13 +129,15 @@ Specs live under `.ai-agent/features/`. Status:
   opens the browser at the token URL (printing only the clean URL), falls back to the
   token URL on open failure / `--no-open`, and exits 3 with install guidance when absent
   or on readiness timeout. No compile-time UI reference from the CLI (guarded by a test).
-- **Localhost web UI — minimal host implemented.** `AgentSync.Ui.Abstractions`
-  (`AgentSyncApp`) is the UI-independent service layer; `AgentSync.Ui.Web` (executable
-  `agent-sync-ui`) is an ASP.NET Core + Blazor host using **Microsoft FluentUI Blazor
+- **Localhost web UI — UI-2 wired.** `AgentSync.Ui.Abstractions` (`AgentSyncApp`) is the
+  UI-independent service layer; `AgentSync.Ui.Web` (executable `agent-sync-ui`) is an
+  ASP.NET Core + Blazor host (**Interactive Server**) using **Microsoft FluentUI Blazor
   components**, bound to `127.0.0.1` with a random port and a per-launch session token
   (exchanged into an HttpOnly cookie and stripped from the URL on first use;
-  unauthenticated `/healthz`). Dashboard + read-only screens are wired; mutation wiring +
-  packaging remain (`features/UI_LOCALHOST_BLAZOR.md`, Milestones UI-2/UI-3).
+  unauthenticated `/healthz`). Dashboard, Skills, Imports, Targets, Status/Drift, Diff,
+  Hooks/CI, and Settings drive `AgentSyncApp` with explicit confirmation before any
+  destructive/file-writing action; no repository logic lives in Razor components. Separate
+  GUI packaging remains (`features/UI_LOCALHOST_BLAZOR.md`, Milestone UI-3).
 
 > The earlier .NET MAUI / OpenMaui GUI direction was **dropped** in favour of the
 > localhost web UI; the MAUI project and the OpenMaui spike doc were removed.

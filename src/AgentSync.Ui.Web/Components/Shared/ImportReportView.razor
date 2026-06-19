@@ -1,0 +1,46 @@
+@* Renders an ImportReport: overall status, per-skill items, validation, dry-run note. *@
+
+@if (Report is not null)
+{
+    <FluentCard Style="margin-top: 8px;">
+        <FluentStack Orientation="Orientation.Vertical" VerticalGap="4">
+            <FluentLabel>
+                <strong>Import:</strong> @Report.Status@(Report.DryRun ? " (dry run — nothing written)" : "")
+            </FluentLabel>
+
+            @if (!string.IsNullOrWhiteSpace(Report.Message))
+            {
+                <FluentLabel>@Report.Message</FluentLabel>
+            }
+
+            @foreach (var item in Report.Items)
+            {
+                <FluentCard Style="margin-top: 4px;">
+                    <FluentStack Orientation="Orientation.Vertical" VerticalGap="2">
+                        <FluentLabel><strong>@item.Id</strong> — @item.Name (@item.Action)</FluentLabel>
+                        <FluentLabel>Source: <code>@item.SourceRelativePath</code></FluentLabel>
+                        <FluentLabel>Writes: <code>@item.SkillYamlPath</code>, <code>@item.SkillMdPath</code></FluentLabel>
+                        @if (!string.IsNullOrWhiteSpace(item.Note))
+                        {
+                            <FluentLabel>@item.Note</FluentLabel>
+                        }
+                        @foreach (var message in item.Validation)
+                        {
+                            <FluentLabel>[@message.Severity] @message.Message</FluentLabel>
+                        }
+                    </FluentStack>
+                </FluentCard>
+            }
+
+            @if (Report.AnyWritten && !Report.DryRun)
+            {
+                <FluentLabel>Next: run <code>agent sync</code> (or the Status screen) to project the imported skill(s).</FluentLabel>
+            }
+        </FluentStack>
+    </FluentCard>
+}
+
+@code {
+    [Parameter]
+    public ImportReport? Report { get; set; }
+}

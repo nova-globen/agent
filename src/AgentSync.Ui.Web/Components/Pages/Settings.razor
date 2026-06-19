@@ -3,11 +3,37 @@
 
 <PageTitle>Agent Sync — Settings</PageTitle>
 
-<FluentStack Orientation="Orientation.Vertical" VerticalGap="8">
+<FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
     <FluentLabel Typo="Typography.H3">Settings / Logs</FluentLabel>
-    <FluentLabel><strong>Active repository:</strong> @App.RepoRoot</FluentLabel>
-    <FluentLabel Typo="Typography.Body">
-        This session is scoped to a single repository, served on 127.0.0.1 with a
-        short-lived session token. Logs and policy settings are placeholders.
-    </FluentLabel>
+
+    <FluentCard>
+        <FluentStack Orientation="Orientation.Vertical" VerticalGap="4">
+            <FluentLabel><strong>Active repository:</strong> @App.RepoRoot</FluentLabel>
+            <FluentLabel><strong>Git repository:</strong> @(App.IsGitRepository ? "yes" : "no")</FluentLabel>
+            <FluentLabel><strong>Agent Sync version:</strong> @AgentSyncApp.AppVersion</FluentLabel>
+        </FluentStack>
+    </FluentCard>
+
+    <FluentCard>
+        <FluentStack Orientation="Orientation.Vertical" VerticalGap="4">
+            <FluentLabel Typo="Typography.H4">Local UI security</FluentLabel>
+            <FluentLabel Typo="Typography.Body">
+                This session is scoped to a single repository, served on <code>127.0.0.1</code> only
+                (never a remote/server/team deployment). Access is gated by a per-launch session token
+                that is exchanged into an HttpOnly cookie and removed from the URL on first use. This UI
+                is an optional layer — the CLI remains the primary supported interface.
+            </FluentLabel>
+        </FluentStack>
+    </FluentCard>
+
+    <FluentCard>
+        <FluentStack Orientation="Orientation.Vertical" VerticalGap="4">
+            <FluentLabel Typo="Typography.H4">CLI examples</FluentLabel>
+            <pre style="margin: 0;">agent status --fail-on-drift --ci
+agent sync
+agent skill add docs-review --name "Docs Review"
+agent import agent AGENTS.md
+agent install-hooks</pre>
+        </FluentStack>
+    </FluentCard>
 </FluentStack>

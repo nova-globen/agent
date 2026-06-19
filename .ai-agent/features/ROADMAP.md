@@ -115,14 +115,21 @@ hooks/CI/`dotnet tool`/containers free of any UI dependency.
   the CLI references neither `AgentSync.Ui.Web` nor FluentUI (test-guarded); host binds
   loopback and rejects missing/invalid tokens; launcher passes repo/port/token.
 
-## Milestone UI-2 — UI feature wiring
+## Milestone UI-2 — UI feature wiring  ✅ implemented
 
 - **Goal:** wire the remaining screens to `AgentSyncApp` with confirmations.
 - **Scope:** Skills CRUD; Imports (dry-run preview then confirm); Targets CRUD;
-  Status/drift "fix" actions; Diff viewer; Sync / validate / hooks. Destructive actions
-  require explicit confirmation; no repository logic in Razor components.
-- **Acceptance criteria:** each action goes through `AgentSyncApp`; mutations confirmed;
-  headless build/test stays green; logic tested at the `AgentSyncApp` layer.
+  Status/drift + sync / force-sync; Diff viewer; Hooks (confirmed install-hooks).
+  Destructive actions require explicit confirmation; no repository logic in Razor
+  components.
+- **Done:** host runs Interactive Server; Dashboard, Skills, Imports, Targets,
+  Status/Drift, Diff, Hooks/CI, Settings all drive `AgentSyncApp`; every
+  destructive/file-writing action has an in-page confirmation. `AgentSyncApp` gained
+  `ListTargets`, `InstallHooks`, `AppVersion`. The launch path was also hardened
+  (readiness probe, browser open, strict option parsing, token→cookie redirect).
+- **Acceptance criteria (met):** each action goes through `AgentSyncApp`; mutations
+  confirmed; headless build/test stays green; logic tested at the `AgentSyncApp` layer
+  (`Ui2WiringTests`) plus a real web-host smoke test (`WebHostSmokeTests`).
 
 ## Milestone UI-3 — GUI packaging
 

@@ -1,12 +1,75 @@
 @page "/hooks"
+@inject AgentSyncApp App
 
 <PageTitle>Agent Sync — Hooks / CI</PageTitle>
 
-<FluentStack Orientation="Orientation.Vertical" VerticalGap="8">
+<FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
     <FluentLabel Typo="Typography.H3">Hooks / CI</FluentLabel>
-    <FluentLabel>Copy this into your pipeline:</FluentLabel>
-    <pre>@AgentSyncApp.CiCommand</pre>
-    <FluentLabel Typo="Typography.Body">
-        Placeholder: "Install hooks" delegates to AgentSync.Core via the application service.
-    </FluentLabel>
+
+    <FluentCard>
+        <FluentStack Orientation="Orientation.Vertical" VerticalGap="4">
+            <FluentLabel>Copy this into your pipeline:</FluentLabel>
+            <pre style="margin: 0;">@AgentSyncApp.CiCommand</pre>
+            <FluentLabel Typo="Typography.Body">It exits non-zero if drift or invalid state exists.</FluentLabel>
+        </FluentStack>
+    </FluentCard>
+
+    <FluentCard>
+        <FluentStack Orientation="Orientation.Vertical" VerticalGap="6">
+            <FluentLabel Typo="Typography.H4">Git hooks</FluentLabel>
+            <FluentLabel Typo="Typography.Body">
+                Installing hooks sets <code>core.hooksPath</code> to <code>.githooks</code> and writes the
+                pre-commit / pre-push hooks (making them executable on Unix). This modifies your Git
+                config and working tree — confirm before running. The CLI equivalent is
+                <code>agent install-hooks</code>.
+            </FluentLabel>
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8">
+                <FluentButton Appearance="Appearance.Accent" OnClick="BeginInstall">Install hooks…</FluentButton>
+            </FluentStack>
+
+            @if (_confirm)
+            {
+                <FluentCard>
+                    <FluentStack Orientation="Orientation.Vertical" VerticalGap="6">
+                        <FluentLabel>Set core.hooksPath and write the hook scripts now?</FluentLabel>
+                        <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8">
+                            <FluentButton Appearance="Appearance.Accent" OnClick="ConfirmInstall">Confirm</FluentButton>
+                            <FluentButton OnClick="@(() => _confirm = false)">Cancel</FluentButton>
+                        </FluentStack>
+                    </FluentStack>
+                </FluentCard>
+            }
+
+            @if (_result is not null)
+            {
+                <FluentCard Style="margin-top: 8px;">
+                    <FluentStack Orientation="Orientation.Vertical" VerticalGap="2">
+                        <FluentLabel><strong>@(_result.Success ? "Hooks installed." : "Hooks not fully installed.")</strong></FluentLabel>
+                        <FluentLabel>core.hooksPath: <code>@_result.HooksPath</code> (@(_result.GitConfigured ? "configured" : "not configured"))</FluentLabel>
+                        @foreach (var hook in _result.Hooks)
+                        {
+                            <FluentLabel><code>@hook.Name</code> — @(!hook.Present ? "missing" : hook.Executable ? "ready" : "not executable")</FluentLabel>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(_result.Error))
+                        {
+                            <FluentLabel>@_result.Error</FluentLabel>
+                        }
+                    </FluentStack>
+                </FluentCard>
+            }
+        </FluentStack>
+    </FluentCard>
 </FluentStack>
+
+@code {
+    private bool _confirm;
+    private InstallHooksResult? _result;
+
+    private void BeginInstall() => _confirm = true;
+
+    private void ConfirmInstall()
+    {
+        _result = App.InstallHooks();
+        _confirm = false;
+    }
+}

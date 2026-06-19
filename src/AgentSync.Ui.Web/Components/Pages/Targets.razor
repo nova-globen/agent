@@ -3,28 +3,181 @@
 
 <PageTitle>Agent Sync — Targets</PageTitle>
 
-<FluentStack Orientation="Orientation.Vertical" VerticalGap="8">
+<FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
     <FluentLabel Typo="Typography.H3">Targets</FluentLabel>
 
-    @foreach (var id in TargetIds.Ordered)
-    {
-        var setting = _config is not null && _config.Targets.TryGetValue(id, out var s) ? s : null;
-        <FluentCard>
-            <FluentLabel>
-                <strong>@id</strong> —
-                @(setting is null ? "not configured" : setting.Enabled ? $"enabled → {setting.Path}" : "disabled")
+    @* ---- Add target ---- *@
+    <FluentCard>
+        <FluentStack Orientation="Orientation.Vertical" VerticalGap="6">
+            <FluentLabel Typo="Typography.H4">Add a target</FluentLabel>
+            <FluentTextField @bind-Value="_add.Id" Label="Target id" Placeholder="gemini" />
+            <FluentTextField @bind-Value="_add.Path" Label="Path (optional; default per adapter)" Placeholder=".gemini/GEMINI.md" />
+            <FluentCheckbox @bind-Value="_add.Enabled" Label="Enabled" />
+            <FluentLabel Typo="Typography.Body">
+                Known ids: @string.Join(", ", TargetIds.Ordered). Paths must stay inside the repository.
             </FluentLabel>
+            <div>
+                <FluentButton Appearance="Appearance.Accent" OnClick="AddTarget" Disabled="@string.IsNullOrWhiteSpace(_add.Id)">Add target</FluentButton>
+            </div>
+            <AuthoringResultView Result="_addResult" />
+        </FluentStack>
+    </FluentCard>
+
+    @* ---- Known targets ---- *@
+    @foreach (var target in _targets)
+    {
+        <FluentCard>
+            <FluentStack Orientation="Orientation.Vertical" VerticalGap="4">
+                <FluentLabel>
+                    <strong>@target.Id</strong> —
+                    @(!target.Configured ? "not configured" : target.Enabled ? $"enabled → {target.Path}" : "disabled")
+                </FluentLabel>
+
+                @if (target.Configured)
+                {
+                    <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8">
+                        <FluentButton OnClick="@(() => BeginEdit(target))">Edit</FluentButton>
+                        <FluentButton OnClick="@(() => BeginDelete(target.Id))">Delete</FluentButton>
+                    </FluentStack>
+                }
+
+                @if (_editId == target.Id)
+                {
+                    <FluentCard Style="margin-top: 8px;">
+                        <FluentStack Orientation="Orientation.Vertical" VerticalGap="6">
+                            <FluentLabel Typo="Typography.H4">Edit @target.Id</FluentLabel>
+                            <FluentTextField @bind-Value="_editPath" Label="Path" />
+                            <FluentCheckbox @bind-Value="_editEnabled" Label="Enabled" />
+                            <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8">
+                                <FluentButton Appearance="Appearance.Accent" OnClick="SaveEdit">Save</FluentButton>
+                                <FluentButton OnClick="CancelEdit">Cancel</FluentButton>
+                            </FluentStack>
+                            <AuthoringResultView Result="_editResult" />
+                        </FluentStack>
+                    </FluentCard>
+                }
+
+                @if (_deleteId == target.Id)
+                {
+                    <FluentCard Style="margin-top: 8px;">
+                        <FluentStack Orientation="Orientation.Vertical" VerticalGap="6">
+                            <FluentLabel Typo="Typography.H4">Delete target @target.Id?</FluentLabel>
+                            <FluentLabel>
+                                This removes the target from <code>.agent/agent.yaml</code>. Any files already
+                                projected for this target stay on disk and its lockfile entries become orphaned
+                                until pruned. Use <strong>Force</strong> to delete even if projections exist
+                                (also prunes the target's lockfile entries).
+                            </FluentLabel>
+                            <FluentCheckbox @bind-Value="_deleteDryRun" Label="Dry run (preview only — nothing written)" />
+                            <FluentCheckbox @bind-Value="_deleteForce" Label="Force (delete even if projected; prune lockfile)" />
+                            <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8">
+                                <FluentButton Appearance="Appearance.Accent" OnClick="ConfirmDelete">Confirm delete</FluentButton>
+                                <FluentButton OnClick="CancelDelete">Cancel</FluentButton>
+                            </FluentStack>
+                            <AuthoringResultView Result="_deleteResult" />
+                        </FluentStack>
+                    </FluentCard>
+                }
+            </FluentStack>
         </FluentCard>
     }
-
-    <FluentLabel Typo="Typography.Body">
-        Add/edit/delete (placeholder): wired to App.AddTarget / EditTarget / DeleteTarget
-        with an explicit confirmation before disabling or deleting a target.
-    </FluentLabel>
 </FluentStack>
 
 @code {
-    private AgentConfig? _config;
+    private IReadOnlyList<TargetView> _targets = Array.Empty<TargetView>();
 
-    protected override void OnInitialized() => _config = App.GetConfig();
+    private AddForm _add = new();
+    private AuthoringResult? _addResult;
+
+    private string? _editId;
+    private string _editPath = string.Empty;
+    private bool _editEnabled;
+    private AuthoringResult? _editResult;
+
+    private string? _deleteId;
+    private bool _deleteDryRun;
+    private bool _deleteForce;
+    private AuthoringResult? _deleteResult;
+
+    protected override void OnInitialized() => Refresh();
+
+    private void Refresh() => _targets = App.ListTargets();
+
+    private void AddTarget()
+    {
+        _addResult = App.AddTarget(_add.Id.Trim(), Blank(_add.Path), _add.Enabled);
+        if (_addResult.Status == AuthoringStatus.Ok)
+        {
+            _add = new AddForm();
+            Refresh();
+        }
+    }
+
+    private void BeginEdit(TargetView target)
+    {
+        _deleteId = null;
+        _editId = target.Id;
+        _editPath = target.Path ?? string.Empty;
+        _editEnabled = target.Enabled;
+        _editResult = null;
+    }
+
+    private void CancelEdit()
+    {
+        _editId = null;
+        _editResult = null;
+    }
+
+    private void SaveEdit()
+    {
+        if (_editId is null)
+        {
+            return;
+        }
+
+        _editResult = App.EditTarget(_editId, Blank(_editPath), _editEnabled);
+        if (_editResult.Status == AuthoringStatus.Ok)
+        {
+            Refresh();
+        }
+    }
+
+    private void BeginDelete(string id)
+    {
+        _editId = null;
+        _deleteId = id;
+        _deleteDryRun = false;
+        _deleteForce = false;
+        _deleteResult = null;
+    }
+
+    private void CancelDelete()
+    {
+        _deleteId = null;
+        _deleteResult = null;
+    }
+
+    private void ConfirmDelete()
+    {
+        if (_deleteId is null)
+        {
+            return;
+        }
+
+        _deleteResult = App.DeleteTarget(_deleteId, _deleteForce, _deleteDryRun);
+        if (_deleteResult.Status == AuthoringStatus.Ok && !_deleteDryRun)
+        {
+            _deleteId = null;
+            Refresh();
+        }
+    }
+
+    private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private sealed class AddForm
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Path { get; set; } = string.Empty;
+        public bool Enabled { get; set; } = true;
+    }
 }

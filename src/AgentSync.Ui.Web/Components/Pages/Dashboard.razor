@@ -1,5 +1,6 @@
 @page "/"
 @inject AgentSyncApp App
+@inject NavigationManager Nav
 
 <PageTitle>Agent Sync — Dashboard</PageTitle>
 
@@ -16,13 +17,22 @@
         </FluentStack>
     </FluentCard>
 
+    <FluentLabel Typo="Typography.H4">Quick actions</FluentLabel>
+    <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8" Wrap="true">
+        <FluentButton Appearance="Appearance.Accent" OnClick="@(() => Nav.NavigateTo("/status"))">Status / Sync</FluentButton>
+        <FluentButton OnClick="@(() => Nav.NavigateTo("/status"))">Validate</FluentButton>
+        <FluentButton OnClick="@(() => Nav.NavigateTo("/imports"))">Import skill</FluentButton>
+        <FluentButton OnClick="@(() => Nav.NavigateTo("/skills"))">Add skill</FluentButton>
+        <FluentButton OnClick="@(() => Nav.NavigateTo("/diff"))">Diff</FluentButton>
+    </FluentStack>
+
     <FluentLabel>CI command: <code>@AgentSyncApp.CiCommand</code></FluentLabel>
 </FluentStack>
 
 @code {
     private RepositoryState? _state;
 
-    // Read-only view of state; mutations happen only via confirmed actions that call the
-    // application service, never inline in markup.
+    // Read-only view of state; mutations happen only on their own screens, after an
+    // explicit confirmation that calls the application service.
     protected override void OnInitialized() => _state = App.GetState();
 }

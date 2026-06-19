@@ -48,18 +48,18 @@ Specs live under `.ai-agent/features/` (`IMPORTS.md`, `CRUD_COMMANDS.md`,
   has **no** compile-time UI reference (guarded by a test).
 - **`AgentSync.Ui.Abstractions`** — UI-independent application service (`AgentSyncApp`)
   over Core; the UI binds to it (no repository logic in Razor components).
-- **`AgentSync.Ui.Web`** — a minimal **localhost Blazor Web UI** host (executable
-  `agent-sync-ui`) using **Microsoft FluentUI Blazor components**. Binds `127.0.0.1`,
-  random port, per-launch session token (`SessionGate`/`TokenCheck`; the token is
-  exchanged into an HttpOnly `SameSite=Strict` cookie and stripped from the URL on first
-  use, with an unauthenticated `/healthz` readiness endpoint). Builds with the standard
-  SDK (no special workloads).
+- **`AgentSync.Ui.Web`** — the **localhost Blazor Web UI** host (executable
+  `agent-sync-ui`, **Interactive Server**) using **Microsoft FluentUI Blazor components**.
+  Binds `127.0.0.1`, random port, per-launch session token (`SessionGate`/`TokenCheck`;
+  the token is exchanged into an HttpOnly `SameSite=Strict` cookie and stripped from the
+  URL on first use, with an unauthenticated `/healthz` readiness endpoint). All screens
+  (Dashboard, Skills, Imports, Targets, Status/Drift, Diff, Hooks/CI, Settings) drive
+  `AgentSyncApp` with explicit confirmation before any destructive/file-writing action; no
+  repository logic lives in Razor components. Builds with the standard SDK (no special
+  workloads).
 
 **In progress / not shipped:**
 
-- **UI feature wiring** — mutations (skill/target CRUD, imports, sync) are tested on
-  `AgentSyncApp` but not yet wired into the web UI with confirmations; some screens are
-  placeholders (Milestone UI-2).
 - **GUI packaging** — `agent-sync-ui` does not yet ship as separate release artifacts
   (Milestone UI-3).
 

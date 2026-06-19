@@ -1,14 +1,105 @@
 @page "/imports"
+@inject AgentSyncApp App
 
 <PageTitle>Agent Sync — Imports</PageTitle>
 
-<FluentStack Orientation="Orientation.Vertical" VerticalGap="8">
+<FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
     <FluentLabel Typo="Typography.H3">Imports</FluentLabel>
     <FluentLabel>
-        Choose a SKILL.md / skill folder, or an existing instruction file (AGENTS.md,
-        CLAUDE.md, Cursor rules, …), preview with a dry run, then confirm.
+        Import reads the source only — it never modifies your original files. Preview with a
+        dry run first, then import. After importing, run <code>agent sync</code> (Status screen)
+        to project the skill(s).
     </FluentLabel>
-    <FluentLabel Typo="Typography.Body">
-        Placeholder: wired to App.ImportSkill / App.ImportAgent (dry-run preview first).
-    </FluentLabel>
+
+    @* ---- Import skill ---- *@
+    <FluentCard>
+        <FluentStack Orientation="Orientation.Vertical" VerticalGap="6">
+            <FluentLabel Typo="Typography.H4">Import skill</FluentLabel>
+            <FluentLabel Typo="Typography.Body">A SKILL.md file or a skill folder, relative to the repository.</FluentLabel>
+            <FluentTextField @bind-Value="_skill.Path" Label="Path" Placeholder=".claude/skills/code-review" />
+            <FluentTextField @bind-Value="_skill.Id" Label="Id (optional)" />
+            <FluentTextField @bind-Value="_skill.Name" Label="Name (optional)" />
+            <FluentTextField @bind-Value="_skill.Target" Label="Target (optional)" />
+            <FluentCheckbox @bind-Value="_skill.DryRun" Label="Dry run (preview only — nothing written)" />
+            <FluentCheckbox @bind-Value="_skill.Force" Label="Force (overwrite an existing canonical skill)" />
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8">
+                <FluentButton OnClick="@(() => ImportSkill(dryRun: true))" Disabled="@string.IsNullOrWhiteSpace(_skill.Path)">Preview (dry run)</FluentButton>
+                <FluentButton Appearance="Appearance.Accent" OnClick="@(() => ImportSkill(dryRun: _skill.DryRun))" Disabled="@string.IsNullOrWhiteSpace(_skill.Path)">Import</FluentButton>
+            </FluentStack>
+            <ImportReportView Report="_skillReport" />
+        </FluentStack>
+    </FluentCard>
+
+    @* ---- Import agent ---- *@
+    <FluentCard>
+        <FluentStack Orientation="Orientation.Vertical" VerticalGap="6">
+            <FluentLabel Typo="Typography.H4">Import agent / instruction file</FluentLabel>
+            <FluentLabel Typo="Typography.Body">An AGENTS.md, CLAUDE.md, Copilot/Gemini file, Cursor rules folder, or skills root.</FluentLabel>
+            <FluentTextField @bind-Value="_agent.Path" Label="Path" Placeholder="AGENTS.md" />
+            <FluentTextField @bind-Value="_agent.Type" Label="Type (optional; e.g. agents_md, claude_md)" />
+            <FluentTextField @bind-Value="_agent.Id" Label="Id (optional)" />
+            <FluentCheckbox @bind-Value="_agent.SplitSections" Label="Split into one skill per top-level heading (otherwise one skill from the whole file)" />
+            <FluentCheckbox @bind-Value="_agent.DryRun" Label="Dry run (preview only — nothing written)" />
+            <FluentCheckbox @bind-Value="_agent.Force" Label="Force (overwrite existing canonical skills)" />
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8">
+                <FluentButton OnClick="@(() => ImportAgent(dryRun: true))" Disabled="@string.IsNullOrWhiteSpace(_agent.Path)">Preview (dry run)</FluentButton>
+                <FluentButton Appearance="Appearance.Accent" OnClick="@(() => ImportAgent(dryRun: _agent.DryRun))" Disabled="@string.IsNullOrWhiteSpace(_agent.Path)">Import</FluentButton>
+            </FluentStack>
+            <ImportReportView Report="_agentReport" />
+        </FluentStack>
+    </FluentCard>
 </FluentStack>
+
+@code {
+    private SkillForm _skill = new();
+    private ImportReport? _skillReport;
+
+    private AgentForm _agent = new();
+    private ImportReport? _agentReport;
+
+    private void ImportSkill(bool dryRun)
+    {
+        var options = new SkillImportOptions(
+            Id: Blank(_skill.Id),
+            Name: Blank(_skill.Name),
+            Targets: Blank(_skill.Target) is { } t ? new[] { t } : null,
+            Force: _skill.Force,
+            DryRun: dryRun);
+
+        _skillReport = App.ImportSkill(_skill.Path.Trim(), options);
+    }
+
+    private void ImportAgent(bool dryRun)
+    {
+        var options = new AgentImportOptions(
+            Type: Blank(_agent.Type),
+            Split: _agent.SplitSections ? "sections" : "file",
+            Id: Blank(_agent.Id),
+            Force: _agent.Force,
+            DryRun: dryRun);
+
+        _agentReport = App.ImportAgent(_agent.Path.Trim(), options);
+    }
+
+    private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private sealed class SkillForm
+    {
+        public string Path { get; set; } = string.Empty;
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Target { get; set; } = string.Empty;
+        public bool DryRun { get; set; }
+        public bool Force { get; set; }
+    }
+
+    private sealed class AgentForm
+    {
+        public string Path { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
+        public string Id { get; set; } = string.Empty;
+        public bool SplitSections { get; set; }
+        public bool DryRun { get; set; }
+        public bool Force { get; set; }
+    }
+}

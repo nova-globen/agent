@@ -20,9 +20,10 @@ compatible and the GUI optional (the headless CLI must not depend on the UI).
 - **Localhost Blazor Web UI** — `AgentSync.Ui.Web` (executable `agent-sync-ui`) using
   **Microsoft FluentUI Blazor components**, bound to `127.0.0.1` with a random port and a
   per-launch session token (exchanged into an HttpOnly cookie and stripped from the URL on
-  first use; unauthenticated `/healthz`). Minimal host implemented (dashboard + read-only
-  screens); remaining work: wire mutations with confirmations and finish placeholder
-  screens (Milestone UI-2).
+  first use; unauthenticated `/healthz`). UI-2 wired: the host runs Interactive Server and
+  all screens (Dashboard, Skills, Imports, Targets, Status/Drift, Diff, Hooks/CI, Settings)
+  drive `AgentSyncApp` with explicit confirmation before destructive actions
+  (Milestone UI-2 done).
 - **Separate GUI packaging** — `agent-sync-ui` ships as its own release artifacts,
   independent of the CLI / `dotnet tool` release (Milestone UI-3, not yet done).
 

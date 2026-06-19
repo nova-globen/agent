@@ -15,7 +15,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Bind to loopback only on the chosen port. Never bind 0.0.0.0 (no remote exposure).
 builder.WebHost.UseUrls($"http://127.0.0.1:{options!.Port}");
 
-builder.Services.AddRazorComponents();
+builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddFluentUIComponents();
 builder.Services.AddSingleton(options);
 // One application service scoped to the single repository this session manages.
@@ -71,7 +71,7 @@ app.MapGet("/healthz", () => Results.Text("ok", "text/plain"));
 
 app.UseStaticFiles();
 app.UseAntiforgery();
-app.MapRazorComponents<App>();
+app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 
 app.Run();
 return 0;

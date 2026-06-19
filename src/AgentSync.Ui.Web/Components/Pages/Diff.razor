@@ -1,10 +1,39 @@
 @page "/diff"
+@inject AgentSyncApp App
 
 <PageTitle>Agent Sync — Diff</PageTitle>
 
-<FluentStack Orientation="Orientation.Vertical" VerticalGap="8">
+<FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
     <FluentLabel Typo="Typography.H3">Diff</FluentLabel>
-    <FluentLabel Typo="Typography.Body">
-        Placeholder: renders canonical-to-projection differences via App.Diff().
-    </FluentLabel>
+
+    <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8">
+        <FluentButton OnClick="Refresh">Refresh</FluentButton>
+    </FluentStack>
+
+    @if (_diff is null || !_diff.HasDifferences)
+    {
+        <FluentLabel>No differences — every projection matches its canonical source.</FluentLabel>
+    }
+    else
+    {
+        @foreach (var entry in _diff.Entries)
+        {
+            <FluentCard>
+                <FluentStack Orientation="Orientation.Vertical" VerticalGap="4">
+                    <FluentLabel>
+                        <strong>@entry.RelativePath</strong> (@entry.TargetId / @entry.SkillId) — @entry.Kind
+                    </FluentLabel>
+                    <pre style="white-space: pre-wrap; margin: 0;">@entry.Diff</pre>
+                </FluentStack>
+            </FluentCard>
+        }
+    }
 </FluentStack>
+
+@code {
+    private DiffReport? _diff;
+
+    protected override void OnInitialized() => Refresh();
+
+    private void Refresh() => _diff = App.Diff();
+}

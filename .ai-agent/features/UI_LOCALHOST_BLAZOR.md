@@ -132,10 +132,26 @@ The UI should eventually support (all through `AgentSyncApp`):
 - Settings / logs
 - Version / release info
 
-Current state: Dashboard, Skills (list), Targets (list), Status/Drift are wired
-read-only; Imports, Diff, Hooks/CI, Settings are placeholders. Mutations are not yet
-wired into the UI (they exist and are tested on `AgentSyncApp`); they will be added with
-explicit confirmation dialogs.
+Current state (UI-2 wired): the host runs **Interactive Server** and the screens drive
+`AgentSyncApp` with explicit in-page confirmation before any destructive/file-writing
+action:
+
+- **Dashboard** — repo path, init/Git/skill-count/drift state, quick-action links, CI
+  command.
+- **Skills** — list/show, add, edit (name/description/version/body-file + enable/disable
+  targets), delete (confirm; dry-run + force; explains generated sections may remain).
+- **Imports** — import skill and import agent, each with dry-run preview, optional
+  id/name/target/type/split, and force; renders the import report.
+- **Targets** — list known targets with state, add, edit (path/enabled), delete (confirm;
+  dry-run + force; explains lockfile/projection implications).
+- **Status / Drift** — status, drift items, validation, refresh, and sync / force-sync
+  (force is confirmed).
+- **Diff** — `AgentSyncApp.Diff()` grouped per target/skill, with an empty state.
+- **Hooks / CI** — copyable CI command + confirmed `InstallHooks()`.
+- **Settings** — active repo, version, and local-UI security notes.
+
+No repository logic lives in Razor components — they only call `AgentSyncApp` after
+confirmation. Remaining: separate GUI release artifacts (Milestone UI-3).
 
 ## Packaging
 
@@ -161,13 +177,14 @@ explicit confirmation dialogs.
   (`IBrowserLauncher`) at the token URL and printing only the clean URL; falls back to the
   token URL on open failure / `--no-open`; exit-3 with install guidance when absent or on
   readiness timeout. No compile-time UI reference in the CLI (test-guarded).
-- **`AgentSync.Ui.Abstractions` (`AgentSyncApp`) — implemented + tested** (no UI deps).
-- **`AgentSync.Ui.Web` — FluentUI Blazor host, hardened launch.** Binds `127.0.0.1`,
-  strict option parsing (`WebOptions.TryParse`), token middleware that exchanges the token
-  into an HttpOnly cookie and strips it from the URL, unauthenticated `/healthz`; dashboard
-  + read-only screens + placeholders. Builds with the standard SDK (no special workloads).
-- **Remaining:** wire mutations with confirmations, finish placeholder screens, and add
-  separate GUI release artifacts (Milestones UI-2 / UI-3 in `ROADMAP.md`).
+- **`AgentSync.Ui.Abstractions` (`AgentSyncApp`) — implemented + tested** (no UI deps);
+  adds `ListTargets`, `InstallHooks`, and `AppVersion` for the UI-2 screens.
+- **`AgentSync.Ui.Web` — FluentUI Blazor host (Interactive Server), UI-2 wired.** Binds
+  `127.0.0.1`, strict option parsing (`WebOptions.TryParse`), token middleware that
+  exchanges the token into an HttpOnly cookie and strips it from the URL, unauthenticated
+  `/healthz`; all screens drive `AgentSyncApp` with confirmation before destructive
+  actions. Builds with the standard SDK (no special workloads).
+- **Remaining:** add separate GUI release artifacts (Milestone UI-3 in `ROADMAP.md`).
 
 ## Tests
 
@@ -184,6 +201,13 @@ explicit confirmation dialogs.
   `--no-open`, exits 3 on readiness timeout / launch failure / when absent, and keeps the
   token out of stderr. Browser/readiness are injected fakes (`IBrowserLauncher` /
   `IUiReadinessProbe`) so tests need no real process or socket.
-- `AgentSyncApp` capability coverage (`AgentSync.Ui.Abstractions.Tests`).
+- `AgentSyncApp` capability coverage (`AgentSync.Ui.Abstractions.Tests`), including the
+  UI-2 mutation paths each screen calls (`Ui2WiringTests`): `ListTargets`, edit/delete
+  skill + target, import skill/agent dry-run, sync dry-run, `InstallHooks`, `AppVersion`.
+- Web-host smoke (`AgentSync.Ui.Web.Tests/WebHostSmokeTests`): boots the real
+  `agent-sync-ui` process against a throwaway repo and asserts `/healthz` readiness, 401
+  without a token, 401 on a wrong token, the valid-token 302 that sets the cookie and
+  strips the token from the URL, and that the Dashboard/Skills/Imports/Targets/Status/Diff
+  pages render their server-side HTML behind the cookie. No browser required.
 - Build isolation: the CLI/Core/GitAgent and tool packages build with no GUI assemblies;
   `AgentSync.Cli` references neither the web host nor FluentUI (test-guarded).
