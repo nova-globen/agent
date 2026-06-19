@@ -112,27 +112,31 @@ The tool must not overwrite user-authored content outside managed sections.
 
 ---
 
-## Planned major features (not yet implemented)
+## Major feature wave (mostly implemented; GUI rendering pending)
 
-The next feature wave is planned but **not implemented** — do not treat it as shipped.
-Implementation-ready specs live under `.ai-agent/features/`:
+Specs live under `.ai-agent/features/`. Status:
 
-- **Import** — `agent import skill` / `agent import agent` to adopt existing skill
-  files/folders and instruction files (`AGENTS.md`, `CLAUDE.md`, Copilot, Gemini,
-  Cursor, skill folders) into canonical `.agent/skills/` (`features/IMPORTS.md`).
-- **CRUD** — `agent skill add/edit/delete/list/show` and
-  `agent target add/edit/delete/list/show` (`features/CRUD_COMMANDS.md`).
-- **`agent ui`** — a planned **launcher/discovery command** that starts a separately
-  installed GUI executable (`agent-sync-ui`). The GUI is a **separate, optional product
-  surface** built with **.NET MAUI Blazor Hybrid** (`AgentSync.Ui.Maui`) reusing
-  `AgentSync.Core` services. Windows/macOS are the official path; **Linux GUI is
-  experimental pending an OpenMaui (`open-maui/maui-linux`) evaluation** and must not
-  block CLI releases (`features/UI_MAUI_BLAZOR.md`).
+- **Import — implemented.** `agent import skill` / `agent import agent` adopt existing
+  skill files/folders and instruction files (`AGENTS.md`, `CLAUDE.md`, Copilot, Gemini,
+  Cursor, skill folders) into canonical `.agent/skills/`. Logic in
+  `src/AgentSync.Core/Import/` (`features/IMPORTS.md`).
+- **CRUD — implemented.** `agent skill add/edit/delete/list/show` (+ `skills`) and
+  `agent target add/edit/delete/list/show` (+ `targets`). Logic in
+  `src/AgentSync.Core/Authoring/` (`features/CRUD_COMMANDS.md`).
+- **`agent ui` — implemented as a launcher.** It starts a separately installed GUI
+  executable (`agent-sync-ui`) via `AgentSync.Core.UiLauncher` and fails gracefully when
+  absent. No compile-time MAUI/OpenMaui reference from the CLI (guarded by a test).
+- **GUI app — skeleton + tested service layer.** `AgentSync.Ui.Abstractions`
+  (`AgentSyncApp`) is implemented and tested; `AgentSync.Ui.Maui` is a MAUI Blazor Hybrid
+  skeleton **excluded from `AgentSync.slnx`**. The rendered MVP + packaging need a
+  MAUI-workload build (`features/UI_MAUI_BLAZOR.md`).
+- **Linux GUI — deferred**, experimental OpenMaui spike only; do not claim support until
+  tested and packaged (`features/OPENMAUI_LINUX_SPIKE.md`).
 
-Guidance for implementing this wave:
+Guidance for continuing this wave:
 
-- Implementation must be **milestone-based** — see `features/ROADMAP.md`. Land one
-  milestone at a time with tests.
+- Work **milestone-based** — see `features/ROADMAP.md`. Land one milestone at a time
+  with tests.
 - **Keep existing CLI behavior backward compatible.** These are additive commands;
   don't change current command semantics or exit codes.
 - **Future UI work must be milestone-based** (see `features/ROADMAP.md`, Milestones
@@ -168,11 +172,17 @@ and `CLAUDE.md` here are hand-authored, not generated).
 ### Projects
 
 - `src/AgentSync.Core` — all domain logic (config, skills, projections, adapters,
-  drift, services). Keep behavior here.
+  drift, services). Keep behavior here. Includes `Import/` (skill + agent import) and
+  `Authoring/` (skill + target CRUD writers), and `UiLauncher` (discovers/launches the
+  external GUI; no MAUI reference).
 - `src/AgentSync.Cli` — the `agent` binary (`AssemblyName=agent`); logic lives in the
   public `CliRunner` so tests drive it without spawning a process.
 - `src/AgentSync.GitAgent` — the `git-agent` binary (`AssemblyName=git-agent`); its
   `Program` just calls `new CliRunner().Run(args)`, so `git agent <cmd>` == `agent <cmd>`.
+- `src/AgentSync.Ui.Abstractions` — UI-independent application service (`AgentSyncApp`)
+  over Core, for the GUI; no MAUI dependency; in `AgentSync.slnx` and unit-tested.
+- `src/AgentSync.Ui.Maui` — MAUI Blazor Hybrid GUI skeleton (executable `agent-sync-ui`),
+  **excluded from `AgentSync.slnx`** (build separately; needs the MAUI workload).
 
 ### Key design points
 

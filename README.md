@@ -92,6 +92,10 @@ Agent Sync ships two entry points: `agent` and the Git extension `git-agent` (so
 `git agent <command>` works). Releases include self-contained builds, so no .NET
 runtime is required to run them.
 
+The CLI is the primary, fully supported interface. The optional desktop GUI is a
+**separate download** (see [Optional GUI](#optional-gui)); installing the CLI never
+pulls in the GUI, and the `dotnet tool` packages are CLI-only.
+
 ### Recommended: install from GitHub Releases
 
 Linux/macOS:
@@ -404,8 +408,10 @@ agent ui    # locates and launches the separately installed GUI (agent-sync-ui)
 
 If the GUI is not installed, `agent ui` says so and points you at the install/download
 and exits without affecting the CLI. The GUI is built with .NET MAUI Blazor Hybrid for
-Windows/macOS; a Linux GUI is being evaluated experimentally and is not yet a supported
-artifact. See `.ai-agent/features/UI_MAUI_BLAZOR.md`.
+Windows/macOS and ships as **separate release artifacts** on its own cadence — the CLI
+release and the `dotnet tool` packages never include it or depend on a GUI workload. A
+Linux GUI is being evaluated experimentally (OpenMaui) and is not yet a supported
+artifact. See `.ai-agent/features/UI_MAUI_BLAZOR.md` and `RELEASE_CHECKLIST.md`.
 
 ## Drift detection
 

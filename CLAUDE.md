@@ -27,28 +27,36 @@ Repository: https://github.com/nova-globen/agent
 
 ## Planned major features
 
-Planned, **not yet implemented** — do not describe these as shipped. Implementation-ready
-specs live under `.ai-agent/features/` (`IMPORTS.md`, `CRUD_COMMANDS.md`,
-`UI_MAUI_BLAZOR.md`, `ROADMAP.md`):
+Specs live under `.ai-agent/features/` (`IMPORTS.md`, `CRUD_COMMANDS.md`,
+`UI_MAUI_BLAZOR.md`, `OPENMAUI_LINUX_SPIKE.md`, `ROADMAP.md`).
 
-- **Import commands** — `agent import skill` and `agent import agent` to adopt existing
+**Implemented:**
+
+- **Import commands** — `agent import skill` and `agent import agent` adopt existing
   skill files/folders and instruction files (`AGENTS.md`, `CLAUDE.md`, Copilot, Gemini,
-  Cursor, skill folders) into canonical `.agent/skills/`.
-- **Skill/target CRUD commands** — `agent skill add/edit/delete/list/show` and
-  `agent target add/edit/delete/list/show`.
-- **`agent ui`** — planned as a **launcher/discovery command only**: it locates and
-  starts a separately installed GUI executable (`agent-sync-ui`) and fails gracefully
-  with install guidance when the GUI is absent. It must not add a compile-time
-  MAUI/OpenMaui reference to `AgentSync.Cli`.
-- **GUI** — a **separate, optional app**, never bundled into the CLI. `AgentSync.Cli`
-  and `AgentSync.GitAgent` (and the `dotnet tool` packages, hooks, CI, containers) must
-  not reference MAUI/OpenMaui. Official GUI target is **MAUI Blazor Hybrid for
-  Windows/macOS** (`AgentSync.Ui.Maui`). **Linux GUI is planned only as an OpenMaui
-  (`open-maui/maui-linux`) spike/evaluation** — do not claim Linux GUI support until it
-  is tested and packaged. See `features/UI_MAUI_BLAZOR.md`.
+  Cursor, skill folders) into canonical `.agent/skills/`. Logic in
+  `src/AgentSync.Core/Import/`.
+- **Skill/target CRUD** — `agent skill add/edit/delete/list/show` (+ `skills`) and
+  `agent target add/edit/delete/list/show` (+ `targets`). Logic in
+  `src/AgentSync.Core/Authoring/`.
+- **`agent ui`** — a **launcher/discovery command only**: `AgentSync.Core.UiLauncher`
+  locates and starts a separately installed GUI executable (`agent-sync-ui`) and fails
+  gracefully (exit 3) when absent. `AgentSync.Cli` has **no** compile-time MAUI/OpenMaui
+  reference (guarded by a test).
+- **`AgentSync.Ui.Abstractions`** — UI-independent application service (`AgentSyncApp`)
+  over Core; the GUI binds to it (no repository logic in Razor components).
 
-Build milestone by milestone (`features/ROADMAP.md`) and keep existing CLI behavior
-backward compatible.
+**Partially done / not shipped:**
+
+- **GUI app** — `src/AgentSync.Ui.Maui` is a MAUI Blazor Hybrid skeleton **excluded from
+  `AgentSync.slnx`**, so the headless build/test never need the MAUI workload. MVP
+  capabilities are covered + tested via `AgentSyncApp`; the rendered MAUI MVP and
+  packaging still need a MAUI-workload build (could not be built/verified in CI here).
+- **Linux GUI** — **deferred**, experimental OpenMaui spike only; do not claim Linux GUI
+  support until a tested build/package/runtime exists (`OPENMAUI_LINUX_SPIKE.md`).
+
+Keep existing CLI behavior backward compatible; keep the CLI/`git-agent`/hooks/CI/
+`dotnet tool`/containers free of any GUI (MAUI/OpenMaui) dependency.
 
 ## CLI entry points
 
@@ -67,6 +75,11 @@ agent diff            # show canonical-to-projection differences
 agent validate        # validate config and skills
 agent doctor          # diagnose Git repo, PATH, hooks, config
 agent install-hooks   # set core.hooksPath=.githooks and make hooks executable
+agent import skill    # import a SKILL.md / skill folder into .agent/skills
+agent import agent    # import an existing instruction file/folder into canonical skills
+agent skill ...       # add | edit | delete | list | show  (alias: agent skills)
+agent target ...      # add | edit | delete | list | show  (alias: agent targets)
+agent ui              # launch the optional, separately-installed desktop GUI
 ```
 
 ## Core product invariant
