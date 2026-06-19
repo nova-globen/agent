@@ -103,7 +103,7 @@ curl -fsSL https://raw.githubusercontent.com/nova-globen/agent/master/scripts/in
 Install a specific version:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.sh | bash -s -- v0.1.0-alpha.3
+curl -fsSL https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.sh | bash -s -- v0.1.0-alpha.4
 ```
 
 By default this installs into `$HOME/.agent-sync/bin`. Override with
@@ -121,7 +121,7 @@ Prefer to review the script before running it (recommended):
 ```powershell
 irm https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.ps1 -OutFile install.ps1
 # review install.ps1, then:
-.\install.ps1            # or: .\install.ps1 -Version v0.1.0-alpha.3
+.\install.ps1            # or: .\install.ps1 -Version v0.1.0-alpha.4
 ```
 
 Override the Windows install directory with `$env:AGENT_SYNC_INSTALL_DIR`. Installs
@@ -159,8 +159,8 @@ This produces a committed `.config/dotnet-tools.json`:
   "version": 1,
   "isRoot": true,
   "tools": {
-    "agent.sync": { "version": "0.1.0-alpha.3", "commands": ["agent"] },
-    "agent.sync.git": { "version": "0.1.0-alpha.3", "commands": ["git-agent"] }
+    "agent.sync": { "version": "0.1.0-alpha.4", "commands": ["agent"] },
+    "agent.sync.git": { "version": "0.1.0-alpha.4", "commands": ["git-agent"] }
   }
 }
 ```
@@ -192,7 +192,7 @@ git agent --version
 
 1. Go to the [GitHub Releases](https://github.com/nova-globen/agent/releases) page.
 2. Download the archive for your OS/architecture, e.g.
-   `agent-sync-v0.1.0-alpha.3-linux-x64.tar.gz` (or `...-win-x64.zip` on Windows).
+   `agent-sync-v0.1.0-alpha.4-linux-x64.tar.gz` (or `...-win-x64.zip` on Windows).
 3. Extract it.
 4. Put both `agent` and `git-agent` (or `agent.exe` and `git-agent.exe`) on your `PATH`.
 5. Verify:
