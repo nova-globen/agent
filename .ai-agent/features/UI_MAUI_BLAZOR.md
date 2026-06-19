@@ -10,6 +10,23 @@ desktop GUI. The GUI exposes Agent Sync's major features (skills, imports, targe
 sync/status/diff/validate, hooks, version info) and reuses `AgentSync.Core` services —
 no business logic is duplicated in the UI, and no CLI code references the UI.
 
+## Implementation status
+
+- **`agent ui` launcher — implemented.** It discovers and launches an external
+  `agent-sync-ui` executable via `AgentSync.Core.UiLauncher` (env override
+  `AGENT_SYNC_UI`, then next to the binary, then `PATH`) and fails gracefully when the
+  GUI is absent. `AgentSync.Cli` has **no** compile-time MAUI/OpenMaui reference (guarded
+  by a test).
+- **`AgentSync.Ui.Abstractions` — implemented.** A UI-independent application service
+  (`AgentSyncApp`) over `AgentSync.Core`, unit-tested without a renderer. The GUI binds
+  to this; no repository logic lives in Razor components.
+- **`AgentSync.Ui.Maui` — skeleton.** A MAUI Blazor Hybrid project (executable
+  `agent-sync-ui`) **excluded from `AgentSync.slnx`** so the headless build/test never
+  need the MAUI workload. Build it separately (`dotnet build src/AgentSync.Ui.Maui`).
+  Full screens are Milestone H.
+- **OpenMaui Linux — evaluated (deferred).** See
+  [`OPENMAUI_LINUX_SPIKE.md`](OPENMAUI_LINUX_SPIKE.md).
+
 ## Decision
 
 The CLI and GUI are **separate, independent products/surfaces**. These decisions are
