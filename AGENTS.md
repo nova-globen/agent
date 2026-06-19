@@ -181,6 +181,15 @@ testing on Linux/macOS is still needed.
 - Install scripts: `scripts/install.sh` (Linux/macOS) and `scripts/install.ps1`
   (Windows). `scripts/release-smoke.sh` validates naming/mapping and that both binaries
   publish and `git-agent` delegates to `agent`.
+- .NET tool packages: `src/AgentSync.Cli` packs as `Agent.Sync` (command `agent`) and
+  `src/AgentSync.GitAgent` packs as `Agent.Sync.Git` (command `git-agent`); tool/package
+  metadata lives in the two csproj plus shared bits in `Directory.Build.props`
+  (`IsPackable` is off by default and opted into per tool project). The release workflow
+  packs both and `dotnet nuget push`es them to NuGet.org via **Trusted Publishing**
+  (`NuGet/login@v1`, job permission `id-token: write`, secret `NUGET_USER`, one-time
+  nuget.org policy — see `RELEASE_CHECKLIST.md`). Tools are framework-dependent, so they
+  need the .NET 10 runtime (unlike the self-contained release binaries). Description
+  fields must XML-escape `<` / `>` (use `&lt;`/`&gt;`).
 - The public repo is `https://github.com/nova-globen/agent`; the default branch in CI
   triggers is both `main` and `master`.
 

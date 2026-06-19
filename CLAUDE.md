@@ -18,10 +18,11 @@ Repository: https://github.com/nova-globen/agent
 ## Current status
 
 - **Alpha / developer preview.** Core workflow works end to end; surface may still change.
-- **Release version:** `0.1.0-alpha.2` (released; `agent --version` reports
-  `agent 0.1.0-alpha.2`). It is a version-only retag of `alpha.1` — no code changes
-  between the two tags. Local dev builds report the base `Version` from
-  `Directory.Build.props`; the released artifact's version comes from the Git tag.
+- **Release version:** `0.1.0-alpha.3` (released; `agent --version` reports
+  `agent 0.1.0-alpha.3`). This release adds the .NET tool packages (`Agent.Sync` /
+  `Agent.Sync.Git`) on NuGet; `alpha.2` was a version-only retag of `alpha.1`. Local
+  dev builds report the base `Version` from `Directory.Build.props`; the released
+  artifact's version comes from the Git tag.
 - **Target framework:** `.NET 10` (`net10.0`).
 
 ## CLI entry points

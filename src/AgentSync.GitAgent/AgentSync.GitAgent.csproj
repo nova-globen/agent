@@ -11,6 +11,16 @@
     <Nullable>enable</Nullable>
     <AssemblyName>git-agent</AssemblyName>
     <RootNamespace>AgentSync.GitAgent</RootNamespace>
+
+    <!-- Publish as a .NET tool: a global install puts `git-agent` on PATH so
+         `git agent &lt;command&gt;` works. (As a local manifest tool the shim is not on
+         PATH, so `git agent` only resolves for global installs.) -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>git-agent</ToolCommandName>
+    <PackageId>Agent.Sync.Git</PackageId>
+    <IsPackable>true</IsPackable>
+    <RollForward>Major</RollForward>
+    <Description>Git extension for Agent Sync. Installing this .NET tool globally puts `git-agent` on PATH so `git agent &lt;command&gt;` behaves exactly like `agent &lt;command&gt;`. See the Agent.Sync package for the primary `agent` CLI.</Description>
   </PropertyGroup>
 
 </Project>

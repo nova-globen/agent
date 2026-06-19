@@ -26,7 +26,8 @@ Current limitations:
 - Manually validated on Windows; needs more real-world testing on Linux and macOS.
 - Install scripts are new and should be tested across more environments.
 - Symlink escape hardening is not yet implemented.
-- Package-manager installation is not available yet.
+- Published as a .NET tool on NuGet (`Agent.Sync` / `Agent.Sync.Git`); other
+  package managers (Homebrew, winget, etc.) are not available yet.
 - Generated output conventions may change based on feedback.
 
 Feedback from real repositories is the most useful thing right now — see
@@ -102,7 +103,7 @@ curl -fsSL https://raw.githubusercontent.com/nova-globen/agent/master/scripts/in
 Install a specific version:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.sh | bash -s -- v0.1.0-alpha.2
+curl -fsSL https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.sh | bash -s -- v0.1.0-alpha.3
 ```
 
 By default this installs into `$HOME/.agent-sync/bin`. Override with
@@ -120,17 +121,78 @@ Prefer to review the script before running it (recommended):
 ```powershell
 irm https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.ps1 -OutFile install.ps1
 # review install.ps1, then:
-.\install.ps1            # or: .\install.ps1 -Version v0.1.0-alpha.2
+.\install.ps1            # or: .\install.ps1 -Version v0.1.0-alpha.3
 ```
 
 Override the Windows install directory with `$env:AGENT_SYNC_INSTALL_DIR`. Installs
 into `%USERPROFILE%\.agent-sync\bin` by default.
 
+### Install as a .NET tool
+
+Agent Sync is published on NuGet as a .NET tool, which is the easiest way to pin a
+version per repository. Unlike the self-contained GitHub Releases above, this path
+requires the **.NET 10 runtime** on the machine.
+
+Two packages are published:
+
+- [`Agent.Sync`](https://www.nuget.org/packages/Agent.Sync) — the `agent` command.
+- [`Agent.Sync.Git`](https://www.nuget.org/packages/Agent.Sync.Git) — the `git-agent`
+  command, so `git agent <command>` works.
+
+**Per-repository (recommended): a tool manifest.** One developer adds the dependency
+and commits the manifest; everyone else restores it:
+
+```bash
+# once per repo, by whoever adds the dependency
+dotnet new tool-manifest          # creates .config/dotnet-tools.json
+dotnet tool install Agent.Sync
+dotnet tool install Agent.Sync.Git
+
+# every other developer, after cloning
+dotnet tool restore
+```
+
+This produces a committed `.config/dotnet-tools.json`:
+
+```json
+{
+  "version": 1,
+  "isRoot": true,
+  "tools": {
+    "agent.sync": { "version": "0.1.0-alpha.3", "commands": ["agent"] },
+    "agent.sync.git": { "version": "0.1.0-alpha.3", "commands": ["git-agent"] }
+  }
+}
+```
+
+Run a manifest (local) tool through `dotnet`:
+
+```bash
+dotnet agent status
+dotnet tool run agent -- status   # equivalent
+```
+
+> Note: local manifest tools are invoked via `dotnet agent ...`; their shims are not
+> placed on `PATH`, so the bare `agent` and `git agent ...` forms are not available
+> from a manifest install. For those, use a global install or the GitHub Releases
+> binaries.
+
+**Global install.** This puts `agent` and `git-agent` on your `PATH` (via
+`~/.dotnet/tools`), so both `agent ...` and `git agent ...` work:
+
+```bash
+dotnet tool install --global Agent.Sync
+dotnet tool install --global Agent.Sync.Git
+
+agent --version
+git agent --version
+```
+
 ### Manual install
 
 1. Go to the [GitHub Releases](https://github.com/nova-globen/agent/releases) page.
 2. Download the archive for your OS/architecture, e.g.
-   `agent-sync-v0.1.0-alpha.2-linux-x64.tar.gz` (or `...-win-x64.zip` on Windows).
+   `agent-sync-v0.1.0-alpha.3-linux-x64.tar.gz` (or `...-win-x64.zip` on Windows).
 3. Extract it.
 4. Put both `agent` and `git-agent` (or `agent.exe` and `git-agent.exe`) on your `PATH`.
 5. Verify:
