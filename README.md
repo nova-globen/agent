@@ -107,7 +107,7 @@ curl -fsSL https://raw.githubusercontent.com/nova-globen/agent/master/scripts/in
 Install a specific version:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.sh | bash -s -- v0.2.0-alpha.1
+curl -fsSL https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.sh | bash -s -- v0.2.0-alpha.2
 ```
 
 By default this installs into `$HOME/.agent-sync/bin`. Override with
@@ -125,7 +125,7 @@ Prefer to review the script before running it (recommended):
 ```powershell
 irm https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.ps1 -OutFile install.ps1
 # review install.ps1, then:
-.\install.ps1            # or: .\install.ps1 -Version v0.2.0-alpha.1
+.\install.ps1            # or: .\install.ps1 -Version v0.2.0-alpha.2
 ```
 
 Override the Windows install directory with `$env:AGENT_SYNC_INSTALL_DIR`. Installs
@@ -163,8 +163,8 @@ This produces a committed `.config/dotnet-tools.json`:
   "version": 1,
   "isRoot": true,
   "tools": {
-    "agentsync": { "version": "0.2.0-alpha.1", "commands": ["agent"] },
-    "agentsync.git": { "version": "0.2.0-alpha.1", "commands": ["git-agent"] }
+    "agentsync": { "version": "0.2.0-alpha.2", "commands": ["agent"] },
+    "agentsync.git": { "version": "0.2.0-alpha.2", "commands": ["git-agent"] }
   }
 }
 ```
@@ -196,7 +196,7 @@ git agent --version
 
 1. Go to the [GitHub Releases](https://github.com/nova-globen/agent/releases) page.
 2. Download the archive for your OS/architecture, e.g.
-   `agent-sync-v0.2.0-alpha.1-linux-x64.tar.gz` (or `...-win-x64.zip` on Windows).
+   `agent-sync-v0.2.0-alpha.2-linux-x64.tar.gz` (or `...-win-x64.zip` on Windows).
 3. Extract it.
 4. Put both `agent` and `git-agent` (or `agent.exe` and `git-agent.exe`) on your `PATH`.
 5. Verify:
@@ -282,7 +282,7 @@ agent validate        # validate config and skills
 agent import skill    # import an existing SKILL.md / skill folder into .agent/skills
 agent skill           # manage canonical skills: add | edit | delete | list | show
 agent target          # manage projection targets: add | edit | delete | list | show
-agent ui              # launch the optional local web UI (separate install)
+agent ui              # launch the optional local web UI (auto-installs it on first run)
 agent install-hooks   # configure core.hooksPath and make hooks executable
 agent doctor          # diagnose Git repo, PATH, hooks, and config
 
@@ -406,33 +406,31 @@ UI assemblies — the CLI still works fully if the UI is not installed. Installi
 
 ### Installing the optional UI
 
-The UI ships as its own self-contained `agent-sync-ui-<version>-<rid>` archives on the
-[GitHub Releases](https://github.com/nova-globen/agent/releases) page, separate from the
-CLI archives. Download the one for your OS/architecture, extract it, and put
-`agent-sync-ui` on your `PATH` (or point `AGENT_SYNC_UI` at the executable):
-
-Linux/macOS:
+The easiest path is to just run it — `agent ui` **installs the UI for you on first run**:
 
 ```bash
-# Download e.g. agent-sync-ui-v0.2.0-alpha.1-linux-x64.tar.gz from GitHub Releases, then:
-tar -xzf agent-sync-ui-*-linux-x64.tar.gz -C ~/.agent-sync/bin   # a dir on your PATH
-agent ui
+agent ui    # installs agent-sync-ui if needed, then launches it
 ```
 
-Windows PowerShell:
+When the UI isn't already present, `agent ui` installs it automatically:
 
-```powershell
-# Download agent-sync-ui-<version>-win-x64.zip from GitHub Releases, extract it, and put
-# agent-sync-ui.exe on your PATH, then:
-agent ui
-```
+- If a `dotnet` SDK is on your `PATH`, it installs the **`AgentSync.Ui` .NET tool**
+  (command `agent-sync-ui`) at the matching version. You can also do this yourself:
 
-Keep the whole extracted folder together — the executable ships with its static web
-assets (`wwwroot` and a manifest) alongside it.
+  ```bash
+  dotnet tool install --global AgentSync.Ui
+  ```
 
-```bash
-agent ui    # locates and launches the separately installed web UI (agent-sync-ui)
-```
+- Otherwise (a self-contained CLI with no `dotnet`), it downloads the matching
+  self-contained `agent-sync-ui-<version>-<rid>` archive from
+  [GitHub Releases](https://github.com/nova-globen/agent/releases) and extracts it into a
+  per-version cache under your home directory (`~/.agent-sync/ui/...`).
+
+You can still install it manually if you prefer — download the
+`agent-sync-ui-<version>-<rid>` archive for your OS/architecture, extract it, and put
+`agent-sync-ui` on your `PATH` (or point `AGENT_SYNC_UI` at the executable). Keep the whole
+extracted folder together — the executable ships with its static web assets (`wwwroot` and
+a manifest) alongside it.
 
 `agent ui` discovers the `agent-sync-ui` executable, picks a free port, generates a
 per-launch session token, launches the host, and waits for it to report ready (a small
@@ -442,17 +440,17 @@ exchanges that token into an HttpOnly, `SameSite=Strict` cookie and **redirects 
 same path without the token in the URL**, so the token does not linger in your address
 bar or history. If the browser cannot be opened (or you pass `--no-open`), the CLI prints
 the token URL so you can open it yourself. If the host does not become ready, `agent ui`
-reports the failure and exits non-zero. If the UI is not installed, it says so and exits
-without affecting the CLI.
+reports the failure and exits non-zero. If the UI is not installed and cannot be installed
+automatically, it prints install guidance and exits without affecting the CLI.
 
 The UI is a Blazor web app built with Microsoft FluentUI Blazor components. It binds to
 **`127.0.0.1`** only (never `0.0.0.0`), uses a random port, and gates every request with
 the session token (valid for the lifetime of the UI process). It is a local, single-repo
 tool only — it makes no claim to remote/server/team use. The release workflow builds it in
 a **separate, optional job** that publishes the `agent-sync-ui-<version>-<rid>` archives
-independently of the CLI artifacts — the CLI release and the `dotnet tool` packages never
-include it, and a UI build failure never blocks a CLI release. See
-`.ai-agent/features/UI_LOCALHOST_BLAZOR.md` and `RELEASE_CHECKLIST.md`.
+and the `AgentSync.Ui` .NET tool independently of the CLI artifacts — the CLI release and
+the CLI `dotnet tool` packages never include it, and a UI build failure never blocks a CLI
+release. See `.ai-agent/features/UI_LOCALHOST_BLAZOR.md` and `RELEASE_CHECKLIST.md`.
 
 The screens drive the same services as the CLI through `AgentSync.Ui.Abstractions`
 (`AgentSyncApp`) — no repository logic lives in the Razor components. File-writing

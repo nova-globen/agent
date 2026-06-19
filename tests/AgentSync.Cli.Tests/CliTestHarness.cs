@@ -60,12 +60,26 @@ public sealed class CliTestHarness : IDisposable
     }
 
     public CliResult InvokeWithUi(AgentSync.Core.IUiLauncher launcher, params string[] args)
-        => InvokeWithUi(launcher, browser: null, readiness: null, args);
+        => InvokeWithUi(launcher, browser: null, readiness: null, installer: null, args);
 
     public CliResult InvokeWithUi(
         AgentSync.Core.IUiLauncher launcher,
         AgentSync.Core.IBrowserLauncher? browser,
         AgentSync.Core.IUiReadinessProbe? readiness,
+        params string[] args)
+        => InvokeWithUi(launcher, browser, readiness, installer: null, args);
+
+    public CliResult InvokeWithUi(
+        AgentSync.Core.IUiLauncher launcher,
+        AgentSync.Core.IUiInstaller installer,
+        params string[] args)
+        => InvokeWithUi(launcher, browser: null, readiness: null, installer, args);
+
+    public CliResult InvokeWithUi(
+        AgentSync.Core.IUiLauncher launcher,
+        AgentSync.Core.IBrowserLauncher? browser,
+        AgentSync.Core.IUiReadinessProbe? readiness,
+        AgentSync.Core.IUiInstaller? installer,
         params string[] args)
     {
         var stdout = new StringWriter();
@@ -76,7 +90,9 @@ public sealed class CliTestHarness : IDisposable
             WorkingDirectory,
             launcher,
             browser ?? new FakeBrowserLauncher(),
-            readiness ?? new FakeReadinessProbe());
+            readiness ?? new FakeReadinessProbe(),
+            // A no-op installer (returns null) by default so tests never touch the network.
+            installer ?? new FakeUiInstaller());
         var code = runner.Run(args);
         return new CliResult(code, stdout.ToString(), stderr.ToString());
     }
@@ -112,6 +128,29 @@ public sealed class FakeBrowserLauncher : AgentSync.Core.IBrowserLauncher
     {
         OpenedUrl = url;
         return _succeeds;
+    }
+}
+
+/// <summary>
+/// Stand-in installer: records the version it was asked to install and returns a configurable
+/// executable path (null by default, i.e. "could not install"). Never touches dotnet or the
+/// network.
+/// </summary>
+public sealed class FakeUiInstaller : AgentSync.Core.IUiInstaller
+{
+    private readonly string? _result;
+
+    public FakeUiInstaller(string? result = null) => _result = result;
+
+    public bool Called { get; private set; }
+
+    public string? RequestedVersion { get; private set; }
+
+    public string? Install(string version, TextWriter log, TextWriter error)
+    {
+        Called = true;
+        RequestedVersion = version;
+        return _result;
     }
 }
 

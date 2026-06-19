@@ -108,7 +108,9 @@ hooks/CI/`dotnet tool`/containers free of any UI dependency.
   - Session-token middleware (`SessionGate` / `TokenCheck`); deny without a valid token.
   - Show the dashboard + read-only status/skills/targets through `AgentSyncApp`.
   - `agent ui` launcher: free port + token + repo → `agent-sync-ui`; print loopback URL;
-    exit-3 with install guidance when absent. No CLI compile-time UI reference.
+    auto-install the UI when absent (the `AgentSync.Ui` .NET tool or a release-archive
+    download), with exit-3 install guidance only if that fails. No CLI compile-time UI
+    reference.
 - **Files touched:** `src/AgentSync.Ui.Web/`, `src/AgentSync.Core/UiLauncher.cs`
   (port/token/`UiSession`), `src/AgentSync.Cli/CliRunner.cs`, `AgentSync.slnx`, tests.
 - **Acceptance criteria (met):** headless build/test green with **no** GUI workload;
@@ -134,22 +136,28 @@ hooks/CI/`dotnet tool`/containers free of any UI dependency.
   `AgentSyncApp` layer (`Ui2WiringTests`, `ConfirmationSemanticsTests`) plus a real
   web-host smoke test (`WebHostSmokeTests`).
 
-## Milestone UI-3 — GUI packaging  ✅ implemented
+## Milestone UI-3 — GUI packaging + install  ✅ implemented
 
-- **Goal:** ship `agent-sync-ui` as **separate** release artifacts.
+- **Goal:** ship `agent-sync-ui` as **separate** artifacts and make `agent ui` install it.
 - **Done:** `release.yml` has a separate **`release-ui` job** (`needs: release`) that
   publishes self-contained, single-file `agent-sync-ui-<tag>-<rid>.tar.gz` /
   `...-win-x64.zip` (each carrying the executable + its `wwwroot`/static-web-assets
   manifest + LICENSE/README) for every CLI RID, merges their checksums into the release's
-  `checksums.txt`, and (on manual runs) uploads them as workflow artifacts. Because it runs
-  only after the CLI release job succeeds, a UI build failure is visible but cannot block or
-  alter the CLI release / NuGet packages. The CLI artifact names and the CLI-only
-  `dotnet tool` packages are unchanged. `agent ui`'s missing-UI message points to the UI
-  archives. `scripts/release-smoke.sh` validates the UI publish shape, invalid-args usage,
-  and a live `/healthz`/`401` check headlessly. README + `RELEASE_CHECKLIST.md` document
-  the optional UI install.
+  `checksums.txt`, **and** packs/pushes the `AgentSync.Ui` .NET tool (command
+  `agent-sync-ui`, static web assets included) to NuGet. Because it runs only after the CLI
+  release job succeeds, a UI build/pack failure is visible but cannot block or alter the CLI
+  release / NuGet packages. The CLI artifact names and the CLI-only `dotnet tool` packages
+  are unchanged. `agent ui` now **auto-installs** the UI when absent
+  (`AgentSync.Core.UiInstaller`: the `AgentSync.Ui` tool when `dotnet` is present, else a
+  release-archive download into `~/.agent-sync/ui/`), only printing manual install guidance
+  if that fails. The host serves static assets with `MapStaticAssets` so CSS/JS load in
+  published and tool-installed hosts. `scripts/release-smoke.sh` validates the UI publish
+  shape, invalid-args usage, and a live `/healthz`/`401` check headlessly. README +
+  `RELEASE_CHECKLIST.md` document the optional UI install.
 - **Acceptance criteria (met):** the CLI release ships without the GUI; the GUI ships
-  independently; CLI artifact names unchanged; a GUI build never blocks a CLI release.
+  independently (archives + `AgentSync.Ui` tool); CLI artifact names unchanged; a GUI build
+  never blocks a CLI release; `agent ui` installs the UI on first run; the installed/published
+  UI serves its CSS/JS (no 404s).
 
 > **Historical (rejected):** an earlier plan used .NET MAUI Blazor Hybrid (Windows/macOS)
 > plus an experimental OpenMaui Linux spike. That direction was dropped in favour of the

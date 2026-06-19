@@ -27,18 +27,55 @@ public sealed class UiCommandTests
     }
 
     [Fact]
-    public void Ui_NotInstalled_ReportsLocalWebUiAndExits3()
+    public void Ui_NotInstalled_AndInstallFails_ReportsGuidanceAndExits3()
     {
         using var h = new CliTestHarness();
         h.MakeGitRepo();
         var launcher = new FakeUiLauncher(path: null);
+        var installer = new FakeUiInstaller(result: null); // install not possible
 
-        var result = h.InvokeWithUi(launcher, "ui");
+        var result = h.InvokeWithUi(launcher, installer, "ui");
 
         Assert.Equal(ExitCodes.EnvironmentProblem, result.ExitCode);
+        Assert.True(installer.Called);
         Assert.Contains("Agent Sync UI is not installed.", result.StdOut);
         Assert.Contains("The headless CLI is working.", result.StdOut);
         Assert.Contains("local web UI", result.StdOut);
+        // Falls back to actionable guidance: the .NET tool and the release download.
+        Assert.Contains("dotnet tool install --global AgentSync.Ui", result.StdOut);
+        Assert.Contains("github.com/nova-globen/agent/releases", result.StdOut);
+    }
+
+    [Fact]
+    public void Ui_NotInstalled_AutoInstalls_ThenLaunches()
+    {
+        using var h = new CliTestHarness();
+        h.MakeGitRepo();
+        var launcher = new FakeUiLauncher(path: null); // not found on disk...
+        var installer = new FakeUiInstaller(result: "/installed/agent-sync-ui"); // ...so install it
+
+        var result = h.InvokeWithUi(launcher, installer, "ui");
+
+        Assert.Equal(ExitCodes.Success, result.ExitCode);
+        Assert.True(installer.Called);
+        Assert.Contains("setting it up now", result.StdOut);
+        Assert.NotNull(launcher.Request);
+        Assert.Equal("/installed/agent-sync-ui", launcher.Request!.ExecutablePath);
+    }
+
+    [Fact]
+    public void Ui_AlreadyInstalled_DoesNotAttemptInstall()
+    {
+        using var h = new CliTestHarness();
+        h.MakeGitRepo();
+        var launcher = new FakeUiLauncher(path: "/opt/agent-sync-ui");
+        var installer = new FakeUiInstaller(result: "/should/not/be/used");
+
+        var result = h.InvokeWithUi(launcher, installer, "ui");
+
+        Assert.Equal(ExitCodes.Success, result.ExitCode);
+        Assert.False(installer.Called);
+        Assert.Equal("/opt/agent-sync-ui", launcher.Request!.ExecutablePath);
     }
 
     [Fact]

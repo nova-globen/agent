@@ -36,12 +36,20 @@ agent-sync-ui-<tag>-win-x64.zip
 
 ## NuGet (.NET tool) packages
 
-The release also publishes two .NET tool packages to NuGet.org:
+The release publishes three .NET tool packages to NuGet.org:
 
 ```text
-AgentSync       -> command `agent`
-AgentSync.Git   -> command `git-agent`
+AgentSync       -> command `agent`         (CLI; `release` job)
+AgentSync.Git   -> command `git-agent`     (CLI; `release` job)
+AgentSync.Ui    -> command `agent-sync-ui` (optional UI; separate `release-ui` job)
 ```
+
+`AgentSync.Ui` is the optional local web UI, packed and pushed by the **separate
+`release-ui` job** (not the CLI `release` job), so the CLI tool packages stay UI-free and
+a UI failure never blocks the CLI release. `agent ui` installs it on first use
+(`dotnet tool install --global AgentSync.Ui` when a `dotnet` SDK is present, otherwise the
+release archive). The Trusted Publishing policy below must also permit the `AgentSync.Ui`
+id; the simplest setup is a policy that does not restrict the package id (covers all three).
 
 Publishing uses **NuGet Trusted Publishing** (GitHub OIDC), so no long-lived API key
 is stored. One-time setup, required before the first NuGet publish:
@@ -68,6 +76,9 @@ optional product** and is **not** part of the CLI release described above:
 - The CLI release (binaries above) and the `AgentSync` / `AgentSync.Git` `dotnet tool`
   packages stay **UI-free** — they publish without any web-UI dependency. `AgentSync.Cli`
   references neither `AgentSync.Ui.Web` nor FluentUI.
+- The UI also ships as the **`AgentSync.Ui` .NET tool** (command `agent-sync-ui`), packed
+  and pushed by the `release-ui` job. The tool package includes its static web assets
+  (`wwwroot` + the endpoints manifest), so the installed tool serves CSS/JS correctly.
 - The UI ships as separate, self-contained, single-file downloads per runtime, with the
   same RID set and tag as the CLI, but **distinct** artifact names:
 
@@ -91,8 +102,9 @@ optional product** and is **not** part of the CLI release described above:
 
 - `agent ui` discovers an installed `agent-sync-ui` on `PATH` (or via `AGENT_SYNC_UI`),
   picks a free port, generates a per-launch session token, polls `/healthz`, and launches
-  it bound to `127.0.0.1`; it does not bundle the UI. Install docs keep the CLI install and
-  the UI install clearly separate.
+  it bound to `127.0.0.1`; it does not bundle the UI. When the UI is absent it auto-installs
+  it (the `AgentSync.Ui` .NET tool, or the release archive into `~/.agent-sync/ui/`). Install
+  docs keep the CLI install and the UI install clearly separate.
 
 ### Verifying a release
 
@@ -101,6 +113,9 @@ optional product** and is **not** part of the CLI release described above:
 - [ ] `checksums.txt` lists **both** the CLI and UI artifacts; `sha256sum -c checksums.txt`
       passes after downloading them all.
 - [ ] The `AgentSync` / `AgentSync.Git` `dotnet tool` packages contain **no** UI assemblies.
+- [ ] The `AgentSync.Ui` tool installs (`dotnet tool install --global AgentSync.Ui
+      --version <version>`) and, once run, serves `/_framework/blazor.web.js` and the
+      FluentUI `_content/...` assets with `200` (not `404`).
 - [ ] With `agent-sync-ui` on `PATH`, `agent ui` launches it; `agent ui --no-open` prints
       the loopback token URL.
 - [ ] `GET /healthz` returns `200 ok`; `GET /` without a token returns `401`; a valid
@@ -113,7 +128,7 @@ optional product** and is **not** part of the CLI release described above:
 1. Ensure `main`/`master` is green (build + test CI passing).
 2. Update the version if needed in `Directory.Build.props` (`<Version>`).
 3. Create and push the tag. Replace `<tag>` with the release tag (example:
-   `v0.2.0-alpha.1`):
+   `v0.2.0-alpha.2`):
 
    ```bash
    git tag <tag>
@@ -154,8 +169,8 @@ optional product** and is **not** part of the CLI release described above:
 
 9. Verify the NuGet tool packages published and install cleanly (allow a few minutes
    for indexing). NuGet versions have no leading `v`, so tag `<tag>` maps to package
-   version `<version>` — for example, tag `v0.2.0-alpha.1` corresponds to package version
-   `0.2.0-alpha.1`:
+   version `<version>` — for example, tag `v0.2.0-alpha.2` corresponds to package version
+   `0.2.0-alpha.2`:
 
    ```bash
    dotnet tool install --global AgentSync --version <version>

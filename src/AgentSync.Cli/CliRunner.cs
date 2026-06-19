@@ -21,6 +21,7 @@ public sealed class CliRunner
     private readonly IUiLauncher _uiLauncher;
     private readonly IBrowserLauncher _browserLauncher;
     private readonly IUiReadinessProbe _readinessProbe;
+    private readonly IUiInstaller _uiInstaller;
 
     /// <summary>How long <c>agent ui</c> waits for the web host to become ready.</summary>
     private static readonly TimeSpan UiReadyTimeout = TimeSpan.FromSeconds(5);
@@ -33,7 +34,8 @@ public sealed class CliRunner
         string? workingDirectory = null,
         IUiLauncher? uiLauncher = null,
         IBrowserLauncher? browserLauncher = null,
-        IUiReadinessProbe? readinessProbe = null)
+        IUiReadinessProbe? readinessProbe = null,
+        IUiInstaller? uiInstaller = null)
     {
         _out = output ?? Console.Out;
         _err = error ?? Console.Error;
@@ -41,6 +43,7 @@ public sealed class CliRunner
         _uiLauncher = uiLauncher ?? new UiLauncher();
         _browserLauncher = browserLauncher ?? new BrowserLauncher();
         _readinessProbe = readinessProbe ?? new HttpUiReadinessProbe();
+        _uiInstaller = uiInstaller ?? new UiInstaller(_uiLauncher);
     }
 
     public int Run(string[] args)
@@ -1152,9 +1155,19 @@ public sealed class CliRunner
         var executable = _uiLauncher.Locate();
         if (executable is null)
         {
+            // First run: install the optional local web UI on the user's behalf rather than
+            // making them download and place it by hand.
+            _out.WriteLine("Agent Sync UI is not installed; setting it up now...");
+            executable = _uiInstaller.Install(GetVersion(), _out, _err);
+        }
+
+        if (executable is null)
+        {
             _out.WriteLine("Agent Sync UI is not installed.");
             _out.WriteLine("The headless CLI is working.");
-            _out.WriteLine("Download agent-sync-ui (the optional local web UI) from GitHub Releases and put it on PATH:");
+            _out.WriteLine("Install the optional local web UI as a .NET tool:");
+            _out.WriteLine("  dotnet tool install --global AgentSync.Ui");
+            _out.WriteLine("or download agent-sync-ui from GitHub Releases and put it on PATH:");
             _out.WriteLine("  https://github.com/nova-globen/agent/releases");
             return ExitCodes.EnvironmentProblem;
         }

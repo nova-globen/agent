@@ -5,12 +5,16 @@ Compact handoff for AI sessions. Pair with `.ai-agent/NEXT_STEPS.md` and
 
 ## Release
 
-- **Latest published release:** `v0.1.0-alpha.4` — CLI binaries plus the `AgentSync` /
-  `AgentSync.Git` NuGet tools. It predates the import/CRUD/UI feature wave (alpha.1…alpha.4
-  were all CLI-focused; `alpha.2` was a version-only retag of `alpha.1`).
-- **Next intended release:** `v0.2.0-alpha.1` — the first release to ship the import +
+- **Latest tagged release:** `v0.2.0-alpha.1` — the first release to ship the import +
   CRUD commands, `agent ui`, the localhost Blazor UI, and the separate UI release
-  artifacts. Not tagged yet at the time of this note.
+  artifacts. The earlier `v0.1.0-alpha.1…alpha.4` were CLI-focused (`alpha.4` added the
+  `AgentSync` / `AgentSync.Git` NuGet tools; `alpha.2` was a version-only retag of
+  `alpha.1`).
+- **Next intended release:** `v0.2.0-alpha.2` — makes `agent ui` self-installing: it
+  installs the optional UI on first run (the `AgentSync.Ui` .NET tool when a `dotnet` SDK is
+  present, otherwise by downloading the matching release archive), ships the UI as a
+  `dotnet tool`, and fixes the web UI's static-asset 404s (CSS/JS now load) by serving
+  assets with `MapStaticAssets`. Tag `v0.2.0-alpha.2` is pushed to cut it.
 - **Release type:** public alpha / developer preview
 - **Repository:** https://github.com/nova-globen/agent (default branch `master`)
 
@@ -28,22 +32,29 @@ Compact handoff for AI sessions. Pair with `.ai-agent/NEXT_STEPS.md` and
   components, driving Agent Sync through `AgentSync.Ui.Abstractions` (`AgentSyncApp`).
   `agent ui` launches it: free port + per-launch session token, `/healthz` readiness
   poll, opens the browser at the token URL (prints only the clean URL; falls back to the
-  token URL on open failure / `--no-open`), exit-3 with install guidance when absent. The
-  host binds `127.0.0.1`, exchanges the token into an HttpOnly cookie and strips it from
-  the URL on first use. All screens are wired with mutations; file-writing actions use
-  explicit submit buttons and destructive ones (delete, force sync, install hooks) require
-  a second confirmation. The CLI never references the UI/web/FluentUI assemblies
-  (test-guarded). **Separate GUI release packaging is implemented** (Milestone UI-3) — see
-  "Release automation".
+  token URL on open failure / `--no-open`). When the UI is absent, `agent ui`
+  **auto-installs** it via `AgentSync.Core.UiInstaller` (the `AgentSync.Ui` .NET tool when a
+  `dotnet` SDK is present, otherwise the matching `agent-sync-ui-v<version>-<rid>` release
+  archive extracted under `~/.agent-sync/ui/`), only exiting 3 with install guidance when
+  installation fails. The host binds `127.0.0.1`, exchanges the token into an HttpOnly
+  cookie and strips it from the URL on first use, and serves static assets with
+  `app.MapStaticAssets()` (so `_framework/blazor.web.js` and the FluentUI `_content/...`
+  assets load instead of 404ing). All screens are wired with mutations; file-writing actions
+  use explicit submit buttons and destructive ones (delete, force sync, install hooks)
+  require a second confirmation. The CLI never references the UI/web/FluentUI assemblies
+  (`UiInstaller` lives in Core; test-guarded). **Separate GUI release packaging is
+  implemented** (Milestone UI-3): both the `agent-sync-ui-<tag>-<rid>` archives and the
+  `AgentSync.Ui` .NET tool — see "Release automation".
 - **Tests:** all suites pass; run `dotnet test` for the current count.
   `dotnet build -c Release` clean. `scripts/release-smoke.sh` also validates UI packaging
   headlessly (publish shape, invalid-args usage, live `/healthz` + `401`).
 - **Release automation:** `.github/workflows/release.yml` (tag `v*.*.*`) publishes
   self-contained CLI binaries for linux-x64/arm64, osx-x64/arm64, win-x64, plus
   `checksums.txt`; `scripts/install.sh` and `scripts/install.ps1` install from releases.
-  The `dotnet tool` packages stay CLI-only. A **separate `release-ui` job** (`needs:
-  release`) publishes the optional `agent-sync-ui-<tag>-<rid>` archives and merges their
-  checksums in; it can fail independently without affecting the CLI release.
+  The CLI `dotnet tool` packages stay CLI-only. A **separate `release-ui` job** (`needs:
+  release`) publishes the optional `agent-sync-ui-<tag>-<rid>` archives, merges their
+  checksums in, **and** packs/pushes the `AgentSync.Ui` .NET tool; it can fail independently
+  without affecting the CLI release.
 - **CI:** `.github/workflows/agent-sync-check.yml` builds/tests on push (`main`/`master`)
   and PRs, and runs an end-to-end drift check in a throwaway repo.
 - This repo does **not** dogfood Agent Sync on its own hand-authored `AGENTS.md` /

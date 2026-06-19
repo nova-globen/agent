@@ -129,7 +129,10 @@ jobs:
             echo "### Optional local web UI"
             echo "The optional \`agent-sync-ui\` (launched by \`agent ui\`) ships as separate,"
             echo "self-contained \`agent-sync-ui-${tag}-<rid>\` archives, attached to this release"
-            echo "by the separate UI packaging job. The CLI does not require it."
+            echo "by the separate UI packaging job, and as a .NET tool (\`dotnet tool install"
+            echo "--global AgentSync.Ui\`). The CLI does not require it; \`agent ui\` installs it"
+            echo "on first use (the .NET tool when a \`dotnet\` SDK is present, otherwise the"
+            echo "matching release archive)."
             echo
             echo "### Verify checksums"
             echo '```bash'
@@ -338,9 +341,73 @@ jobs:
             checksums.txt \
             --clobber
 
+      # The UI also ships as a .NET tool (id AgentSync.Ui, command agent-sync-ui) so
+      # `agent ui` can self-install it via `dotnet tool install`. This is packed and pushed
+      # in this separate job (not the CLI `release` job) so the CLI's `dotnet tool` packages
+      # stay UI-free and a UI packaging failure can never block the already-published CLI.
+      - name: Pack UI .NET tool
+        run: |
+          set -euo pipefail
+          version="${{ steps.version.outputs.version }}"
+          mkdir -p nupkgs-ui
+          dotnet pack src/AgentSync.Ui.Web/AgentSync.Ui.Web.csproj \
+            -c Release \
+            -p:Version="${version}" \
+            -p:ContinuousIntegrationBuild=true \
+            -o nupkgs-ui
+          echo "UI package:"
+          ls -1 nupkgs-ui
+
+      # Requires a Trusted Publishing policy on nuget.org for the AgentSync.Ui package id
+      # (owner: nova-globen, repo: agent, workflow: release.yml). See RELEASE_CHECKLIST.md.
+      - name: NuGet login (Trusted Publishing)
+        if: ${{ github.event_name == 'push' }}
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push UI tool to NuGet.org
+        if: ${{ github.event_name == 'push' }}
+        run: |
+          set -euo pipefail
+          dotnet nuget push "nupkgs-ui/*.nupkg" \
+            --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+
+      - name: Verify UI package is live on NuGet.org
+        if: ${{ github.event_name == 'push' }}
+        run: |
+          set -euo pipefail
+          version="${{ steps.version.outputs.version }}"
+          id="agentsync.ui" # NuGet flat-container paths are lowercase.
+          url="https://api.nuget.org/v3-flatcontainer/${id}/${version}/${id}.${version}.nupkg"
+          echo "Waiting for ${id} ${version} to appear on the feed..."
+          ok=""
+          for i in $(seq 1 20); do   # up to ~10 minutes (20 x 30s)
+            code="$(curl -fsS -o /dev/null -w '%{http_code}' "$url" || true)"
+            if [ "$code" = "200" ]; then ok=1; echo "  available (HTTP 200)"; break; fi
+            echo "  not yet (HTTP ${code}); retry ${i}/20"
+            sleep 30
+          done
+          if [ -z "$ok" ]; then
+            echo "::error::${id} ${version} was pushed but never became installable on NuGet.org. The async validation likely rejected it (reserved package id, failed malware scan, or unconfirmed owner). Check the owner email on the NuGet account for the reason."
+            exit 1
+          fi
+          echo "AgentSync.Ui is live on NuGet.org."
+
+      - name: Upload UI .nupkg as release asset
+        if: ${{ github.event_name == 'push' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ steps.version.outputs.tag }}" nupkgs-ui/*.nupkg --clobber
+
       - name: Upload UI workflow artifacts (manual runs)
         if: ${{ github.event_name == 'workflow_dispatch' }}
         uses: actions/upload-artifact@v4
         with:
           name: agent-sync-ui-${{ steps.version.outputs.tag }}
-          path: dist-ui/*
+          path: |
+            dist-ui/*
+            nupkgs-ui/*.nupkg

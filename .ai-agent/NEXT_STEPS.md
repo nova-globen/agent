@@ -12,11 +12,12 @@ compatible and the GUI optional (the headless CLI must not depend on the UI).
   `features/IMPORTS.md`).
 - **Skill/target CRUD** — `agent skill …` / `agent target …` (implemented;
   `features/CRUD_COMMANDS.md`).
-- **`agent ui` launcher** — launches a *separately installed* `agent-sync-ui` with
+- **`agent ui` launcher + installer** — launches `agent-sync-ui` with
   `--repo`/`--port`/`--token` (`--no-open`), waits for its `/healthz` readiness endpoint,
-  opens the browser at the token URL (printing only the clean URL), and exits 3 with
-  install guidance when absent or on readiness timeout (implemented;
-  `features/UI_LOCALHOST_BLAZOR.md`).
+  and opens the browser at the token URL (printing only the clean URL). When the UI is
+  absent it **auto-installs** it (the `AgentSync.Ui` .NET tool when `dotnet` is present,
+  otherwise the matching release archive into `~/.agent-sync/ui/`) and only prints install
+  guidance / exits 3 if that fails (implemented; `features/UI_LOCALHOST_BLAZOR.md`).
 - **Localhost Blazor Web UI** — `AgentSync.Ui.Web` (executable `agent-sync-ui`) using
   **Microsoft FluentUI Blazor components**, bound to `127.0.0.1` with a random port and a
   per-launch session token (exchanged into an HttpOnly cookie and stripped from the URL on
@@ -25,11 +26,11 @@ compatible and the GUI optional (the headless CLI must not depend on the UI).
   drive `AgentSyncApp` via view-models (`AgentSync.Ui.Web/ViewModels/*`); file-writing
   actions use explicit submit buttons and destructive ones (delete, force sync, install
   hooks) require a second confirmation step (Milestone UI-2 done).
-- **Separate GUI packaging** — `agent-sync-ui` ships as its own
-  `agent-sync-ui-<tag>-<rid>` release artifacts via a separate `release-ui` job
-  (`needs: release`), independent of the CLI / `dotnet tool` release; UI checksums are
-  merged into `checksums.txt` and a UI build failure never blocks the CLI release
-  (Milestone UI-3 done).
+- **Separate GUI packaging** — `agent-sync-ui` ships both as its own
+  `agent-sync-ui-<tag>-<rid>` release artifacts **and** as the `AgentSync.Ui` .NET tool
+  (command `agent-sync-ui`), via a separate `release-ui` job (`needs: release`), independent
+  of the CLI / CLI-`dotnet tool` release; UI checksums are merged into `checksums.txt` and a
+  UI build failure never blocks the CLI release (Milestone UI-3 done).
 
 > The earlier MAUI/OpenMaui GUI direction was dropped in favour of the localhost web UI;
 > the MAUI project and the OpenMaui spike doc were removed.
@@ -43,7 +44,8 @@ Milestone breakdown and acceptance criteria: `features/ROADMAP.md`.
 - Verify the alpha limitations list is current.
 - Verify the GitHub issue templates render and route correctly.
 - Verify install docs (`install.sh` / `install.ps1` commands, manual install).
-- Verify GitHub release assets (CLI + UI) exist and checksums validate for `v0.2.0-alpha.1`.
+- Verify GitHub release assets (CLI + UI archives + the `AgentSync.Ui` tool) exist and
+  checksums validate for `v0.2.0-alpha.2`.
 
 ## Near-term product work
 
@@ -61,7 +63,7 @@ Milestone breakdown and acceptance criteria: `features/ROADMAP.md`.
 
 - Homebrew formula (macOS/Linux).
 - winget package (Windows).
-- `dotnet tool` package, if feasible.
+- `dotnet tool` packages — done (`AgentSync`, `AgentSync.Git`, and `AgentSync.Ui`).
 - Container image, if useful for CI usage.
 
 ## Longer-term

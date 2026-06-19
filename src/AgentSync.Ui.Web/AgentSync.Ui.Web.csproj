@@ -9,8 +9,15 @@
     <AssemblyName>agent-sync-ui</AssemblyName>
     <RootNamespace>AgentSync.Ui.Web</RootNamespace>
 
-    <!-- A separate, optional product; not packed as a dotnet tool. -->
-    <IsPackable>false</IsPackable>
+    <!-- The optional local web UI also ships as a .NET tool (id AgentSync.Ui, command
+         agent-sync-ui) so `agent ui` can install it via `dotnet tool install`. This is a
+         SEPARATE package from the CLI tools; the CLI never references this project. -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>agent-sync-ui</ToolCommandName>
+    <PackageId>AgentSync.Ui</PackageId>
+    <IsPackable>true</IsPackable>
+    <RollForward>Major</RollForward>
+    <Description>Agent Sync UI — the optional localhost web UI for Agent Sync (command: agent-sync-ui), launched by `agent ui`. A Blazor host bound to 127.0.0.1 with a per-launch session token, for managing canonical skills, imports, targets, drift, and Git-hook/CI enforcement. The Agent Sync CLI does not require it.</Description>
   </PropertyGroup>
 
   <ItemGroup>

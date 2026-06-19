@@ -21,10 +21,13 @@ business logic is duplicated, and no CLI code references the web host.
 - GUI executable name: **`agent-sync-ui`**.
 - `agent ui` is a **launcher/discovery command only** (no UI rendering in the CLI).
 - The CLI and Git extension stay **headless and GUI-free**; hooks, CI, containers, and
-  the `dotnet tool` packages never depend on the UI or on any web/UI assemblies.
+  the **CLI** `dotnet tool` packages (`AgentSync` / `AgentSync.Git`) never depend on the UI
+  or on any web/UI assemblies.
 - `AgentSync.Cli` must not reference `AgentSync.Ui.Web` (no compile-time UI dependency);
-  it knows only the executable name and the launch protocol.
-- The `dotnet tool` package remains CLI-only unless explicitly changed later.
+  it knows only the executable name, the install package id, and the launch protocol
+  (discovery/install/launch logic lives in `AgentSync.Core`).
+- The **CLI** `dotnet tool` packages stay CLI-only; the UI ships as its **own separate**
+  `AgentSync.Ui` .NET tool (command `agent-sync-ui`).
 - The GUI is **independently packaged** and shipped on its own cadence.
 - The GUI uses **`AgentSync.Ui.Abstractions`** and **`AgentSync.Core`**.
 - UI rendering is separated from repository mutation logic — **Razor components contain
@@ -63,7 +66,12 @@ Razor components (FluentUI)  ->  AgentSyncApp (AgentSync.Ui.Abstractions)  ->  A
 
 1. Resolve the current repository path (`GitRepository.Discover`, falling back to cwd).
 2. Locate `agent-sync-ui` (`AGENT_SYNC_UI` override → next to the `agent` binary →
-   `PATH`).
+   `PATH`). If not found, **auto-install** it via `AgentSync.Core.UiInstaller`
+   (`IUiInstaller`): install the `AgentSync.Ui` .NET tool (command `agent-sync-ui`) when a
+   `dotnet` SDK is on `PATH`, otherwise download the matching
+   `agent-sync-ui-v<version>-<rid>` release archive and extract it into a per-version cache
+   (`~/.agent-sync/ui/v<version>/<rid>/`). The installer lives in Core, so the CLI keeps no
+   UI reference.
 3. Choose a free loopback port (`UiSession.FindFreePort`).
 4. Generate a per-launch session token (`UiSession.NewToken`).
 5. Launch:
@@ -82,16 +90,33 @@ Razor components (FluentUI)  ->  AgentSyncApp (AgentSync.Ui.Abstractions)  ->  A
    - On failure (or with `--no-open`), print the token URL on **stdout** so the user can
      open it manually. The token is never written to stderr or logs.
 
-If the GUI is missing, `agent ui` exits with code **3** and prints:
+If the GUI is missing **and** auto-install fails (e.g. an unreleased dev build, no `dotnet`
+and no network, or no matching release asset), `agent ui` exits with code **3** and prints
+guidance:
 
 ```text
 Agent Sync UI is not installed.
 The headless CLI is working.
-Install the Agent Sync UI package or download the local web UI from GitHub Releases.
+Install the optional local web UI as a .NET tool:
+  dotnet tool install --global AgentSync.Ui
+or download agent-sync-ui from GitHub Releases and put it on PATH:
+  https://github.com/nova-globen/agent/releases
 ```
 
-The CLI has **no** compile-time reference to the UI; discovery/launch is by executable
-name only (guarded by a test).
+The CLI has **no** compile-time reference to the UI; discovery, install, and launch are by
+package id / executable name only (`UiInstaller` lives in `AgentSync.Core`; guarded by a
+test).
+
+### Static asset delivery
+
+The host serves static files with `app.MapStaticAssets()` (the .NET 9+ endpoint-routing
+convention), **not** `app.UseStaticFiles()`. In a published/self-contained or
+`dotnet tool`-installed host, `UseStaticFiles` 404s the framework script
+(`_framework/blazor.web.js`) and the FluentUI `_content/...` assets, leaving the page with
+no CSS or JS; `MapStaticAssets` reads the build/publish static-web-assets endpoint manifest
+and serves them. `App.razor` resolves fingerprinted assets via `@Assets["..."]` (with an
+`<ImportMap />`), keeps the Blazor framework script reference unfingerprinted, and links a
+`wwwroot/favicon.svg` so the browser stops requesting a missing `/favicon.ico`.
 
 ## Security
 
@@ -183,31 +208,39 @@ Packaging is implemented (Milestone UI-3):
 
 - The **CLI release remains independent** and GUI-free; CLI artifact names
   (`agent-sync-<tag>-<rid>.{tar.gz,zip}` + `checksums.txt`) are unchanged.
-- The **`dotnet tool` packages stay CLI-only.**
+- The **CLI `dotnet tool` packages (`AgentSync` / `AgentSync.Git`) stay CLI-only.**
 - `agent-sync-ui` ships **separately** from a dedicated **`release-ui` job** in
-  `release.yml` (`needs: release`), as a self-contained, single-file executable per RID,
-  archived **with its `wwwroot`/static-web-assets manifest** plus LICENSE/README:
+  `release.yml` (`needs: release`), in two forms:
+  - a self-contained, single-file executable per RID, archived **with its
+    `wwwroot`/static-web-assets manifest** plus LICENSE/README:
 
-  ```text
-  agent-sync-ui-<tag>-<rid>.tar.gz
-  agent-sync-ui-<tag>-win-x64.zip
-  ```
+    ```text
+    agent-sync-ui-<tag>-<rid>.tar.gz
+    agent-sync-ui-<tag>-win-x64.zip
+    ```
+
+  - the **`AgentSync.Ui` .NET tool** (command `agent-sync-ui`), packed and pushed to NuGet
+    by the same job (its static web assets are included in the package, so the installed
+    tool serves CSS/JS correctly).
 
   The UI checksums are merged into the release's `checksums.txt` (CLI entries preserved).
-- Because `release-ui` runs only after the CLI release job succeeds, a UI build failure is
-  visible but **cannot block or alter** the CLI release / NuGet packages.
-- `agent ui` tells users how to install the GUI when it is missing (download
-  `agent-sync-ui` from GitHub Releases and put it on `PATH`).
+- Because `release-ui` runs only after the CLI release job succeeds, a UI build/pack failure
+  is visible but **cannot block or alter** the CLI release / NuGet packages.
+- When the GUI is missing, `agent ui` installs it automatically (the `AgentSync.Ui` .NET
+  tool when `dotnet` is present, else the release archive) and only prints manual install
+  guidance if that fails.
 - `scripts/release-smoke.sh` validates the UI publish shape, invalid-args usage, and a
   live `/healthz`/`401` check — headlessly, no browser.
 
 ## Implementation status
 
-- **`agent ui` launcher — implemented + hardened.** Free port + token + repo passed to
-  `agent-sync-ui`; polls `/healthz` readiness before opening the browser
+- **`agent ui` launcher + installer — implemented + hardened.** Free port + token + repo
+  passed to `agent-sync-ui`; polls `/healthz` readiness before opening the browser
   (`IBrowserLauncher`) at the token URL and printing only the clean URL; falls back to the
-  token URL on open failure / `--no-open`; exit-3 with install guidance when absent or on
-  readiness timeout. No compile-time UI reference in the CLI (test-guarded).
+  token URL on open failure / `--no-open`. When the UI is absent, `AgentSync.Core.UiInstaller`
+  auto-installs it (the `AgentSync.Ui` .NET tool or a release-archive download into
+  `~/.agent-sync/ui/`); exit-3 with install guidance only if install fails or on readiness
+  timeout. No compile-time UI reference in the CLI (test-guarded).
 - **`AgentSync.Ui.Abstractions` (`AgentSyncApp`) — implemented + tested** (no UI deps);
   adds `ListTargets`, `InstallHooks`, and `AppVersion` for the UI-2 screens.
 - **`AgentSync.Ui.Web` — FluentUI Blazor host (Interactive Server), UI-2 wired.** Binds
@@ -215,9 +248,11 @@ Packaging is implemented (Milestone UI-3):
   exchanges the token into an HttpOnly cookie and strips it from the URL, unauthenticated
   `/healthz`; screens drive `AgentSyncApp` via view-models (file-writing actions explicit;
   destructive ones confirmed). Builds with the standard SDK (no special workloads).
-- **Packaging (UI-3) — implemented.** A separate `release-ui` job publishes
-  `agent-sync-ui-<tag>-<rid>` archives independently of the CLI release; checksums merged;
-  CLI / `dotnet tool` release unchanged; release smoke covers it headlessly.
+- **Packaging (UI-3) — implemented.** A separate `release-ui` job publishes the
+  `agent-sync-ui-<tag>-<rid>` archives **and** the `AgentSync.Ui` .NET tool independently of
+  the CLI release; checksums merged; CLI / CLI-`dotnet tool` release unchanged; release smoke
+  covers the UI headlessly. The host serves static assets with `MapStaticAssets` so CSS/JS
+  load in published and tool-installed hosts.
 - **Remaining:** nothing for UI-1…UI-3. Future polish only (e.g. package-manager
   distribution of the UI), tracked in `NEXT_STEPS.md`.
 
@@ -233,9 +268,16 @@ Packaging is implemented (Milestone UI-3):
 - `agent ui` launcher (`AgentSync.Cli.Tests/UiCommandTests`): locates `agent-sync-ui`,
   passes repo/port/token, polls readiness on the launched port, opens the browser at the
   token URL but prints only the clean URL, falls back to the token URL on open failure or
-  `--no-open`, exits 3 on readiness timeout / launch failure / when absent, and keeps the
-  token out of stderr. Browser/readiness are injected fakes (`IBrowserLauncher` /
-  `IUiReadinessProbe`) so tests need no real process or socket.
+  `--no-open`, exits 3 on readiness timeout / launch failure, and keeps the token out of
+  stderr. Auto-install paths too: when the UI is absent it invokes `IUiInstaller` and
+  launches the returned executable; if install fails it prints the `dotnet tool` + Releases
+  guidance and exits 3; when already present it never installs. Browser/readiness/installer
+  are injected fakes (`IBrowserLauncher` / `IUiReadinessProbe` / `IUiInstaller`) so tests
+  need no real process, socket, or network.
+- `UiInstaller` pure helpers (`AgentSync.Core.Tests/UiInstallerTests`): the release
+  download URL matches the artifact naming, `ResolveRid` returns a published RID,
+  `CacheDirectory` is version/RID-scoped, and an unreleased version (`0.0.0`/empty) returns
+  null without side effects.
 - `AgentSyncApp` capability coverage (`AgentSync.Ui.Abstractions.Tests`), including the
   UI-2 mutation paths each screen calls (`Ui2WiringTests`): `ListTargets`, edit/delete
   skill + target, import skill/agent dry-run, sync dry-run, `InstallHooks`, `AppVersion`.

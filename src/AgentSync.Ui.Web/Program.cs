@@ -69,7 +69,13 @@ app.Use(async (context, next) =>
 // CLI's `agent ui` polls this to confirm the host started before opening the browser.
 app.MapGet("/healthz", () => Results.Text("ok", "text/plain"));
 
-app.UseStaticFiles();
+// Serve the framework script (_framework/blazor.web.js), the FluentUI component
+// library's static web assets (_content/...), and our own wwwroot via endpoint routing.
+// MapStaticAssets (not UseStaticFiles) is required for these to resolve in a published
+// self-contained host: it reads the build/publish static-web-assets endpoint manifest,
+// whereas UseStaticFiles only serves a physical wwwroot and 404s the _content/_framework
+// assets, leaving the page with no CSS or JS.
+app.MapStaticAssets();
 app.UseAntiforgery();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 

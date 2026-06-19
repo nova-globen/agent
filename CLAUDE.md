@@ -18,14 +18,17 @@ Repository: https://github.com/nova-globen/agent
 ## Current status
 
 - **Alpha / developer preview.** Core workflow works end to end; surface may still change.
-- **Release version:** the next intended release is `0.2.0-alpha.1` — the first to ship
-  the import/CRUD/`agent ui`/localhost-UI wave and the separate UI release artifacts. The
-  previously published releases were `0.1.0-alpha.1`…`0.1.0-alpha.4` (CLI binaries + NuGet
-  tools only): `alpha.4` introduced the .NET tool packages (`AgentSync` / `AgentSync.Git`)
-  on NuGet; `alpha.3` published the GitHub Release binaries but its NuGet push did not
-  clear validation; `alpha.2` was a version-only retag of `alpha.1`. Local dev builds
-  report the base `Version` from `Directory.Build.props`; the released artifact's version
-  comes from the Git tag.
+- **Release version:** the next intended release is `0.2.0-alpha.2` — it makes `agent ui`
+  self-installing (auto-installs the optional UI on first run: the `AgentSync.Ui` .NET tool
+  when a `dotnet` SDK is present, otherwise the matching release archive), ships the UI as
+  a `dotnet tool`, and fixes the web UI's static-asset 404s (CSS/JS now load) via
+  `MapStaticAssets`. The prior tag `0.2.0-alpha.1` shipped the import/CRUD/`agent ui`/
+  localhost-UI wave and the separate UI release artifacts. The earlier
+  `0.1.0-alpha.1`…`0.1.0-alpha.4` were CLI binaries + NuGet tools only: `alpha.4` introduced
+  the .NET tool packages (`AgentSync` / `AgentSync.Git`) on NuGet; `alpha.3` published the
+  GitHub Release binaries but its NuGet push did not clear validation; `alpha.2` was a
+  version-only retag of `alpha.1`. Local dev builds report the base `Version` from
+  `Directory.Build.props`; the released artifact's version comes from the Git tag.
 - **Target framework:** `.NET 10` (`net10.0`).
 
 ## Planned major features
@@ -42,13 +45,18 @@ Specs live under `.ai-agent/features/` (`IMPORTS.md`, `CRUD_COMMANDS.md`,
 - **Skill/target CRUD** — `agent skill add/edit/delete/list/show` (+ `skills`) and
   `agent target add/edit/delete/list/show` (+ `targets`). Logic in
   `src/AgentSync.Core/Authoring/`.
-- **`agent ui`** — a **launcher/discovery command only**: `AgentSync.Core.UiLauncher` /
-  `UiSession` locate and start a separately installed `agent-sync-ui` with
-  `--repo`/`--port`/`--token` (`--no-open` supported), poll its `/healthz` readiness
-  endpoint (`IUiReadinessProbe`), open the browser (`IBrowserLauncher`) at the token URL
-  but print only the clean URL, fall back to the token URL on open failure / `--no-open`,
-  and exit 3 with install guidance when absent or on readiness timeout. `AgentSync.Cli`
-  has **no** compile-time UI reference (guarded by a test).
+- **`agent ui`** — a **launcher/installer command only**: `AgentSync.Core.UiLauncher` /
+  `UiSession` locate and start `agent-sync-ui` with `--repo`/`--port`/`--token`
+  (`--no-open` supported), poll its `/healthz` readiness endpoint (`IUiReadinessProbe`),
+  open the browser (`IBrowserLauncher`) at the token URL but print only the clean URL, and
+  fall back to the token URL on open failure / `--no-open`. When the UI is **not** found,
+  `AgentSync.Core.UiInstaller` (`IUiInstaller`) **auto-installs** it on first run — as the
+  `AgentSync.Ui` .NET tool when a `dotnet` SDK is on PATH, otherwise by downloading and
+  extracting the matching `agent-sync-ui-v<version>-<rid>` release archive into a per-version
+  cache under the user profile (`~/.agent-sync/ui/...`). It only exits 3 with install
+  guidance (the `dotnet tool install` command + the Releases URL) when both install paths
+  fail or the host never becomes ready. `AgentSync.Cli` has **no** compile-time UI reference
+  (`UiInstaller` lives in Core; guarded by a test).
 - **`AgentSync.Ui.Abstractions`** — UI-independent application service (`AgentSyncApp`)
   over Core; the UI binds to it (no repository logic in Razor components).
 - **`AgentSync.Ui.Web`** — the **localhost Blazor Web UI** host (executable
@@ -65,8 +73,16 @@ Specs live under `.ai-agent/features/` (`IMPORTS.md`, `CRUD_COMMANDS.md`,
 - **GUI packaging (Milestone UI-3)** — a separate `release-ui` job in `release.yml`
   (`needs: release`) publishes self-contained `agent-sync-ui-<tag>-<rid>` archives (with
   their `wwwroot`/static-web-assets manifest) independently of the CLI release, merging
-  the UI checksums into `checksums.txt`. A UI build failure is visible but never blocks the
-  CLI release; the CLI artifact names and CLI-only `dotnet tool` packages are unchanged.
+  the UI checksums into `checksums.txt`, **and** packs/pushes the UI as the `AgentSync.Ui`
+  .NET tool (command `agent-sync-ui`) to NuGet. A UI build failure is visible but never
+  blocks the CLI release; the CLI artifact names and CLI-only `dotnet tool` packages are
+  unchanged.
+- **Web UI static assets** — `AgentSync.Ui.Web/Program.cs` serves static files with
+  `app.MapStaticAssets()` (not `UseStaticFiles()`); the latter 404s `_framework/blazor.web.js`
+  and the FluentUI `_content/...` assets in a published/self-contained host, leaving the
+  page with no CSS/JS. `App.razor` resolves fingerprinted assets via `@Assets[...]` (and an
+  `<ImportMap />`); a `wwwroot/favicon.svg` is referenced so the browser stops requesting a
+  missing `/favicon.ico`. Keep `MapStaticAssets`.
 
 The earlier MAUI/OpenMaui direction was **dropped**; the localhost web UI replaces it.
 Keep existing CLI behavior backward compatible; keep the CLI/`git-agent`/hooks/CI/
@@ -93,7 +109,7 @@ agent import skill    # import a SKILL.md / skill folder into .agent/skills
 agent import agent    # import an existing instruction file/folder into canonical skills
 agent skill ...       # add | edit | delete | list | show  (alias: agent skills)
 agent target ...      # add | edit | delete | list | show  (alias: agent targets)
-agent ui              # launch the optional, separately-installed local web UI (agent-sync-ui)
+agent ui              # launch the optional local web UI (agent-sync-ui); auto-installs it on first run
 ```
 
 ## Core product invariant

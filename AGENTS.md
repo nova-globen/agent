@@ -123,12 +123,15 @@ Specs live under `.ai-agent/features/`. Status:
 - **CRUD — implemented.** `agent skill add/edit/delete/list/show` (+ `skills`) and
   `agent target add/edit/delete/list/show` (+ `targets`). Logic in
   `src/AgentSync.Core/Authoring/` (`features/CRUD_COMMANDS.md`).
-- **`agent ui` — implemented as a launcher.** It starts a separately installed
-  `agent-sync-ui` via `AgentSync.Core.UiLauncher` / `UiSession`
-  (`--repo`/`--port`/`--token`, `--no-open`), polls its `/healthz` readiness endpoint,
-  opens the browser at the token URL (printing only the clean URL), falls back to the
-  token URL on open failure / `--no-open`, and exits 3 with install guidance when absent
-  or on readiness timeout. No compile-time UI reference from the CLI (guarded by a test).
+- **`agent ui` — implemented as a launcher + installer.** It starts `agent-sync-ui` via
+  `AgentSync.Core.UiLauncher` / `UiSession` (`--repo`/`--port`/`--token`, `--no-open`),
+  polls its `/healthz` readiness endpoint, opens the browser at the token URL (printing
+  only the clean URL), and falls back to the token URL on open failure / `--no-open`. If
+  the UI is not found, `AgentSync.Core.UiInstaller` auto-installs it on first run — the
+  `AgentSync.Ui` .NET tool when a `dotnet` SDK is present, otherwise the matching
+  `agent-sync-ui-v<version>-<rid>` release archive (extracted under `~/.agent-sync/ui/`).
+  It exits 3 with install guidance only when both install paths fail or the host never
+  becomes ready. No compile-time UI reference from the CLI (guarded by a test).
 - **Localhost web UI — UI-2 wired.** `AgentSync.Ui.Abstractions` (`AgentSyncApp`) is the
   UI-independent service layer; `AgentSync.Ui.Web` (executable `agent-sync-ui`) is an
   ASP.NET Core + Blazor host (**Interactive Server**) using **Microsoft FluentUI Blazor
@@ -139,8 +142,11 @@ Specs live under `.ai-agent/features/`. Status:
   use explicit submit buttons and destructive ones (delete skill/target, force sync,
   install hooks) require a second confirmation step. Page interaction lives in
   `AgentSync.Ui.Web/ViewModels/*` (testable); no repository logic lives in Razor
-  components. **GUI packaging is implemented**: a separate `release-ui` job publishes
-  `agent-sync-ui-<tag>-<rid>` archives independently of the CLI release
+  components. Static files are served with `app.MapStaticAssets()` (required so
+  `_framework/blazor.web.js` and the FluentUI `_content/...` assets resolve in a published
+  host; `UseStaticFiles()` 404s them). **GUI packaging is implemented**: a separate
+  `release-ui` job publishes `agent-sync-ui-<tag>-<rid>` archives independently of the CLI
+  release and also packs/pushes the `AgentSync.Ui` .NET tool (command `agent-sync-ui`)
   (`features/UI_LOCALHOST_BLAZOR.md`, Milestone UI-3).
 
 > The earlier .NET MAUI / OpenMaui GUI direction was **dropped** in favour of the
@@ -156,8 +162,10 @@ Guidance for continuing this wave:
   stack — `AgentSync.Cli`, `AgentSync.Core`, `AgentSync.GitAgent`, Git hooks, CI, the
   `dotnet tool` packages, and container images — must build, test, run, and ship without
   any UI dependency and must **never** reference `AgentSync.Ui.Web` or FluentUI.
-- **`agent ui` is a launcher**: it starts the external `agent-sync-ui` and fails
-  gracefully with install guidance when absent.
+- **`agent ui` is a launcher + installer**: it starts the external `agent-sync-ui`, and
+  when that is absent it auto-installs it (the `AgentSync.Ui` .NET tool, else the release
+  archive) via `AgentSync.Core.UiInstaller`, falling back to printed install guidance only
+  if installation fails. The installer lives in Core, so the CLI keeps no UI reference.
 - **The web UI binds `127.0.0.1`** with a random port and a per-launch session token
   (exchanged into an HttpOnly cookie and stripped from the URL after first use); never
   `0.0.0.0`. File-writing actions (add/edit/import/sync) use explicit submit buttons;
@@ -188,7 +196,9 @@ and `CLAUDE.md` here are hand-authored, not generated).
 - `src/AgentSync.Core` — all domain logic (config, skills, projections, adapters,
   drift, services). Keep behavior here. Includes `Import/` (skill + agent import) and
   `Authoring/` (skill + target CRUD writers), and `UiLauncher` (discovers/launches the
-  external `agent-sync-ui`; no UI reference), and `UiSession` (free port + session token).
+  external `agent-sync-ui`; no UI reference), `UiInstaller` (installs the UI on demand via
+  the `AgentSync.Ui` .NET tool or a release-archive download), and `UiSession` (free port +
+  session token).
 - `src/AgentSync.Cli` — the `agent` binary (`AssemblyName=agent`); logic lives in the
   public `CliRunner` so tests drive it without spawning a process.
 - `src/AgentSync.GitAgent` — the `git-agent` binary (`AssemblyName=git-agent`); its
@@ -233,9 +243,12 @@ and `git agent --version` (both `agent 0.1.0-alpha.1`), `agent init`, `agent syn
 pre-commit hook running Agent Sync, manual-edit drift detection in `AGENTS.md`, and a
 commit being **blocked** by the hook when drift exists. See
 `.ai-agent/VALIDATION_LOG.md`. The published releases through `v0.1.0-alpha.4` were
-CLI-focused (`alpha.4` added the `AgentSync` / `AgentSync.Git` NuGet tools); the next
-release, `v0.2.0-alpha.1`, is the first to ship imports, CRUD, `agent ui`, and the
-localhost UI. More real-world testing on Linux/macOS is still needed.
+CLI-focused (`alpha.4` added the `AgentSync` / `AgentSync.Git` NuGet tools); `v0.2.0-alpha.1`
+was the first to ship imports, CRUD, `agent ui`, and the localhost UI; the next release,
+`v0.2.0-alpha.2`, makes `agent ui` self-installing (auto-installs the UI — the `AgentSync.Ui`
+.NET tool or a release-archive download), ships the UI as a `dotnet tool`, and fixes the web
+UI's static-asset 404s via `MapStaticAssets`. More real-world testing on Linux/macOS is
+still needed.
 
 ### Releases
 

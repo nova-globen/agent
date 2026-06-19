@@ -73,14 +73,26 @@ grep -q 'release-ui:' "$workflow" || fail "release workflow has no separate UI j
 grep -q 'needs: release' "$workflow" || fail "release-ui job must 'needs: release' (so it cannot block the CLI release)."
 pass "release workflow publishes the UI as separate, optional artifacts."
 
-# 4b. The dotnet tool packages must stay CLI-only (the UI project is only ever published,
-# never packed). The pack step lists exactly the two CLI tool projects.
+# 4b. The CLI 'dotnet tool' packages must stay CLI-only: the CLI 'release' job's pack loop
+# lists exactly the two CLI tool projects and never the UI project.
 grep -Eq 'for proj in src/AgentSync.Cli src/AgentSync.GitAgent' "$workflow" \
-  || fail "release workflow pack/publish project list changed unexpectedly."
-if grep -E 'dotnet pack' "$workflow" | grep -q 'Ui.Web'; then
-  fail "dotnet tool pack must not include AgentSync.Ui.Web."
+  || fail "release workflow CLI pack/publish project list changed unexpectedly."
+if grep -E 'for proj in ' "$workflow" | grep -q 'Ui.Web'; then
+  fail "the CLI dotnet tool pack loop must not include AgentSync.Ui.Web."
 fi
-pass "dotnet tool packages remain CLI-only."
+# The UI ships as its own separate 'AgentSync.Ui' .NET tool, packed in the release-ui job.
+grep -Eq 'dotnet pack +src/AgentSync.Ui.Web' "$workflow" \
+  || fail "release-ui job does not pack the AgentSync.Ui .NET tool."
+grep -q 'PackAsTool' src/AgentSync.Ui.Web/AgentSync.Ui.Web.csproj \
+  && grep -q '<PackageId>AgentSync.Ui</PackageId>' src/AgentSync.Ui.Web/AgentSync.Ui.Web.csproj \
+  || fail "AgentSync.Ui.Web is not configured as the 'AgentSync.Ui' .NET tool."
+pass "CLI tool packages stay CLI-only; the UI ships as the separate AgentSync.Ui tool."
+
+# 4b-ii. The host serves static assets via MapStaticAssets (not UseStaticFiles) so the
+# published/tool-installed UI's CSS/JS load instead of 404ing.
+grep -q 'MapStaticAssets' src/AgentSync.Ui.Web/Program.cs \
+  || fail "UI host must serve static assets with MapStaticAssets (CSS/JS 404 otherwise)."
+pass "UI host serves static assets with MapStaticAssets."
 
 # 4c. Publish the UI for the host runtime and confirm the shippable shape.
 echo "Publishing self-contained UI for $host_rid ..."
@@ -124,11 +136,20 @@ if command -v curl >/dev/null 2>&1; then
     sleep 0.25
   done
   unauth="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:${ui_port}/" 2>/dev/null || true)"
+  # Exchange the token for the session cookie, then confirm a static asset serves (200, not
+  # 404) — guards the MapStaticAssets fix so the UI's CSS/JS keep loading.
+  asset="404"
+  if [ "$ok" = "1" ]; then
+    cj="$ui_out/cookies.txt"
+    curl -s -c "$cj" -o /dev/null "http://127.0.0.1:${ui_port}/?token=${ui_token}" 2>/dev/null || true
+    asset="$(curl -s -b "$cj" -o /dev/null -w '%{http_code}' "http://127.0.0.1:${ui_port}/_framework/blazor.web.js" 2>/dev/null || true)"
+  fi
   kill "$ui_pid" >/dev/null 2>&1 || true
   rm -rf "$ui_repo"
   [ "$ok" = "1" ] || fail "agent-sync-ui did not answer /healthz with 200."
   [ "$unauth" = "401" ] || fail "agent-sync-ui served '/' without a token (expected 401, got $unauth)."
-  pass "agent-sync-ui serves /healthz (200) and gates '/' without a token (401)."
+  [ "$asset" = "200" ] || fail "agent-sync-ui did not serve /_framework/blazor.web.js (expected 200, got $asset) — static assets are 404ing."
+  pass "agent-sync-ui serves /healthz (200), gates '/' without a token (401), and serves static assets (200)."
 else
   echo "SKIP: curl not found; skipped the live /healthz check."
 fi

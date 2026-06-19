@@ -1,7 +1,10 @@
 using System.Diagnostics;
+using System.Formats.Tar;
+using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 
 namespace AgentSync.Core;
@@ -99,6 +102,258 @@ public sealed class UiLauncher : IUiLauncher
         => OperatingSystem.IsWindows()
             ? new[] { ExecutableName + ".exe", ExecutableName }
             : new[] { ExecutableName };
+}
+
+/// <summary>
+/// Installs the external <c>agent-sync-ui</c> on demand when <c>agent ui</c> can't find it,
+/// so the first run is self-service instead of a manual download. Two strategies: install
+/// the <c>AgentSync.Ui</c> .NET tool when a <c>dotnet</c> SDK is on PATH, otherwise download
+/// and extract the self-contained release archive for the current platform.
+/// </summary>
+public interface IUiInstaller
+{
+    /// <summary>
+    /// Attempts to install the UI for the given Agent Sync <paramref name="version"/>,
+    /// writing human-readable progress to <paramref name="log"/> and problems to
+    /// <paramref name="error"/>. Returns the path to the installed executable, or
+    /// <c>null</c> if installation was not possible.
+    /// </summary>
+    string? Install(string version, TextWriter log, TextWriter error);
+}
+
+/// <summary>
+/// Default <see cref="IUiInstaller"/>. Prefers <c>dotnet tool install --global AgentSync.Ui</c>
+/// (matching the CLI's version) when a <c>dotnet</c> command is available; otherwise downloads
+/// the <c>agent-sync-ui-v&lt;version&gt;-&lt;rid&gt;</c> archive from GitHub Releases and
+/// extracts it into a per-version cache under the user profile. Never throws — failure is
+/// reported by returning <c>null</c> so the caller can print install guidance.
+/// </summary>
+public sealed class UiInstaller : IUiInstaller
+{
+    public const string PackageId = "AgentSync.Ui";
+    public const string ReleaseBaseUrl = "https://github.com/nova-globen/agent/releases/download";
+
+    private readonly IUiLauncher _launcher;
+
+    public UiInstaller(IUiLauncher? launcher = null) => _launcher = launcher ?? new UiLauncher();
+
+    public string? Install(string version, TextWriter log, TextWriter error)
+    {
+        if (string.IsNullOrWhiteSpace(version) || version is "0.0.0")
+        {
+            // A local dev build has no published tool/release to install from.
+            error.WriteLine("note: cannot auto-install the UI for an unreleased build.");
+            return null;
+        }
+
+        if (DotnetAvailable())
+        {
+            log.WriteLine($"Installing the Agent Sync UI as a .NET tool ({PackageId} {version})...");
+            if (InstallDotnetTool(version, log, error))
+            {
+                var installed = _launcher.Locate() ?? GlobalToolExecutable();
+                if (installed is not null && File.Exists(installed))
+                {
+                    return installed;
+                }
+            }
+
+            error.WriteLine("note: the .NET tool install did not yield a usable agent-sync-ui; trying a direct download.");
+        }
+
+        return DownloadAndExtract(version, log, error);
+    }
+
+    /// <summary>Maps the current OS/architecture to a published release runtime identifier.</summary>
+    public static string ResolveRid()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return "win-x64";
+        }
+
+        var isArm64 = RuntimeInformation.ProcessArchitecture == Architecture.Arm64;
+        if (OperatingSystem.IsMacOS())
+        {
+            return isArm64 ? "osx-arm64" : "osx-x64";
+        }
+
+        return isArm64 ? "linux-arm64" : "linux-x64";
+    }
+
+    /// <summary>The GitHub Releases download URL for the UI archive of a version + RID.</summary>
+    public static string DownloadUrl(string version, string rid)
+    {
+        var ext = rid.StartsWith("win", StringComparison.Ordinal) ? "zip" : "tar.gz";
+        return $"{ReleaseBaseUrl}/v{version}/agent-sync-ui-v{version}-{rid}.{ext}";
+    }
+
+    /// <summary>The per-version cache directory the downloaded UI is extracted into.</summary>
+    public static string CacheDirectory(string version, string rid)
+        => Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            ".agent-sync", "ui", $"v{version}", rid);
+
+    private static string ExecutableInDir(string dir)
+        => Path.Combine(dir, OperatingSystem.IsWindows() ? UiLauncher.ExecutableName + ".exe" : UiLauncher.ExecutableName);
+
+    private static bool DotnetAvailable()
+    {
+        var pathVar = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        var names = OperatingSystem.IsWindows() ? new[] { "dotnet.exe", "dotnet" } : new[] { "dotnet" };
+        foreach (var dir in pathVar.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+        {
+            foreach (var name in names)
+            {
+                try
+                {
+                    if (File.Exists(Path.Combine(dir.Trim(), name)))
+                    {
+                        return true;
+                    }
+                }
+                catch
+                {
+                    // Ignore malformed PATH entries.
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static bool InstallDotnetTool(string version, TextWriter log, TextWriter error)
+    {
+        // `install` succeeds when the tool is absent; if it's already present that fails, so
+        // fall back to `update` (which also pins the requested version).
+        if (RunDotnet(new[] { "tool", "install", "--global", PackageId, "--version", version }, log, error))
+        {
+            return true;
+        }
+
+        return RunDotnet(new[] { "tool", "update", "--global", PackageId, "--version", version }, log, error);
+    }
+
+    private static bool RunDotnet(string[] args, TextWriter log, TextWriter error)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo("dotnet")
+            {
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            };
+            foreach (var a in args)
+            {
+                psi.ArgumentList.Add(a);
+            }
+
+            using var process = Process.Start(psi);
+            if (process is null)
+            {
+                return false;
+            }
+
+            var stdout = process.StandardOutput.ReadToEnd();
+            var stderr = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+            if (process.ExitCode != 0)
+            {
+                if (!string.IsNullOrWhiteSpace(stderr))
+                {
+                    error.WriteLine(stderr.TrimEnd());
+                }
+
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(stdout))
+            {
+                log.WriteLine(stdout.TrimEnd());
+            }
+
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static string GlobalToolExecutable()
+        => ExecutableInDir(Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".dotnet", "tools"));
+
+    private string? DownloadAndExtract(string version, TextWriter log, TextWriter error)
+    {
+        var rid = ResolveRid();
+        var dir = CacheDirectory(version, rid);
+        var exe = ExecutableInDir(dir);
+
+        // Reuse a previously extracted copy rather than downloading again.
+        if (File.Exists(exe))
+        {
+            return exe;
+        }
+
+        var url = DownloadUrl(version, rid);
+        log.WriteLine($"Downloading the Agent Sync UI from {url} ...");
+
+        var tempArchive = Path.Combine(Path.GetTempPath(), $"agent-sync-ui-{Guid.NewGuid():N}");
+        try
+        {
+            using (var client = new HttpClient { Timeout = TimeSpan.FromMinutes(5) })
+            {
+                using var response = client.GetAsync(url).GetAwaiter().GetResult();
+                if (!response.IsSuccessStatusCode)
+                {
+                    error.WriteLine($"error: download failed (HTTP {(int)response.StatusCode}). No release asset for v{version} / {rid}?");
+                    return null;
+                }
+
+                using var src = response.Content.ReadAsStream();
+                using var dest = File.Create(tempArchive);
+                src.CopyTo(dest);
+            }
+
+            Directory.CreateDirectory(dir);
+            if (url.EndsWith(".zip", StringComparison.Ordinal))
+            {
+                ZipFile.ExtractToDirectory(tempArchive, dir, overwriteFiles: true);
+            }
+            else
+            {
+                using var fs = File.OpenRead(tempArchive);
+                using var gz = new GZipStream(fs, CompressionMode.Decompress);
+                TarFile.ExtractToDirectory(gz, dir, overwriteFiles: true);
+            }
+
+            if (!File.Exists(exe))
+            {
+                error.WriteLine("error: the downloaded archive did not contain agent-sync-ui.");
+                return null;
+            }
+
+            if (!OperatingSystem.IsWindows())
+            {
+                var mode = File.GetUnixFileMode(exe);
+                File.SetUnixFileMode(exe, mode | UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute);
+            }
+
+            log.WriteLine($"Installed the Agent Sync UI to {dir}");
+            return exe;
+        }
+        catch (Exception ex)
+        {
+            error.WriteLine($"error: could not download or extract the Agent Sync UI: {ex.Message}");
+            return null;
+        }
+        finally
+        {
+            try { File.Delete(tempArchive); } catch { /* best effort */ }
+        }
+    }
 }
 
 /// <summary>
