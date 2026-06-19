@@ -36,12 +36,16 @@ specs live under `.ai-agent/features/` (`IMPORTS.md`, `CRUD_COMMANDS.md`,
   Cursor, skill folders) into canonical `.agent/skills/`.
 - **Skill/target CRUD commands** — `agent skill add/edit/delete/list/show` and
   `agent target add/edit/delete/list/show`.
-- **`agent ui`** — an optional GUI exposing the major features.
-- **MAUI Blazor Hybrid GUI** — a **separate, optional product surface** (`src/AgentSync.Ui`)
-  reusing `AgentSync.Core` services. Decision is locked: Windows/macOS use official MAUI
-  Blazor Hybrid; Linux is an experimental OpenMaui spike that must not block CLI
-  releases. The CLI, `git-agent`, hooks, CI, `dotnet tool` packages, and containers must
-  **never** depend on MAUI/OpenMaui (see `features/UI_MAUI_BLAZOR.md`).
+- **`agent ui`** — planned as a **launcher/discovery command only**: it locates and
+  starts a separately installed GUI executable (`agent-sync-ui`) and fails gracefully
+  with install guidance when the GUI is absent. It must not add a compile-time
+  MAUI/OpenMaui reference to `AgentSync.Cli`.
+- **GUI** — a **separate, optional app**, never bundled into the CLI. `AgentSync.Cli`
+  and `AgentSync.GitAgent` (and the `dotnet tool` packages, hooks, CI, containers) must
+  not reference MAUI/OpenMaui. Official GUI target is **MAUI Blazor Hybrid for
+  Windows/macOS** (`AgentSync.Ui.Maui`). **Linux GUI is planned only as an OpenMaui
+  (`open-maui/maui-linux`) spike/evaluation** — do not claim Linux GUI support until it
+  is tested and packaged. See `features/UI_MAUI_BLAZOR.md`.
 
 Build milestone by milestone (`features/ROADMAP.md`) and keep existing CLI behavior
 backward compatible.

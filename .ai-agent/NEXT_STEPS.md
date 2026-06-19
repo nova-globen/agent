@@ -17,9 +17,19 @@ compatible and the GUI optional (headless CLI must not depend on MAUI).
   (`features/CRUD_COMMANDS.md`).
 - **Target CRUD commands** — `agent target add/edit/delete/list/show`
   (`features/CRUD_COMMANDS.md`).
-- **`agent ui`** — a GUI exposing the major features (`features/UI_MAUI_BLAZOR.md`).
-- **MAUI Blazor Hybrid UI** — `src/AgentSync.Ui` reusing `AgentSync.Core` services
-  (`features/UI_MAUI_BLAZOR.md`).
+- **`agent ui` launcher command** — a launcher/discovery command that starts a
+  *separately installed* GUI executable (`agent-sync-ui`); fails gracefully when the GUI
+  isn't installed (`features/UI_MAUI_BLAZOR.md`).
+- **Separate, optional GUI app** — GUI code lives in its own project(s); the CLI,
+  `git-agent`, hooks, CI, containers, and the `dotnet tool` packages stay GUI-free and
+  must not depend on MAUI/OpenMaui.
+- **MAUI Blazor Hybrid for Windows/macOS** — the official primary GUI path
+  (`AgentSync.Ui.Maui`), reusing `AgentSync.Core` services.
+- **OpenMaui Linux spike** — evaluate `open-maui/maui-linux` for an *experimental*
+  Linux GUI (Milestone F2); never claimed as supported without a tested build/package/
+  runtime; never blocks CLI releases.
+- **Separate GUI packaging** — GUI release artifacts ship independently from the CLI /
+  `dotnet tool` release.
 
 Milestone breakdown and acceptance criteria: `features/ROADMAP.md`.
 
