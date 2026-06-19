@@ -1,0 +1,25 @@
+@* Skeleton Imports screen. Lets the user pick a skill or instruction source and preview
+   a dry-run import via AgentSyncApp before confirming. No import logic lives here — it
+   delegates to App.ImportSkill / App.ImportAgent (which reuse AgentSync.Core). *@
+@page "/imports"
+@using AgentSync.Core.Import
+@using AgentSync.Ui.Abstractions
+@inject AgentSyncApp App
+
+<h1>Imports</h1>
+
+<p>Choose a SKILL.md / skill folder, or an existing instruction file (AGENTS.md,
+   CLAUDE.md, Cursor rules, …), preview with a dry run, then confirm.</p>
+
+@if (_preview is not null)
+{
+    <p>Status: @_preview.Status (@_preview.Items.Count item(s))</p>
+}
+
+@code {
+    private ImportReport? _preview;
+
+    // Example flow (wired to UI controls in the MVP): preview a dry-run, then import.
+    private void PreviewSkill(string path)
+        => _preview = App.ImportSkill(path, new SkillImportOptions(DryRun: true));
+}

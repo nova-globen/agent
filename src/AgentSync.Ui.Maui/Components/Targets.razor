@@ -1,0 +1,22 @@
+@* Skeleton Targets screen. Shows configured targets via AgentSyncApp; enable/disable/
+   edit/delete call the service (delete confirmed first). No repository logic here. *@
+@page "/targets"
+@using AgentSync.Core.Configuration
+@using AgentSync.Ui.Abstractions
+@inject AgentSyncApp App
+
+<h1>Targets</h1>
+
+<ul>
+    @foreach (var id in TargetIds.Ordered)
+    {
+        var configured = _config is not null && _config.Targets.TryGetValue(id, out var s) ? s : null;
+        <li>@id — @(configured is null ? "not configured" : configured.Enabled ? $"enabled → {configured.Path}" : "disabled")</li>
+    }
+</ul>
+
+@code {
+    private AgentConfig? _config;
+
+    protected override void OnInitialized() => _config = App.GetConfig();
+}

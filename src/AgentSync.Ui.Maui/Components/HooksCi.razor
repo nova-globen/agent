@@ -1,0 +1,10 @@
+@* Skeleton Hooks/CI screen. Surfaces the copyable CI command and (in the MVP) an
+   "Install hooks" action that delegates to AgentSync.Core via the application service. *@
+@page "/hooks"
+@using AgentSync.Ui.Abstractions
+@inject AgentSyncApp App
+
+<h1>Hooks / CI</h1>
+
+<p>Copy this into your pipeline:</p>
+<pre>@AgentSyncApp.CiCommand</pre>

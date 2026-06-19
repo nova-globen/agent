@@ -20,10 +20,19 @@ no business logic is duplicated in the UI, and no CLI code references the UI.
 - **`AgentSync.Ui.Abstractions` — implemented.** A UI-independent application service
   (`AgentSyncApp`) over `AgentSync.Core`, unit-tested without a renderer. The GUI binds
   to this; no repository logic lives in Razor components.
-- **`AgentSync.Ui.Maui` — skeleton.** A MAUI Blazor Hybrid project (executable
-  `agent-sync-ui`) **excluded from `AgentSync.slnx`** so the headless build/test never
-  need the MAUI workload. Build it separately (`dotnet build src/AgentSync.Ui.Maui`).
-  Full screens are Milestone H.
+- **`AgentSync.Ui.Maui` — skeleton + MVP scaffolding.** A MAUI Blazor Hybrid project
+  (executable `agent-sync-ui`) **excluded from `AgentSync.slnx`** so the headless
+  build/test never need the MAUI workload. Build it separately
+  (`dotnet build src/AgentSync.Ui.Maui`). It now carries skeleton screen components
+  (Dashboard, Skills, Targets, Status/Drift, Imports, Hooks/CI) that bind to
+  `AgentSyncApp` with no repository logic in markup.
+- **GUI MVP capabilities — covered + tested at the service layer; rendering pending.**
+  Every MVP acceptance criterion (open repo, show init state, list skills, show
+  status/drift, diff, validate, sync with confirmation, import skill/agent, skill and
+  target add/edit/delete) is implemented on `AgentSyncApp` and unit-tested without a
+  renderer (`MvpCapabilityTests`). **The MAUI rendering layer requires the MAUI workload
+  and could not be built/verified in this CI environment** — finishing the rendered MVP
+  (DI wiring, navigation, dialogs, packaging) must happen on a workload-equipped machine.
 - **OpenMaui Linux — evaluated (deferred).** See
   [`OPENMAUI_LINUX_SPIKE.md`](OPENMAUI_LINUX_SPIKE.md).
 

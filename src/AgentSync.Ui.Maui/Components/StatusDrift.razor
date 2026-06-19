@@ -1,0 +1,25 @@
+@* Skeleton Status/Drift screen. Read-only view via AgentSyncApp; the "fix" actions
+   (Sync / Sync --force) call the service after explicit confirmation. *@
+@page "/status"
+@using AgentSync.Core
+@using AgentSync.Ui.Abstractions
+@inject AgentSyncApp App
+
+<h1>Status</h1>
+
+@if (_status is not null)
+{
+    <p>Initialized: @_status.Initialized — Skills: @_status.SkillCount</p>
+    <ul>
+        @foreach (var issue in _status.Issues)
+        {
+            <li>[@issue.Severity] @issue.Message</li>
+        }
+    </ul>
+}
+
+@code {
+    private StatusReport? _status;
+
+    protected override void OnInitialized() => _status = App.Status();
+}
