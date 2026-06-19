@@ -13,7 +13,8 @@ public sealed class CliRunnerTests
         var result = h.Invoke("--version");
 
         Assert.Equal(ExitCodes.Success, result.ExitCode);
-        Assert.Contains("0.1.0", result.StdOut);
+        // Assert the format, not a hardcoded version, so this survives version bumps.
+        Assert.Matches(@"^agent \d+\.\d+\.\d+", result.StdOut.Trim());
     }
 
     [Fact]

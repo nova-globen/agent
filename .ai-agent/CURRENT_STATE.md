@@ -5,8 +5,12 @@ Compact handoff for AI sessions. Pair with `.ai-agent/NEXT_STEPS.md` and
 
 ## Release
 
-- **Current release:** `v0.1.0-alpha.2` (version-only retag of `alpha.1`; no code
-  changes between the two tags)
+- **Latest published release:** `v0.1.0-alpha.4` — CLI binaries plus the `AgentSync` /
+  `AgentSync.Git` NuGet tools. It predates the import/CRUD/UI feature wave (alpha.1…alpha.4
+  were all CLI-focused; `alpha.2` was a version-only retag of `alpha.1`).
+- **Next intended release:** `v0.2.0-alpha.1` — the first release to ship the import +
+  CRUD commands, `agent ui`, the localhost Blazor UI, and the separate UI release
+  artifacts. Not tagged yet at the time of this note.
 - **Release type:** public alpha / developer preview
 - **Repository:** https://github.com/nova-globen/agent (default branch `master`)
 

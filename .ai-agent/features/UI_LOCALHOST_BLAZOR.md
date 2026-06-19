@@ -1,6 +1,6 @@
 # Feature plan: `agent ui` — localhost Blazor Web UI
 
-> **Status: launcher + minimal web host implemented; feature wiring in progress.** The
+> **Status: implemented (Milestones UI-1 … UI-3).** The
 > GUI is a **separate, optional product surface** — a localhost Blazor web host
 > (`agent-sync-ui`) using Microsoft FluentUI Blazor components. The headless CLI keeps
 > working with zero GUI dependencies.

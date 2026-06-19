@@ -107,7 +107,7 @@ curl -fsSL https://raw.githubusercontent.com/nova-globen/agent/master/scripts/in
 Install a specific version:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.sh | bash -s -- v0.1.0-alpha.4
+curl -fsSL https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.sh | bash -s -- v0.2.0-alpha.1
 ```
 
 By default this installs into `$HOME/.agent-sync/bin`. Override with
@@ -125,7 +125,7 @@ Prefer to review the script before running it (recommended):
 ```powershell
 irm https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.ps1 -OutFile install.ps1
 # review install.ps1, then:
-.\install.ps1            # or: .\install.ps1 -Version v0.1.0-alpha.4
+.\install.ps1            # or: .\install.ps1 -Version v0.2.0-alpha.1
 ```
 
 Override the Windows install directory with `$env:AGENT_SYNC_INSTALL_DIR`. Installs
@@ -163,8 +163,8 @@ This produces a committed `.config/dotnet-tools.json`:
   "version": 1,
   "isRoot": true,
   "tools": {
-    "agentsync": { "version": "0.1.0-alpha.4", "commands": ["agent"] },
-    "agentsync.git": { "version": "0.1.0-alpha.4", "commands": ["git-agent"] }
+    "agentsync": { "version": "0.2.0-alpha.1", "commands": ["agent"] },
+    "agentsync.git": { "version": "0.2.0-alpha.1", "commands": ["git-agent"] }
   }
 }
 ```
@@ -196,7 +196,7 @@ git agent --version
 
 1. Go to the [GitHub Releases](https://github.com/nova-globen/agent/releases) page.
 2. Download the archive for your OS/architecture, e.g.
-   `agent-sync-v0.1.0-alpha.4-linux-x64.tar.gz` (or `...-win-x64.zip` on Windows).
+   `agent-sync-v0.2.0-alpha.1-linux-x64.tar.gz` (or `...-win-x64.zip` on Windows).
 3. Extract it.
 4. Put both `agent` and `git-agent` (or `agent.exe` and `git-agent.exe`) on your `PATH`.
 5. Verify:
@@ -414,7 +414,7 @@ CLI archives. Download the one for your OS/architecture, extract it, and put
 Linux/macOS:
 
 ```bash
-# Download e.g. agent-sync-ui-v0.1.0-alpha.4-linux-x64.tar.gz from GitHub Releases, then:
+# Download e.g. agent-sync-ui-v0.2.0-alpha.1-linux-x64.tar.gz from GitHub Releases, then:
 tar -xzf agent-sync-ui-*-linux-x64.tar.gz -C ~/.agent-sync/bin   # a dir on your PATH
 agent ui
 ```
@@ -465,7 +465,7 @@ in-page confirmation step before anything is written. Functional screens: **Dash
 **Imports** (import skill and import agent, with dry-run preview), **Targets** (add / edit
 / delete), **Status / Drift** (status, drift, validate, and run-sync / force-sync),
 **Diff**, and **Hooks / CI** (copyable CI command + confirmed install-hooks). Separate GUI
-release artifacts are not built yet (Milestone UI-3).
+release artifacts are built by the `release-ui` job and attached to tagged GitHub Releases.
 
 ## Drift detection
 

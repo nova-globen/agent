@@ -14,7 +14,7 @@ Agent Sync is a Git-native consistency manager. Developers define a **canonical 
 once under `.agent/`; Agent Sync **projects** it into agent-specific formats (AGENTS.md,
 CLAUDE.md, Cursor rules, Copilot/Gemini instructions, OpenAI/Claude skill folders) and
 enforces consistency via Git hooks and CI. Current state: public **alpha**
-(`v0.1.0-alpha.4`), targeting **.NET 10**.
+(`v0.2.0-alpha.1`), targeting **.NET 10**.
 
 ## Key invariants (do not break without maintainer sign-off)
 

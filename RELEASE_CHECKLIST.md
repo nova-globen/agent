@@ -112,31 +112,36 @@ optional product** and is **not** part of the CLI release described above:
 
 1. Ensure `main`/`master` is green (build + test CI passing).
 2. Update the version if needed in `Directory.Build.props` (`<Version>`).
-3. Create and push the tag:
+3. Create and push the tag. Replace `<tag>` with the release tag (example:
+   `v0.2.0-alpha.1`):
 
    ```bash
-   git tag v0.1.0
-   git push origin v0.1.0
+   git tag <tag>
+   git push origin <tag>
    ```
 
-4. Wait for the **Release** workflow to finish.
-5. Verify the release exists with all expected assets:
+4. Wait for the **Release** workflow (`release` **and** the optional `release-ui` job) to
+   finish.
+5. Verify the release exists with all expected assets — both the CLI archives and the
+   separate `agent-sync-ui-<tag>-<rid>` archives, plus `checksums.txt` (see "Verifying a
+   release" above):
 
    ```bash
-   gh release view v0.1.0
+   gh release view <tag>
    ```
 
-6. Verify checksums:
+6. Verify checksums (download every asset listed in `checksums.txt` — CLI **and** UI —
+   first):
 
    ```bash
-   curl -fsSLO https://github.com/nova-globen/agent/releases/download/v0.1.0/checksums.txt
+   curl -fsSLO https://github.com/nova-globen/agent/releases/download/<tag>/checksums.txt
    # download the archives, then:
    sha256sum -c checksums.txt
    ```
 
 7. Test the install script on at least one Linux/macOS machine and one Windows machine:
 
-   - Linux/macOS: `curl -fsSL .../install.sh | bash -s -- v0.1.0`
+   - Linux/macOS: `curl -fsSL .../install.sh | bash -s -- <tag>`
    - Windows: `irm .../install.ps1 | iex`
 
 8. Verify the installed binaries:
@@ -148,12 +153,13 @@ optional product** and is **not** part of the CLI release described above:
    ```
 
 9. Verify the NuGet tool packages published and install cleanly (allow a few minutes
-   for indexing):
+   for indexing). NuGet versions have no leading `v`, so tag `<tag>` maps to package
+   version `<version>` — for example, tag `v0.2.0-alpha.1` corresponds to package version
+   `0.2.0-alpha.1`:
 
    ```bash
-   # NuGet versions have no leading 'v' (tag v0.1.0 -> package version 0.1.0).
-   dotnet tool install --global AgentSync --version 0.1.0
-   dotnet tool install --global AgentSync.Git --version 0.1.0
+   dotnet tool install --global AgentSync --version <version>
+   dotnet tool install --global AgentSync.Git --version <version>
    agent --version
    git agent --version
    ```
@@ -177,8 +183,8 @@ The Release workflow is safe to re-run on the same tag (e.g. after fixing a secr
 the GitHub Release step creates the release if missing or refreshes notes/assets if it
 already exists, and `dotnet nuget push` uses `--skip-duplicate` so already-published
 package versions are skipped without failing. Note that a NuGet version, once
-published, is permanent — re-runs cannot replace `0.1.0-alpha.4` with different
-content; bump the version for any code change.
+published, is permanent — re-runs cannot republish an already-published version with
+different content; bump the version for any code change.
 
 ## Post-release
 
