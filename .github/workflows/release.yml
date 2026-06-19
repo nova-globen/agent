@@ -134,12 +134,26 @@ jobs:
             echo "See the [installation section of the README](https://github.com/nova-globen/agent#installation) for manual install and build-from-source instructions."
           } > release-notes.md
 
-          gh release create "$tag" \
-            dist/agent-sync-*.tar.gz \
-            dist/agent-sync-*.zip \
-            dist/checksums.txt \
-            --title "Agent Sync ${tag}" \
-            --notes-file release-notes.md
+          # Idempotent so re-runs of the same tag don't fail on an existing release:
+          # create it if missing, otherwise refresh its notes and (re)upload assets.
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists; updating notes and assets."
+            gh release edit "$tag" \
+              --title "Agent Sync ${tag}" \
+              --notes-file release-notes.md
+            gh release upload "$tag" \
+              dist/agent-sync-*.tar.gz \
+              dist/agent-sync-*.zip \
+              dist/checksums.txt \
+              --clobber
+          else
+            gh release create "$tag" \
+              dist/agent-sync-*.tar.gz \
+              dist/agent-sync-*.zip \
+              dist/checksums.txt \
+              --title "Agent Sync ${tag}" \
+              --notes-file release-notes.md
+          fi
 
       - name: Pack .NET tools
         run: |

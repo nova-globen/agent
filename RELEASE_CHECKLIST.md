@@ -111,6 +111,15 @@ publishing account must be allowed to register that id).
   dotnet publish src/AgentSync.GitAgent -c Release -r linux-x64 --self-contained true
   ```
 
+## Re-running a release
+
+The Release workflow is safe to re-run on the same tag (e.g. after fixing a secret):
+the GitHub Release step creates the release if missing or refreshes notes/assets if it
+already exists, and `dotnet nuget push` uses `--skip-duplicate` so already-published
+package versions are skipped without failing. Note that a NuGet version, once
+published, is permanent — re-runs cannot replace `0.1.0-alpha.3` with different
+content; bump the version for any code change.
+
 ## Post-release
 
 - Verify the published artifacts install and run (`agent --version`).
