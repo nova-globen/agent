@@ -96,21 +96,43 @@ artifact names stable; adapters/importers stay deterministic.
   `status` reports the now-orphaned projections clearly.
 - **Risks:** YAML round-trip dropping comments; orphaned generated files after disable.
 
-## Milestone F — UI architecture spike
+## Milestone F — UI architecture spike (Windows/macOS)
 
-- **Goal:** prove MAUI Blazor Hybrid viability and lock in the architecture decisions
-  (separate app vs bundled; Linux scope; build isolation).
+> Architecture is already decided (see `UI_MAUI_BLAZOR.md` → "Decision (locked)"):
+> separate optional app; CLI/git-agent/hooks/CI/`dotnet tool`/containers never depend
+> on MAUI/OpenMaui; Windows+macOS official, Linux experimental and non-blocking. This
+> milestone *proves out* the primary (Windows/macOS) path, not re-decides it.
+
+- **Goal:** prove MAUI Blazor Hybrid viability on Windows/macOS and prove build
+  isolation (headless stack builds with no GUI workload).
 - **Files likely touched:** new `src/AgentSync.Ui/` prototype; optional
   `src/AgentSync.App/` (view models / app services); solution wiring (`AgentSync.slnx`
   + a solution filter that excludes UI from the default CI build).
-- **Commands added:** none yet (or a stub `agent ui` that reports "GUI not installed").
+- **Commands added:** none yet (or a stub `agent ui` that reports "GUI not installed"
+  and exits 3).
 - **Tests:** a CI build/test of Core + CLI + GitAgent passes **without** the MAUI
   workload; any view-model logic added is unit-tested without a renderer.
-- **Acceptance:** documented decision on launch model + platform matrix + Linux alpha
-  scope (per `UI_MAUI_BLAZOR.md`); a minimal MAUI Blazor Hybrid window renders on at
-  least one of Windows/macOS and can read the current workspace via `AgentSync.Core`.
-- **Risks:** MAUI workload friction in CI; Linux not supported by MAUI; accidental
-  coupling of Core/CLI to MAUI.
+- **Acceptance:** a minimal MAUI Blazor Hybrid window renders on at least one of
+  Windows/macOS and reads the current workspace via `AgentSync.Core`; the launch
+  contract for `agent ui` is documented; the headless stack (Core+CLI+GitAgent, tool
+  packages, containers) builds and tests with no GUI workload installed.
+- **Risks:** MAUI workload friction in CI; accidental coupling of Core/CLI to MAUI.
+
+## Milestone F-Linux — OpenMaui Linux spike (experimental)
+
+- **Goal:** evaluate **OpenMaui / maui-linux** as the Linux GUI host, reusing the same
+  Razor components / view models. Experimental; must not gate any CLI release.
+- **Files likely touched:** Linux host project / target under `src/AgentSync.Ui/` (or a
+  sibling), kept out of the default build path; CI experiment job (allowed to fail).
+- **Commands added:** none (Linux `agent ui` keeps returning the graceful
+  experimental/exit-3 message until this proves out).
+- **Tests:** the four gates — **build, packaging, install, runtime** — on Linux. Until
+  all four pass, Linux GUI stays experimental.
+- **Acceptance:** a documented go/no-go on OpenMaui with evidence; if go, a tested
+  Linux release artifact exists before any official Linux-GUI claim; if no-go, record
+  the fallback decision (Blazor Server/Photino, or Linux-GUI deferred).
+- **Risks:** OpenMaui maturity/instability; packaging across distros; never claim
+  Linux support without a tested artifact; do not let this block CLI releases.
 
 ## Milestone G — GUI MVP
 
@@ -135,12 +157,14 @@ artifact names stable; adapters/importers stay deterministic.
 - **Commands added:** none.
 - **Tests:** UI smoke test where feasible (build the UI app per supported platform);
   existing release-smoke (`scripts/release-smoke.sh`) still passes for the CLI.
-- **Acceptance:** decision recorded on whether the UI ships in the same Release or
-  separately; CLI artifact names unchanged (`agent-sync-<tag>-<rid>.{tar.gz,zip}` +
-  `checksums.txt`); install docs cover installing + launching the GUI; `dotnet tool`
-  packages remain CLI-only and `agent ui` documents the GUI as a separate install.
-- **Risks:** MAUI packaging per platform; release pipeline complexity; keeping the
-  alpha honest about which platforms have a GUI.
+- **Acceptance:** the UI ships as a **separate** publishable app (decided); CLI artifact
+  names unchanged (`agent-sync-<tag>-<rid>.{tar.gz,zip}` + `checksums.txt`); the
+  `dotnet tool` packages and container images remain GUI-free; install docs cover
+  installing + launching the GUI; **Windows/macOS GUI artifacts are official, Linux GUI
+  artifacts (if any) are labeled experimental**; CLI releases are never blocked on Linux
+  GUI; no official Linux-GUI claim without a tested Linux artifact.
+- **Risks:** MAUI/OpenMaui packaging per platform; release pipeline complexity; keeping
+  the alpha honest about which platforms have an *official* vs *experimental* GUI.
 
 ---
 
@@ -149,6 +173,7 @@ artifact names stable; adapters/importers stay deterministic.
 - All existing tests still pass; new behavior has tests.
 - `agent`, `git-agent`, and `git agent ...` unchanged for existing commands.
 - `RepoPath`, marker handling, and manual-edit protection unchanged or strengthened.
-- Headless CLI builds/tests/runs with no MAUI dependency.
+- The headless stack — CLI, `git-agent`, hooks, CI, `dotnet tool` packages, and
+  container images — builds/tests/runs/ships with no MAUI/OpenMaui dependency.
 - Docs (`README.md`, `AGENTS.md`, `CLAUDE.md`, `.ai-agent/*`) updated as each milestone
   lands; alpha positioning kept honest.

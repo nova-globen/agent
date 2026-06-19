@@ -123,7 +123,9 @@ Implementation-ready specs live under `.ai-agent/features/`:
 - **CRUD** — `agent skill add/edit/delete/list/show` and
   `agent target add/edit/delete/list/show` (`features/CRUD_COMMANDS.md`).
 - **`agent ui`** — an optional GUI built with **.NET MAUI Blazor Hybrid**
-  (`src/AgentSync.Ui`), reusing `AgentSync.Core` services (`features/UI_MAUI_BLAZOR.md`).
+  (`src/AgentSync.Ui`), reusing `AgentSync.Core` services. It is a **separate, optional
+  product surface**: Windows/macOS are the official path; Linux is an experimental
+  OpenMaui spike that must not block CLI releases (`features/UI_MAUI_BLAZOR.md`).
 
 Guidance for implementing this wave:
 
@@ -131,9 +133,10 @@ Guidance for implementing this wave:
   milestone at a time with tests.
 - **Keep existing CLI behavior backward compatible.** These are additive commands;
   don't change current command semantics or exit codes.
-- **Keep the UI optional.** The headless CLI (`AgentSync.Cli`, `AgentSync.Core`,
-  `AgentSync.GitAgent`) must build, test, and run without the MAUI workload and must
-  not depend on MAUI. `agent ui` launches a separate UI executable.
+- **Keep the UI optional and separate.** The headless stack — `AgentSync.Cli`,
+  `AgentSync.Core`, `AgentSync.GitAgent`, Git hooks, CI, the `dotnet tool` packages, and
+  container images — must build, test, run, and ship without any GUI workload and must
+  **never** depend on MAUI or OpenMaui. `agent ui` launches a separate UI executable.
 - Preserve the core invariants below and in `CLAUDE.md` (path safety, marker handling,
   manual-edit protection, `net10.0`, `git-agent` delegation).
 

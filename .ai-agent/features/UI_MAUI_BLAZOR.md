@@ -9,6 +9,25 @@ imports, targets, sync/status/diff/validate, hooks, version info). It is built w
 **.NET MAUI Blazor Hybrid** and reuses `AgentSync.Core` services directly — no
 business logic is duplicated in the UI.
 
+## Decision (locked)
+
+The GUI is a **separate, optional product surface**. The following decisions are
+settled — implement to them, don't relitigate:
+
+- **The CLI, Git extension, Git hooks, CI, the `dotnet tool` packages, and container
+  images must NEVER depend on MAUI, OpenMaui, or any GUI workload.** Headless usage is
+  the primary product and must build/test/run/ship with zero GUI dependencies.
+- **Primary GUI path (Windows / macOS):** the official **.NET MAUI Blazor Hybrid** app.
+- **Linux GUI path:** evaluate **OpenMaui / maui-linux** in a dedicated spike. Treat
+  Linux GUI as **experimental** until proven by build, packaging, install, and runtime
+  tests.
+  - Do **not** block CLI releases on Linux GUI support.
+  - Do **not** claim official Linux GUI support until there is a tested release
+    artifact (build + package + install + runtime all verified).
+- The GUI ships as a **separate publishable app** (`AgentSync.Ui`); `agent ui` launches
+  it and fails gracefully when it is absent (it is never bundled into the CLI or the
+  `dotnet tool` packages).
+
 ## Hard architectural rule
 
 ```text
@@ -97,24 +116,29 @@ Android**. **MAUI does not target desktop Linux.** Blazor Hybrid renders via a
 
 Implications:
 
-- **Windows + macOS**: MAUI Blazor Hybrid is the path. Good fit.
-- **Linux desktop**: not supported by MAUI. Options to document and choose from:
-  1. **Defer Linux GUI past alpha** (recommended for the alpha) — `agent ui` returns a
-     clear "GUI not available on Linux yet; use the CLI" message on Linux.
-  2. Ship a **Blazor Server / Photino** fallback host that reuses the *same Razor
-     components and view models* (the value of keeping logic in `AgentSync.App`):
-     `agent ui` starts a local web host and opens the browser. This keeps Linux users
-     covered without MAUI.
-- Decide in the spike whether Linux uses option 1 (alpha) or 2 (later), and record it.
+- **Windows + macOS** (primary, official): MAUI Blazor Hybrid is the path. Good fit.
+- **Linux desktop** (experimental): upstream MAUI does not target desktop Linux. Per
+  the locked decision, the Linux path is a **dedicated OpenMaui / maui-linux spike**
+  (Milestone F-Linux). It stays **experimental** until build, packaging, install, and
+  runtime tests all pass, and Linux GUI support must **never block a CLI release**. On
+  Linux until then, `agent ui` returns a clear "GUI is experimental / not available on
+  Linux yet; use the CLI" message and exits gracefully (exit 3).
+  - The Razor components and view models (ideally in `AgentSync.App`) are shared, so an
+    OpenMaui Linux host reuses the same UI; a Blazor Server / Photino host remains a
+    fallback option to evaluate if OpenMaui doesn't pan out.
+  - Do not advertise official Linux GUI support anywhere (README, PROMOTION, release
+    notes) until a tested Linux release artifact exists.
 
 ## Technical concerns
 
-- **MAUI workload**: `AgentSync.Ui` needs the MAUI workload
-  (`dotnet workload install maui`) and platform SDKs to build. This must **not** be
-  required to build/test `AgentSync.Cli`, `AgentSync.GitAgent`, or `AgentSync.Core`.
-  Keep `AgentSync.Ui` out of the default `dotnet build`/`dotnet test` path used by CI
-  (separate solution filter, or a build flag), so contributors and CI without the MAUI
-  workload aren't broken. The current solution is `AgentSync.slnx`.
+- **MAUI / OpenMaui workload**: `AgentSync.Ui` needs the MAUI workload
+  (`dotnet workload install maui`, plus OpenMaui/maui-linux bits for the Linux spike)
+  and platform SDKs to build. This must **not** be required to build/test `AgentSync.Cli`,
+  `AgentSync.GitAgent`, or `AgentSync.Core`, nor to build the `dotnet tool` packages or
+  the container images. Keep `AgentSync.Ui` out of the default `dotnet build`/
+  `dotnet test` path used by CI (separate solution filter, or a build flag), so
+  contributors and CI without the GUI workload aren't broken. The current solution is
+  `AgentSync.slnx`.
 - **Packaging per platform**: MSIX/unpackaged `.exe` (Windows), `.app`/`.pkg`
   (macOS via Mac Catalyst). Separate from the existing self-contained
   `agent`/`git-agent` archives.
@@ -134,15 +158,17 @@ Implications:
   test setup. Razor components stay declarative. Optionally add bUnit component tests
   later, but the **acceptance bar is that view models are tested without a renderer**.
 
-## Important architecture decision (resolve in Milestone F)
+## Architecture decisions (settled — see "Decision (locked)" above)
 
-- **Separate publishable app vs bundled into `agent`?** Recommendation: **separate
-  publishable app** (`AgentSync.Ui`) that `agent ui` launches. Reasons: keeps the CLI
-  small and dependency-free, keeps `dotnet tool` packaging viable, lets the GUI ship on
-  its own cadence, and avoids forcing the MAUI workload on CLI contributors/CI.
-- Define the launch contract (`agent ui` -> locate + start `AgentSync.Ui` with repo
-  path; graceful failure when absent).
-- Document the Windows/macOS/Linux support matrix and the alpha Linux decision.
+- **Separate publishable app** (`AgentSync.Ui`) that `agent ui` launches — **decided**,
+  not bundled into the CLI or the `dotnet tool` packages. This keeps the CLI small and
+  dependency-free, keeps `dotnet tool` packaging viable, lets the GUI ship on its own
+  cadence, and avoids forcing the MAUI/OpenMaui workload on CLI contributors and CI.
+- Still to define during the spike (Milestone F): the exact launch contract (`agent ui`
+  -> locate + start `AgentSync.Ui` with the repo path; graceful exit-3 when absent), and
+  the OpenMaui Linux viability outcome.
+- The Windows/macOS/Linux support matrix is fixed by the locked decision: Windows/macOS
+  official; Linux experimental and non-blocking for CLI releases.
 
 ## Tests required
 
