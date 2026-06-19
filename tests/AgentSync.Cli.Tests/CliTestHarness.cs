@@ -59,6 +59,15 @@ public sealed class CliTestHarness : IDisposable
         return new CliResult(code, stdout.ToString(), stderr.ToString());
     }
 
+    public CliResult InvokeWithUi(AgentSync.Core.IUiLauncher launcher, params string[] args)
+    {
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+        var runner = new CliRunner(stdout, stderr, WorkingDirectory, launcher);
+        var code = runner.Run(args);
+        return new CliResult(code, stdout.ToString(), stderr.ToString());
+    }
+
     public void Dispose()
     {
         try

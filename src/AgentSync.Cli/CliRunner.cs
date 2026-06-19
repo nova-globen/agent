@@ -18,14 +18,16 @@ public sealed class CliRunner
     private readonly TextWriter _out;
     private readonly TextWriter _err;
     private readonly string _workingDirectory;
+    private readonly IUiLauncher _uiLauncher;
 
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
-    public CliRunner(TextWriter? output = null, TextWriter? error = null, string? workingDirectory = null)
+    public CliRunner(TextWriter? output = null, TextWriter? error = null, string? workingDirectory = null, IUiLauncher? uiLauncher = null)
     {
         _out = output ?? Console.Out;
         _err = error ?? Console.Error;
         _workingDirectory = workingDirectory ?? Directory.GetCurrentDirectory();
+        _uiLauncher = uiLauncher ?? new UiLauncher();
     }
 
     public int Run(string[] args)
@@ -66,6 +68,7 @@ public sealed class CliRunner
             "skills" => RunSkillList(rest),
             "target" => RunTarget(rest),
             "targets" => RunTargetList(rest),
+            "ui" => RunUi(rest),
             "install-hooks" => RunInstallHooks(rest),
             "doctor" => RunDoctor(rest),
             _ => UnknownCommand(command),
@@ -1109,6 +1112,41 @@ public sealed class CliRunner
         _ => ExitCodes.DriftOrValidationFailed,
     };
 
+    // --- ui (launcher) --------------------------------------------------------
+
+    private int RunUi(string[] args)
+    {
+        foreach (var arg in args)
+        {
+            return UnknownOption("ui", arg);
+        }
+
+        var root = GitRepository.Discover(_workingDirectory);
+        var repoPath = root ?? _workingDirectory;
+        if (root is null)
+        {
+            _out.WriteLine("note: not inside a Git repository; the UI will open the current folder.");
+        }
+
+        var executable = _uiLauncher.Locate();
+        if (executable is null)
+        {
+            _out.WriteLine("Agent Sync UI is not installed.");
+            _out.WriteLine("The headless CLI is working.");
+            _out.WriteLine("Install the GUI package or download the desktop app from GitHub Releases.");
+            return ExitCodes.EnvironmentProblem;
+        }
+
+        if (!_uiLauncher.Launch(executable, repoPath))
+        {
+            _err.WriteLine("error: failed to launch the Agent Sync UI.");
+            return ExitCodes.EnvironmentProblem;
+        }
+
+        _out.WriteLine($"Launching Agent Sync UI for {repoPath}...");
+        return ExitCodes.Success;
+    }
+
     // --- target CRUD ----------------------------------------------------------
 
     private int RunTarget(string[] args)
@@ -1398,6 +1436,7 @@ public sealed class CliRunner
         _out.WriteLine("  import agent        Import an existing instruction file/folder (AGENTS.md, CLAUDE.md, Cursor, ...) (--type, --split, --id, --dry-run, --force, --json).");
         _out.WriteLine("  skill               Manage canonical skills: add | edit | delete | list | show.");
         _out.WriteLine("  target              Manage projection targets: add | edit | delete | list | show.");
+        _out.WriteLine("  ui                  Launch the optional desktop GUI (separate install; CLI stays GUI-free).");
         _out.WriteLine("  install-hooks       Configure core.hooksPath and make hooks executable.");
         _out.WriteLine("  doctor              Diagnose Git repo, PATH, hooks, and config (--json).");
         _out.WriteLine();

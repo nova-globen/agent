@@ -278,6 +278,7 @@ agent validate        # validate config and skills
 agent import skill    # import an existing SKILL.md / skill folder into .agent/skills
 agent skill           # manage canonical skills: add | edit | delete | list | show
 agent target          # manage projection targets: add | edit | delete | list | show
+agent ui              # launch the optional desktop GUI (separate install)
 agent install-hooks   # configure core.hooksPath and make hooks executable
 agent doctor          # diagnose Git repo, PATH, hooks, and config
 
@@ -390,6 +391,21 @@ Target ids must be known adapter ids (`agents_md`, `claude_md`, `cursor`, `copil
 `gemini`, `openai_skill`, `claude_skill`) and paths must stay inside the repository.
 Edits round-trip `agent.yaml` through the parser, so hand-written comments in that file
 are not preserved.
+
+## Optional GUI
+
+Agent Sync ships as a CLI first. An optional desktop GUI is a **separate, independent
+product**: the CLI, the Git extension, the Git hooks, CI usage, the container images,
+and the `dotnet tool` packages never depend on it or on any GUI workload.
+
+```bash
+agent ui    # locates and launches the separately installed GUI (agent-sync-ui)
+```
+
+If the GUI is not installed, `agent ui` says so and points you at the install/download
+and exits without affecting the CLI. The GUI is built with .NET MAUI Blazor Hybrid for
+Windows/macOS; a Linux GUI is being evaluated experimentally and is not yet a supported
+artifact. See `.ai-agent/features/UI_MAUI_BLAZOR.md`.
 
 ## Drift detection
 
