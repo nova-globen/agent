@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using AgentSync.Core;
+using AgentSync.Core.Authoring;
 using AgentSync.Core.Configuration;
 using AgentSync.Core.Drift;
 using AgentSync.Core.Import;
@@ -61,6 +62,8 @@ public sealed class CliRunner
             "diff" => RunDiff(rest),
             "validate" => RunValidate(rest),
             "import" => RunImport(rest),
+            "skill" => RunSkill(rest),
+            "skills" => RunSkillList(rest),
             "install-hooks" => RunInstallHooks(rest),
             "doctor" => RunDoctor(rest),
             _ => UnknownCommand(command),
@@ -749,6 +752,303 @@ public sealed class CliRunner
         _ => ExitCodes.InvalidUsage,
     };
 
+    // --- skill CRUD -----------------------------------------------------------
+
+    private int RunSkill(string[] args)
+    {
+        if (args.Length == 0)
+        {
+            _err.WriteLine("error: 'skill' requires a subcommand: add | edit | delete | list | show.");
+            return ExitCodes.InvalidUsage;
+        }
+
+        var sub = args[0];
+        var rest = args.Skip(1).ToArray();
+        return sub switch
+        {
+            "add" => RunSkillAdd(rest),
+            "edit" => RunSkillEdit(rest),
+            "delete" => RunSkillDelete(rest),
+            "list" => RunSkillList(rest),
+            "show" => RunSkillShow(rest),
+            _ => UnknownSubcommand("skill", sub),
+        };
+    }
+
+    private int RunSkillAdd(string[] args)
+    {
+        string? id = null;
+        string? name = null;
+        string? description = null;
+        string? version = null;
+        var targets = new List<string>();
+
+        for (var i = 0; i < args.Length; i++)
+        {
+            var arg = args[i];
+            switch (arg)
+            {
+                case "--name":
+                    if (!TryValue(args, ref i, "--name", out name)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--description":
+                    if (!TryValue(args, ref i, "--description", out description)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--version":
+                    if (!TryValue(args, ref i, "--version", out version)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--target":
+                    if (!TryValue(args, ref i, "--target", out var t)) return ExitCodes.InvalidUsage;
+                    targets.Add(t!);
+                    break;
+                default:
+                    if (arg.StartsWith('-')) return UnknownOption("skill add", arg);
+                    if (id is not null) { _err.WriteLine($"error: unexpected argument '{arg}'."); return ExitCodes.InvalidUsage; }
+                    id = arg;
+                    break;
+            }
+        }
+
+        if (id is null)
+        {
+            _err.WriteLine("error: 'skill add' requires an <id>.");
+            return ExitCodes.InvalidUsage;
+        }
+
+        var root = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
+        var result = new SkillWriter(root).Add(id, name, description, version, targets.Count > 0 ? targets : null);
+        return RenderAuthoring($"skill add {id}", result);
+    }
+
+    private int RunSkillEdit(string[] args)
+    {
+        string? id = null;
+        string? name = null;
+        string? description = null;
+        string? version = null;
+        string? bodyFile = null;
+        var enable = new List<string>();
+        var disable = new List<string>();
+
+        for (var i = 0; i < args.Length; i++)
+        {
+            var arg = args[i];
+            switch (arg)
+            {
+                case "--name":
+                    if (!TryValue(args, ref i, "--name", out name)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--description":
+                    if (!TryValue(args, ref i, "--description", out description)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--version":
+                    if (!TryValue(args, ref i, "--version", out version)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--body-file":
+                    if (!TryValue(args, ref i, "--body-file", out bodyFile)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--enable":
+                    if (!TryValue(args, ref i, "--enable", out var en)) return ExitCodes.InvalidUsage;
+                    enable.Add(en!);
+                    break;
+                case "--disable":
+                    if (!TryValue(args, ref i, "--disable", out var di)) return ExitCodes.InvalidUsage;
+                    disable.Add(di!);
+                    break;
+                default:
+                    if (arg.StartsWith('-')) return UnknownOption("skill edit", arg);
+                    if (id is not null) { _err.WriteLine($"error: unexpected argument '{arg}'."); return ExitCodes.InvalidUsage; }
+                    id = arg;
+                    break;
+            }
+        }
+
+        if (id is null)
+        {
+            _err.WriteLine("error: 'skill edit' requires an <id>.");
+            return ExitCodes.InvalidUsage;
+        }
+
+        var root = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
+        var result = new SkillWriter(root).Edit(id, name, description, version, bodyFile,
+            enable.Count > 0 ? enable : null, disable.Count > 0 ? disable : null);
+        return RenderAuthoring($"skill edit {id}", result);
+    }
+
+    private int RunSkillDelete(string[] args)
+    {
+        string? id = null;
+        var force = false;
+        var dryRun = false;
+
+        for (var i = 0; i < args.Length; i++)
+        {
+            var arg = args[i];
+            switch (arg)
+            {
+                case "--force":
+                    force = true;
+                    break;
+                case "--dry-run":
+                    dryRun = true;
+                    break;
+                default:
+                    if (arg.StartsWith('-')) return UnknownOption("skill delete", arg);
+                    if (id is not null) { _err.WriteLine($"error: unexpected argument '{arg}'."); return ExitCodes.InvalidUsage; }
+                    id = arg;
+                    break;
+            }
+        }
+
+        if (id is null)
+        {
+            _err.WriteLine("error: 'skill delete' requires an <id>.");
+            return ExitCodes.InvalidUsage;
+        }
+
+        var root = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
+        var result = new SkillWriter(root).Delete(id, force, dryRun);
+        return RenderAuthoring($"skill delete {id}", result);
+    }
+
+    private int RunSkillList(string[] args)
+    {
+        var json = false;
+        foreach (var arg in args)
+        {
+            if (arg == "--json") json = true;
+            else return UnknownOption("skill list", arg);
+        }
+
+        var root = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
+        var workspace = WorkspaceLoader.Load(root);
+        var skills = workspace.Skills.OrderBy(s => s.Id, StringComparer.Ordinal).ToList();
+
+        if (json)
+        {
+            var payload = skills.Select(s => new
+            {
+                id = s.Id,
+                name = s.Manifest.Name,
+                description = s.Manifest.Description,
+                version = s.Manifest.Version,
+                targets = s.EnabledTargets.OrderBy(t => t, StringComparer.Ordinal).ToArray(),
+            });
+            _out.WriteLine(JsonSerializer.Serialize(payload, JsonOptions));
+        }
+        else
+        {
+            _out.WriteLine("Agent Sync skills");
+            _out.WriteLine();
+            if (skills.Count == 0)
+            {
+                _out.WriteLine("No skills defined. Add one with 'agent skill add <id> --name ... --description ...'.");
+            }
+            else
+            {
+                foreach (var s in skills)
+                {
+                    _out.WriteLine($"  {s.Id,-24} {s.Manifest.Name}  ({s.EnabledTargets.Count()} target(s))");
+                }
+            }
+        }
+
+        return ExitCodes.Success;
+    }
+
+    private int RunSkillShow(string[] args)
+    {
+        string? id = null;
+        var json = false;
+        foreach (var arg in args)
+        {
+            if (arg == "--json") json = true;
+            else if (arg.StartsWith('-')) return UnknownOption("skill show", arg);
+            else if (id is null) id = arg;
+            else { _err.WriteLine($"error: unexpected argument '{arg}'."); return ExitCodes.InvalidUsage; }
+        }
+
+        if (id is null)
+        {
+            _err.WriteLine("error: 'skill show' requires an <id>.");
+            return ExitCodes.InvalidUsage;
+        }
+
+        var root = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
+        var workspace = WorkspaceLoader.Load(root);
+        var skill = workspace.Skills.FirstOrDefault(s => string.Equals(s.Id, id, StringComparison.Ordinal));
+
+        if (skill is null)
+        {
+            _err.WriteLine($"error: skill '{id}' not found.");
+            return ExitCodes.DriftOrValidationFailed;
+        }
+
+        if (json)
+        {
+            var payload = new
+            {
+                id = skill.Id,
+                name = skill.Manifest.Name,
+                description = skill.Manifest.Description,
+                version = skill.Manifest.Version,
+                targets = skill.EnabledTargets.OrderBy(t => t, StringComparer.Ordinal).ToArray(),
+                body = skill.Body,
+            };
+            _out.WriteLine(JsonSerializer.Serialize(payload, JsonOptions));
+        }
+        else
+        {
+            _out.WriteLine($"Skill: {skill.Id}");
+            _out.WriteLine($"  name:        {skill.Manifest.Name}");
+            _out.WriteLine($"  description: {skill.Manifest.Description}");
+            _out.WriteLine($"  version:     {skill.Manifest.Version}");
+            _out.WriteLine($"  targets:     {string.Join(", ", skill.EnabledTargets.OrderBy(t => t, StringComparer.Ordinal))}");
+            _out.WriteLine($"  body:        {skill.Body.Length} chars");
+        }
+
+        return ExitCodes.Success;
+    }
+
+    private int RenderAuthoring(string title, AuthoringResult result)
+    {
+        _out.WriteLine(result.DryRun ? $"Agent Sync {title} (dry-run)" : $"Agent Sync {title}");
+        _out.WriteLine();
+
+        foreach (var change in result.Changes)
+        {
+            _out.WriteLine($"  {change}");
+        }
+
+        foreach (var m in result.Validation)
+        {
+            var marker = m.Severity == ValidationSeverity.Error ? "ERROR" : "WARN";
+            _out.WriteLine($"  [{marker}] {m.Message}");
+        }
+
+        if (result.Message is not null)
+        {
+            if (result.Changes.Count > 0) _out.WriteLine();
+            _out.WriteLine(result.Message);
+        }
+
+        if (result.Status == AuthoringStatus.Ok && result.RecommendSync && !result.DryRun)
+        {
+            _out.WriteLine();
+            _out.WriteLine("Run 'agent sync' to update your projections.");
+        }
+
+        return AuthoringExitCode(result.Status);
+    }
+
+    private static int AuthoringExitCode(AuthoringStatus status) => status switch
+    {
+        AuthoringStatus.Ok => ExitCodes.Success,
+        AuthoringStatus.InvalidUsage => ExitCodes.InvalidUsage,
+        AuthoringStatus.UnsafePath => ExitCodes.EnvironmentProblem,
+        _ => ExitCodes.DriftOrValidationFailed,
+    };
+
     // --- helpers --------------------------------------------------------------
 
     private bool TryValue(string[] args, ref int i, string option, out string? value)
@@ -793,6 +1093,7 @@ public sealed class CliRunner
         _out.WriteLine("  diff                Show canonical-to-projection differences (--json).");
         _out.WriteLine("  validate            Validate config and skills (--json).");
         _out.WriteLine("  import skill        Import a SKILL.md/skill folder into .agent/skills (--id, --name, --target, --dry-run, --force, --json).");
+        _out.WriteLine("  skill               Manage canonical skills: add | edit | delete | list | show.");
         _out.WriteLine("  install-hooks       Configure core.hooksPath and make hooks executable.");
         _out.WriteLine("  doctor              Diagnose Git repo, PATH, hooks, and config (--json).");
         _out.WriteLine();

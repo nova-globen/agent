@@ -276,6 +276,7 @@ agent sync            # write missing/outdated projections (--check, --write, --
 agent diff            # show canonical-to-projection differences
 agent validate        # validate config and skills
 agent import skill    # import an existing SKILL.md / skill folder into .agent/skills
+agent skill           # manage canonical skills: add | edit | delete | list | show
 agent install-hooks   # configure core.hooksPath and make hooks executable
 agent doctor          # diagnose Git repo, PATH, hooks, and config
 
@@ -332,6 +333,26 @@ writes `.agent/skills/<id>/skill.yaml` and `SKILL.md`, and validates the result.
 never overwrites an existing canonical skill unless you pass `--force`. After importing,
 run `agent sync` to project the skill into your targets. JSON output is available with
 `--json`.
+
+## Managing skills
+
+Create, edit, and remove canonical skills without hand-editing `.agent/skills/`:
+
+```bash
+agent skill add docs-review --name "Docs Review" --description "Reviews documentation."
+agent skill list                       # or: agent skills
+agent skill show docs-review           # add --json for machine-readable output
+agent skill edit docs-review --description "Reviews docs and examples."
+agent skill edit docs-review --body-file path/to/SKILL.md
+agent skill edit docs-review --enable cursor --disable gemini
+agent skill delete docs-review         # refused if projections exist; preview with --dry-run
+agent skill delete docs-review --force # also prunes the skill's lockfile entries
+```
+
+Every mutation re-validates the workspace and reminds you to run `agent sync`.
+`skill delete` refuses to remove a skill that has already been projected unless you pass
+`--force`; generated sections in shared files are left in place for you to clean up or
+re-sync.
 
 ## Drift detection
 
