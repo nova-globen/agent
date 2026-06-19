@@ -590,6 +590,7 @@ public sealed class CliRunner
         return sub switch
         {
             "skill" => RunImportSkill(rest),
+            "agent" => RunImportAgent(rest),
             _ => UnknownSubcommand("import", sub),
         };
     }
@@ -655,6 +656,63 @@ public sealed class CliRunner
         var options = new SkillImportOptions(id, name, targets.Count > 0 ? targets : null, force, dryRun);
         var report = new SkillImporter(root).Import(path, options);
 
+        return RenderImport(report, json);
+    }
+
+    private int RunImportAgent(string[] args)
+    {
+        string? path = null;
+        string? type = null;
+        string? id = null;
+        var split = "file";
+        var includeGenerated = false;
+        var force = false;
+        var dryRun = false;
+        var json = false;
+
+        for (var i = 0; i < args.Length; i++)
+        {
+            var arg = args[i];
+            switch (arg)
+            {
+                case "--type":
+                    if (!TryValue(args, ref i, "--type", out type)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--split":
+                    if (!TryValue(args, ref i, "--split", out split)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--id":
+                    if (!TryValue(args, ref i, "--id", out id)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--include-generated":
+                    includeGenerated = true;
+                    break;
+                case "--force":
+                    force = true;
+                    break;
+                case "--dry-run":
+                    dryRun = true;
+                    break;
+                case "--json":
+                    json = true;
+                    break;
+                default:
+                    if (arg.StartsWith('-')) return UnknownOption("import agent", arg);
+                    if (path is not null) { _err.WriteLine($"error: unexpected argument '{arg}'."); return ExitCodes.InvalidUsage; }
+                    path = arg;
+                    break;
+            }
+        }
+
+        if (path is null)
+        {
+            _err.WriteLine("error: 'import agent' requires a <path>.");
+            return ExitCodes.InvalidUsage;
+        }
+
+        var root = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
+        var options = new AgentImportOptions(type, split!, id, includeGenerated, force, dryRun);
+        var report = new AgentImporter(root).Import(path, options);
         return RenderImport(report, json);
     }
 
@@ -1337,6 +1395,7 @@ public sealed class CliRunner
         _out.WriteLine("  diff                Show canonical-to-projection differences (--json).");
         _out.WriteLine("  validate            Validate config and skills (--json).");
         _out.WriteLine("  import skill        Import a SKILL.md/skill folder into .agent/skills (--id, --name, --target, --dry-run, --force, --json).");
+        _out.WriteLine("  import agent        Import an existing instruction file/folder (AGENTS.md, CLAUDE.md, Cursor, ...) (--type, --split, --id, --dry-run, --force, --json).");
         _out.WriteLine("  skill               Manage canonical skills: add | edit | delete | list | show.");
         _out.WriteLine("  target              Manage projection targets: add | edit | delete | list | show.");
         _out.WriteLine("  install-hooks       Configure core.hooksPath and make hooks executable.");

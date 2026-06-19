@@ -335,6 +335,23 @@ never overwrites an existing canonical skill unless you pass `--force`. After im
 run `agent sync` to project the skill into your targets. JSON output is available with
 `--json`.
 
+If you already have tool-specific instruction files (an `AGENTS.md`, `CLAUDE.md`,
+Copilot/Gemini instructions, or Cursor rules) but no `.agent/`, import them into
+canonical skills:
+
+```bash
+agent import agent AGENTS.md                       # one skill from the whole file
+agent import agent AGENTS.md --split sections       # one skill per top-level heading
+agent import agent .cursor/rules                    # one skill per .mdc rule
+agent import agent .claude/skills                    # delegates to skill import per folder
+agent import agent legacy.md --type agents_md        # force the source type
+agent import agent AGENTS.md --dry-run               # preview; writes nothing
+```
+
+`import agent` reads the source only — it never modifies your original files. Generated
+`agent-sync` sections are skipped by default (pass `--include-generated` to include
+them). Each imported skill enables the matching target; run `agent sync` afterwards.
+
 ## Managing skills
 
 Create, edit, and remove canonical skills without hand-editing `.agent/skills/`:

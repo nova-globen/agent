@@ -123,22 +123,27 @@ public sealed class SkillImporter
     /// <summary>Plans and (unless dry-run) writes a single draft, returning a one-item report.</summary>
     internal ImportReport ApplyOne(SkillDraft draft, SkillImportOptions options)
     {
-        var item = Plan(draft, options.Force);
-        var items = new[] { item };
+        var item = ApplyDraft(draft, options.Force, options.DryRun);
+        var status = item.Action == ImportAction.Skip
+            ? ImportStatus.Problem
+            : item.HasValidationErrors ? ImportStatus.Problem : ImportStatus.Ok;
+        return new ImportReport(status, new[] { item }, options.DryRun, item.Action == ImportAction.Skip ? item.Note : null);
+    }
 
-        if (item.Action == ImportAction.Skip)
-        {
-            return new ImportReport(ImportStatus.Problem, items, options.DryRun, item.Note);
-        }
-
-        if (!options.DryRun)
+    /// <summary>
+    /// Plans a draft and, unless skipped or dry-run, writes its canonical files. Shared by
+    /// single-skill import and the multi-skill <c>import agent</c> flows.
+    /// </summary>
+    internal ImportItem ApplyDraft(SkillDraft draft, bool force, bool dryRun)
+    {
+        var item = Plan(draft, force);
+        if (item.Action != ImportAction.Skip && !dryRun)
         {
             var manifestYaml = SkillFiles.RenderManifestYaml(draft.Id, draft.Name, draft.Description, draft.Version, draft.Targets);
             SkillFiles.Write(_layout, draft.Id, manifestYaml, draft.Body);
         }
 
-        var status = item.HasValidationErrors ? ImportStatus.Problem : ImportStatus.Ok;
-        return new ImportReport(status, items, options.DryRun);
+        return item;
     }
 
     private ImportItem Plan(SkillDraft draft, bool force)
