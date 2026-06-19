@@ -123,13 +123,16 @@ hooks/CI/`dotnet tool`/containers free of any UI dependency.
   Destructive actions require explicit confirmation; no repository logic in Razor
   components.
 - **Done:** host runs Interactive Server; Dashboard, Skills, Imports, Targets,
-  Status/Drift, Diff, Hooks/CI, Settings all drive `AgentSyncApp`; every
-  destructive/file-writing action has an in-page confirmation. `AgentSyncApp` gained
-  `ListTargets`, `InstallHooks`, `AppVersion`. The launch path was also hardened
-  (readiness probe, browser open, strict option parsing, token→cookie redirect).
-- **Acceptance criteria (met):** each action goes through `AgentSyncApp`; mutations
-  confirmed; headless build/test stays green; logic tested at the `AgentSyncApp` layer
-  (`Ui2WiringTests`) plus a real web-host smoke test (`WebHostSmokeTests`).
+  Status/Drift, Diff, Hooks/CI, Settings all drive `AgentSyncApp` via view-models in
+  `AgentSync.Ui.Web/ViewModels/*`. File-writing actions (add/edit/import/sync) use
+  explicit submit buttons; destructive ones (delete skill/target, force sync, install
+  hooks) require a second confirmation step. `AgentSyncApp` gained `ListTargets`,
+  `InstallHooks`, `AppVersion`. The launch path was also hardened (readiness probe,
+  browser open, strict option parsing, token→cookie redirect).
+- **Acceptance criteria (met):** each action goes through `AgentSyncApp`; destructive
+  mutations confirmed; headless build/test stays green; logic tested at the view-model /
+  `AgentSyncApp` layer (`Ui2WiringTests`, `ConfirmationSemanticsTests`) plus a real
+  web-host smoke test (`WebHostSmokeTests`).
 
 ## Milestone UI-3 — GUI packaging
 

@@ -6,7 +6,7 @@
 > working with zero GUI dependencies.
 
 `agent ui` is a **launcher/discovery command** that starts a separately installed local
-web host. The host serves a browser UI on `127.0.0.1`, gated by a short-lived session
+web host. The host serves a browser UI on `127.0.0.1`, gated by a per-launch session
 token, and drives Agent Sync through `AgentSync.Ui.Abstractions` (`AgentSyncApp`) — no
 business logic is duplicated, and no CLI code references the web host.
 
@@ -109,8 +109,9 @@ name only (guarded by a test).
   does not stay in the address bar or browser history.
 - **No unauthenticated mutation endpoints**; the token gate is global. The only public
   path is `GET /healthz`, which returns a minimal `ok` and exposes no repository data.
-- **Explicit confirmation for destructive operations** (force-overwrite, delete,
-  disable a target) before calling `AgentSyncApp`.
+- **Confirmation semantics** (see the dedicated section below): file-writing operations
+  use explicit submit buttons; destructive/environment-changing operations require a
+  second confirmation step before calling `AgentSyncApp`.
 - **Avoid logging tokens** — the token is never written to logs or stderr; it appears
   only in the access URL printed to the user's own terminal.
 - **CSRF / same-origin:** antiforgery is enabled (`UseAntiforgery`) and the cookie is
@@ -133,8 +134,11 @@ The UI should eventually support (all through `AgentSyncApp`):
 - Version / release info
 
 Current state (UI-2 wired): the host runs **Interactive Server** and the screens drive
-`AgentSyncApp` with explicit in-page confirmation before any destructive/file-writing
-action:
+`AgentSyncApp`. Page interaction logic lives in `AgentSync.Ui.Web/ViewModels/*`
+(`SkillsViewModel`, `TargetsViewModel`, `StatusViewModel`, `HooksViewModel`) so the
+confirmation flow is unit-testable; the Razor components are thin and hold no repository
+logic. File-writing actions use explicit submit buttons; destructive ones require a second
+confirmation step (see "Confirmation semantics"):
 
 - **Dashboard** — repo path, init/Git/skill-count/drift state, quick-action links, CI
   command.
@@ -150,8 +154,28 @@ action:
 - **Hooks / CI** — copyable CI command + confirmed `InstallHooks()`.
 - **Settings** — active repo, version, and local-UI security notes.
 
-No repository logic lives in Razor components — they only call `AgentSyncApp` after
-confirmation. Remaining: separate GUI release artifacts (Milestone UI-3).
+No repository logic lives in Razor components — they delegate to the view-models, which
+call `AgentSyncApp`. Remaining: separate GUI release artifacts (Milestone UI-3).
+
+## Confirmation semantics
+
+All file-writing or destructive UI operations require an explicit user action — nothing is
+written as a side effect of typing or navigating. Two tiers:
+
+- **File-writing, non-destructive** — *add skill*, *save changes* (edit skill/target),
+  *add target*, *import skill*, *import agent instructions*, *run sync*. These have a
+  single clearly-labelled submit/apply button, show the result immediately, and offer a
+  **dry-run/preview** where the underlying command supports one (import and sync do).
+  They do **not** require a second confirmation.
+- **Destructive or environment-changing** — *delete skill*, *delete target*, *force sync*
+  (overwrites manually edited projections), *install hooks* (changes Git config + working
+  tree). These require a **second confirmation step**: the first action only opens a
+  confirmation panel; a separate "Confirm …" button performs the write. In the
+  view-models this is enforced by a pending-state guard (`ConfirmDelete` / `ConfirmForceSync`
+  / `ConfirmInstall` do nothing unless a matching `Request…` ran first), which is covered
+  by `ConfirmationSemanticsTests`.
+
+After a successful non-dry-run mutation the screen refreshes its view of repository state.
 
 ## Packaging
 
@@ -204,6 +228,11 @@ confirmation. Remaining: separate GUI release artifacts (Milestone UI-3).
 - `AgentSyncApp` capability coverage (`AgentSync.Ui.Abstractions.Tests`), including the
   UI-2 mutation paths each screen calls (`Ui2WiringTests`): `ListTargets`, edit/delete
   skill + target, import skill/agent dry-run, sync dry-run, `InstallHooks`, `AppVersion`.
+- Confirmation semantics at the view-model layer
+  (`AgentSync.Ui.Web.Tests/ConfirmationSemanticsTests`): add/edit are explicit (not a
+  side effect), and `ConfirmDelete` (skill + target), `ConfirmForceSync`, and
+  `ConfirmInstall` are no-ops unless a matching `Request…` ran first; dry-run sync writes
+  nothing.
 - Web-host smoke (`AgentSync.Ui.Web.Tests/WebHostSmokeTests`): boots the real
   `agent-sync-ui` process against a throwaway repo and asserts `/healthz` readiness, 401
   without a token, 401 on a wrong token, the valid-token 302 that sets the cookie and

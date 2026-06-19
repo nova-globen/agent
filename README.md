@@ -426,14 +426,17 @@ artifacts** on its own cadence — the CLI release and the `dotnet tool` package
 include it. See `.ai-agent/features/UI_LOCALHOST_BLAZOR.md` and `RELEASE_CHECKLIST.md`.
 
 The screens drive the same services as the CLI through `AgentSync.Ui.Abstractions`
-(`AgentSyncApp`) — no repository logic lives in the Razor components, and every
-destructive or file-writing action (delete, force-sync, disable a target, install hooks)
-requires an explicit in-page confirmation. Functional screens: **Dashboard** (state +
-quick actions), **Skills** (add / edit / enable-disable targets / delete), **Imports**
-(import skill and import agent, with dry-run preview), **Targets** (add / edit / delete),
-**Status / Drift** (status, drift, validate, and sync / force-sync), **Diff**, and
-**Hooks / CI** (copyable CI command + confirmed install-hooks). Separate GUI release
-artifacts are not built yet (Milestone UI-3).
+(`AgentSyncApp`) — no repository logic lives in the Razor components. File-writing
+operations (add skill, save changes, import, run sync) are explicit, clearly labelled
+submit/apply actions that show the result immediately and offer a dry-run/preview where
+the underlying command supports one. Destructive or environment-changing operations
+(**delete skill**, **delete target**, **force sync**, **install hooks**) require a second
+in-page confirmation step before anything is written. Functional screens: **Dashboard**
+(state + quick actions), **Skills** (add / edit / enable-disable targets / delete),
+**Imports** (import skill and import agent, with dry-run preview), **Targets** (add / edit
+/ delete), **Status / Drift** (status, drift, validate, and run-sync / force-sync),
+**Diff**, and **Hooks / CI** (copyable CI command + confirmed install-hooks). Separate GUI
+release artifacts are not built yet (Milestone UI-3).
 
 ## Drift detection
 

@@ -54,9 +54,11 @@ Specs live under `.ai-agent/features/` (`IMPORTS.md`, `CRUD_COMMANDS.md`,
   the token is exchanged into an HttpOnly `SameSite=Strict` cookie and stripped from the
   URL on first use, with an unauthenticated `/healthz` readiness endpoint). All screens
   (Dashboard, Skills, Imports, Targets, Status/Drift, Diff, Hooks/CI, Settings) drive
-  `AgentSyncApp` with explicit confirmation before any destructive/file-writing action; no
-  repository logic lives in Razor components. Builds with the standard SDK (no special
-  workloads).
+  `AgentSyncApp`: file-writing actions (add/edit/import/sync) use explicit submit buttons,
+  and destructive ones (delete skill/target, force sync, install hooks) require a second
+  confirmation step. Page interaction logic lives in `AgentSync.Ui.Web/ViewModels/*`
+  (unit-tested); no repository logic lives in Razor components. Builds with the standard
+  SDK (no special workloads).
 
 **In progress / not shipped:**
 

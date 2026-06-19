@@ -24,7 +24,7 @@
             <FluentCheckbox @bind-Value="_skill.Force" Label="Force (overwrite an existing canonical skill)" />
             <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8">
                 <FluentButton OnClick="@(() => ImportSkill(dryRun: true))" Disabled="@string.IsNullOrWhiteSpace(_skill.Path)">Preview (dry run)</FluentButton>
-                <FluentButton Appearance="Appearance.Accent" OnClick="@(() => ImportSkill(dryRun: _skill.DryRun))" Disabled="@string.IsNullOrWhiteSpace(_skill.Path)">Import</FluentButton>
+                <FluentButton Appearance="Appearance.Accent" OnClick="@(() => ImportSkill(dryRun: _skill.DryRun))" Disabled="@string.IsNullOrWhiteSpace(_skill.Path)">Import skill</FluentButton>
             </FluentStack>
             <ImportReportView Report="_skillReport" />
         </FluentStack>
@@ -43,7 +43,7 @@
             <FluentCheckbox @bind-Value="_agent.Force" Label="Force (overwrite existing canonical skills)" />
             <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8">
                 <FluentButton OnClick="@(() => ImportAgent(dryRun: true))" Disabled="@string.IsNullOrWhiteSpace(_agent.Path)">Preview (dry run)</FluentButton>
-                <FluentButton Appearance="Appearance.Accent" OnClick="@(() => ImportAgent(dryRun: _agent.DryRun))" Disabled="@string.IsNullOrWhiteSpace(_agent.Path)">Import</FluentButton>
+                <FluentButton Appearance="Appearance.Accent" OnClick="@(() => ImportAgent(dryRun: _agent.DryRun))" Disabled="@string.IsNullOrWhiteSpace(_agent.Path)">Import agent instructions</FluentButton>
             </FluentStack>
             <ImportReportView Report="_agentReport" />
         </FluentStack>

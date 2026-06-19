@@ -7,23 +7,23 @@
     <FluentLabel Typo="Typography.H3">Status / Drift</FluentLabel>
 
     <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8">
-        <FluentButton OnClick="Refresh">Refresh</FluentButton>
+        <FluentButton OnClick="@(() => _vm.Refresh())">Refresh</FluentButton>
     </FluentStack>
 
-    @if (_status is not null)
+    @if (_vm.Status is not null)
     {
         <FluentCard>
             <FluentStack Orientation="Orientation.Vertical" VerticalGap="4">
-                <FluentLabel>Initialized: @_status.Initialized — Skills: @_status.SkillCount</FluentLabel>
-                <FluentLabel>Validation: @(_validation?.IsValid == true ? "valid" : "errors")</FluentLabel>
+                <FluentLabel>Initialized: @_vm.Status.Initialized — Skills: @_vm.Status.SkillCount</FluentLabel>
+                <FluentLabel>Validation: @(_vm.Validation?.IsValid == true ? "valid" : "errors")</FluentLabel>
 
-                @if (_status.Issues.Count == 0)
+                @if (_vm.Status.Issues.Count == 0)
                 {
                     <FluentLabel>No issues detected.</FluentLabel>
                 }
                 else
                 {
-                    @foreach (var issue in _status.Issues)
+                    @foreach (var issue in _vm.Status.Issues)
                     {
                         <FluentLabel>[@issue.Severity] @issue.Message</FluentLabel>
                     }
@@ -32,16 +32,16 @@
         </FluentCard>
     }
 
-    @if (_drift is not null && _drift.HasDrift)
+    @if (_vm.Drift is not null && _vm.Drift.HasDrift)
     {
         <FluentCard>
             <FluentStack Orientation="Orientation.Vertical" VerticalGap="4">
                 <FluentLabel Typo="Typography.H4">Drift</FluentLabel>
-                @foreach (var item in _drift.Drifted)
+                @foreach (var item in _vm.Drift.Drifted)
                 {
                     <FluentLabel>[@item.Kind] <code>@item.RelativePath</code> (@item.TargetId)</FluentLabel>
                 }
-                @foreach (var orphan in _drift.Orphans)
+                @foreach (var orphan in _vm.Drift.Orphans)
                 {
                     <FluentLabel>[Orphan] <code>@orphan.Path</code> (@orphan.Target)</FluentLabel>
                 }
@@ -54,38 +54,38 @@
         <FluentStack Orientation="Orientation.Vertical" VerticalGap="6">
             <FluentLabel Typo="Typography.H4">Sync</FluentLabel>
             <FluentLabel Typo="Typography.Body">
-                Sync writes missing/outdated projections. Hand-edited generated sections are left
+                Run sync writes missing/outdated projections. Hand-edited generated sections are left
                 untouched unless you confirm <strong>Force</strong>, which regenerates them from the
                 canonical source.
             </FluentLabel>
             <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8" Wrap="true">
-                <FluentButton OnClick="@(() => RunSync(force: false, dryRun: true))">Preview (dry run)</FluentButton>
-                <FluentButton Appearance="Appearance.Accent" OnClick="@(() => RunSync(force: false, dryRun: false))">Sync</FluentButton>
-                <FluentButton OnClick="BeginForce">Sync --force…</FluentButton>
+                <FluentButton OnClick="@(() => _vm.RunSync(dryRun: true))">Preview (dry run)</FluentButton>
+                <FluentButton Appearance="Appearance.Accent" OnClick="@(() => _vm.RunSync(dryRun: false))">Run sync</FluentButton>
+                <FluentButton OnClick="@(() => _vm.RequestForceSync())">Force sync…</FluentButton>
             </FluentStack>
 
-            @if (_confirmForce)
+            @if (_vm.ForceSyncPending)
             {
                 <FluentCard>
                     <FluentStack Orientation="Orientation.Vertical" VerticalGap="6">
                         <FluentLabel>Force overwrites manually edited generated projections. Continue?</FluentLabel>
                         <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8">
-                            <FluentButton Appearance="Appearance.Accent" OnClick="@(() => RunSync(force: true, dryRun: false))">Confirm force sync</FluentButton>
-                            <FluentButton OnClick="@(() => _confirmForce = false)">Cancel</FluentButton>
+                            <FluentButton Appearance="Appearance.Accent" OnClick="@(() => _vm.ConfirmForceSync())">Confirm force sync</FluentButton>
+                            <FluentButton OnClick="@(() => _vm.CancelForceSync())">Cancel</FluentButton>
                         </FluentStack>
                     </FluentStack>
                 </FluentCard>
             }
 
-            @if (_sync is not null)
+            @if (_vm.Sync is not null)
             {
                 <FluentCard Style="margin-top: 8px;">
                     <FluentStack Orientation="Orientation.Vertical" VerticalGap="2">
                         <FluentLabel>
-                            <strong>Sync:</strong> @(_sync.DryRun ? "dry run — " : "")@(_sync.ConfigValid ? "config valid" : "config invalid"),
-                            @(_sync.AnyChanges ? "changes applied" : "no changes")@(_sync.AnyManualEdits ? ", manual edits skipped" : "")
+                            <strong>Sync:</strong> @(_vm.Sync.DryRun ? "dry run — " : "")@(_vm.Sync.ConfigValid ? "config valid" : "config invalid"),
+                            @(_vm.Sync.AnyChanges ? "changes applied" : "no changes")@(_vm.Sync.AnyManualEdits ? ", manual edits skipped" : "")
                         </FluentLabel>
-                        @foreach (var outcome in _sync.Outcomes)
+                        @foreach (var outcome in _vm.Sync.Outcomes)
                         {
                             <FluentLabel><code>@outcome.Projection.RelativePath</code> (@outcome.Projection.TargetId) — @outcome.Change</FluentLabel>
                         }
@@ -97,30 +97,8 @@
 </FluentStack>
 
 @code {
-    private StatusReport? _status;
-    private DriftReport? _drift;
-    private ValidationResult? _validation;
-    private SyncReport? _sync;
-    private bool _confirmForce;
+    private StatusViewModel _vm = default!;
 
-    protected override void OnInitialized() => Refresh();
-
-    private void Refresh()
-    {
-        _status = App.Status();
-        _drift = App.Drift();
-        _validation = App.Validate();
-    }
-
-    private void BeginForce() => _confirmForce = true;
-
-    private void RunSync(bool force, bool dryRun)
-    {
-        _sync = App.Sync(force, dryRun);
-        _confirmForce = false;
-        if (!dryRun)
-        {
-            Refresh();
-        }
-    }
+    // Repository logic lives in StatusViewModel / AgentSyncApp, never in this component.
+    protected override void OnInitialized() => _vm = new StatusViewModel(App);
 }

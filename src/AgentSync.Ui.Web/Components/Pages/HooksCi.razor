@@ -24,35 +24,35 @@
                 <code>agent install-hooks</code>.
             </FluentLabel>
             <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8">
-                <FluentButton Appearance="Appearance.Accent" OnClick="BeginInstall">Install hooks…</FluentButton>
+                <FluentButton Appearance="Appearance.Accent" OnClick="@(() => _vm.RequestInstall())">Install hooks…</FluentButton>
             </FluentStack>
 
-            @if (_confirm)
+            @if (_vm.InstallPending)
             {
                 <FluentCard>
                     <FluentStack Orientation="Orientation.Vertical" VerticalGap="6">
                         <FluentLabel>Set core.hooksPath and write the hook scripts now?</FluentLabel>
                         <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8">
-                            <FluentButton Appearance="Appearance.Accent" OnClick="ConfirmInstall">Confirm</FluentButton>
-                            <FluentButton OnClick="@(() => _confirm = false)">Cancel</FluentButton>
+                            <FluentButton Appearance="Appearance.Accent" OnClick="@(() => _vm.ConfirmInstall())">Confirm install</FluentButton>
+                            <FluentButton OnClick="@(() => _vm.CancelInstall())">Cancel</FluentButton>
                         </FluentStack>
                     </FluentStack>
                 </FluentCard>
             }
 
-            @if (_result is not null)
+            @if (_vm.Result is not null)
             {
                 <FluentCard Style="margin-top: 8px;">
                     <FluentStack Orientation="Orientation.Vertical" VerticalGap="2">
-                        <FluentLabel><strong>@(_result.Success ? "Hooks installed." : "Hooks not fully installed.")</strong></FluentLabel>
-                        <FluentLabel>core.hooksPath: <code>@_result.HooksPath</code> (@(_result.GitConfigured ? "configured" : "not configured"))</FluentLabel>
-                        @foreach (var hook in _result.Hooks)
+                        <FluentLabel><strong>@(_vm.Result.Success ? "Hooks installed." : "Hooks not fully installed.")</strong></FluentLabel>
+                        <FluentLabel>core.hooksPath: <code>@_vm.Result.HooksPath</code> (@(_vm.Result.GitConfigured ? "configured" : "not configured"))</FluentLabel>
+                        @foreach (var hook in _vm.Result.Hooks)
                         {
                             <FluentLabel><code>@hook.Name</code> — @(!hook.Present ? "missing" : hook.Executable ? "ready" : "not executable")</FluentLabel>
                         }
-                        @if (!string.IsNullOrWhiteSpace(_result.Error))
+                        @if (!string.IsNullOrWhiteSpace(_vm.Result.Error))
                         {
-                            <FluentLabel>@_result.Error</FluentLabel>
+                            <FluentLabel>@_vm.Result.Error</FluentLabel>
                         }
                     </FluentStack>
                 </FluentCard>
@@ -62,14 +62,8 @@
 </FluentStack>
 
 @code {
-    private bool _confirm;
-    private InstallHooksResult? _result;
+    private HooksViewModel _vm = default!;
 
-    private void BeginInstall() => _confirm = true;
-
-    private void ConfirmInstall()
-    {
-        _result = App.InstallHooks();
-        _confirm = false;
-    }
+    // Repository logic lives in HooksViewModel / AgentSyncApp, never in this component.
+    protected override void OnInitialized() => _vm = new HooksViewModel(App);
 }

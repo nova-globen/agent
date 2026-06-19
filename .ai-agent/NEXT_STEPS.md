@@ -22,8 +22,9 @@ compatible and the GUI optional (the headless CLI must not depend on the UI).
   per-launch session token (exchanged into an HttpOnly cookie and stripped from the URL on
   first use; unauthenticated `/healthz`). UI-2 wired: the host runs Interactive Server and
   all screens (Dashboard, Skills, Imports, Targets, Status/Drift, Diff, Hooks/CI, Settings)
-  drive `AgentSyncApp` with explicit confirmation before destructive actions
-  (Milestone UI-2 done).
+  drive `AgentSyncApp` via view-models (`AgentSync.Ui.Web/ViewModels/*`); file-writing
+  actions use explicit submit buttons and destructive ones (delete, force sync, install
+  hooks) require a second confirmation step (Milestone UI-2 done).
 - **Separate GUI packaging** — `agent-sync-ui` ships as its own release artifacts,
   independent of the CLI / `dotnet tool` release (Milestone UI-3, not yet done).
 

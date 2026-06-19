@@ -102,7 +102,7 @@ public sealed class UiLauncher : IUiLauncher
 }
 
 /// <summary>
-/// Helpers for a local UI session: a free loopback port, a short-lived session token,
+/// Helpers for a local UI session: a free loopback port, a per-launch session token,
 /// and the access URL. The token gates local browser access to the web UI.
 /// </summary>
 public static class UiSession
@@ -122,7 +122,7 @@ public static class UiSession
         }
     }
 
-    /// <summary>Generates a cryptographically random, short-lived session token.</summary>
+    /// <summary>Generates a cryptographically random, per-launch session token.</summary>
     public static string NewToken()
         => Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
 

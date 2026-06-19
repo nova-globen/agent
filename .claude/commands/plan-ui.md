@@ -12,8 +12,11 @@ Plan/extend the Agent Sync GUI (`agent ui`) — produce a plan before implementi
    - `agent ui` is a **launcher/discovery command** that starts `agent-sync-ui` with
      `--repo`/`--port`/`--token`, opens the loopback URL, and fails gracefully (exit 3)
      when the GUI is absent.
-   - The host binds **`127.0.0.1`** with a **random port** and a **short-lived session
-     token**; never bind `0.0.0.0`. Destructive actions need explicit confirmation.
+   - The host binds **`127.0.0.1`** with a **random port** and a **per-launch session
+     token** (exchanged into an HttpOnly cookie and stripped from the URL on first use,
+     with an unauthenticated `/healthz` readiness endpoint); never bind `0.0.0.0`.
+     File-writing actions use explicit submit buttons; destructive actions (delete, force
+     sync, install hooks) need a second confirmation step.
    - UI operations call shared services (`AgentSync.Ui.Abstractions` → `AgentSync.Core`);
      **no repository mutation logic in Razor components**.
 3. Produce a concrete implementation plan (which screens/mutations to wire, confirmation

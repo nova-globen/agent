@@ -135,9 +135,12 @@ Specs live under `.ai-agent/features/`. Status:
   components**, bound to `127.0.0.1` with a random port and a per-launch session token
   (exchanged into an HttpOnly cookie and stripped from the URL on first use;
   unauthenticated `/healthz`). Dashboard, Skills, Imports, Targets, Status/Drift, Diff,
-  Hooks/CI, and Settings drive `AgentSyncApp` with explicit confirmation before any
-  destructive/file-writing action; no repository logic lives in Razor components. Separate
-  GUI packaging remains (`features/UI_LOCALHOST_BLAZOR.md`, Milestone UI-3).
+  Hooks/CI, and Settings drive `AgentSyncApp`; file-writing actions (add/edit/import/sync)
+  use explicit submit buttons and destructive ones (delete skill/target, force sync,
+  install hooks) require a second confirmation step. Page interaction lives in
+  `AgentSync.Ui.Web/ViewModels/*` (testable); no repository logic lives in Razor
+  components. Separate GUI packaging remains (`features/UI_LOCALHOST_BLAZOR.md`,
+  Milestone UI-3).
 
 > The earlier .NET MAUI / OpenMaui GUI direction was **dropped** in favour of the
 > localhost web UI; the MAUI project and the OpenMaui spike doc were removed.
@@ -156,8 +159,10 @@ Guidance for continuing this wave:
   gracefully with install guidance when absent.
 - **The web UI binds `127.0.0.1`** with a random port and a per-launch session token
   (exchanged into an HttpOnly cookie and stripped from the URL after first use); never
-  `0.0.0.0`. Destructive actions require explicit confirmation; no repository mutation
-  logic in Razor components.
+  `0.0.0.0`. File-writing actions (add/edit/import/sync) use explicit submit buttons;
+  destructive/environment-changing actions (delete, force sync, install hooks) require a
+  second confirmation step. No repository mutation logic in Razor components — it lives in
+  `AgentSync.Ui.Web/ViewModels/*` and `AgentSyncApp`.
 - **The CLI remains the primary supported interface**; the GUI is an optional layer.
 - Preserve the core invariants below and in `CLAUDE.md` (path safety, marker handling,
   manual-edit protection, `net10.0`, `git-agent` delegation).

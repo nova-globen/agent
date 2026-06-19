@@ -16,12 +16,27 @@ Compact handoff for AI sessions. Pair with `.ai-agent/NEXT_STEPS.md` and
 - **Entry points:** `agent` (`src/AgentSync.Cli`) and `git-agent`
   (`src/AgentSync.GitAgent`, delegates to `AgentSync.Cli.CliRunner`).
 - **Commands implemented:** `init`, `sync`, `status`, `diff`, `validate`, `doctor`,
-  `install-hooks` — all available via both `agent` and `git agent`.
-- **Tests:** Core and CLI test suites passing as of v0.1.0-alpha.1; run `dotnet test`
-  for the current count. `dotnet build -c Release` clean.
+  `install-hooks`, `import skill`, `import agent`, `skill add/edit/delete/list/show`,
+  `target add/edit/delete/list/show`, and `ui` — all available via both `agent` and
+  `git agent`.
+- **Local web UI (optional, separate):** `AgentSync.Ui.Web` (executable `agent-sync-ui`)
+  is a localhost Blazor host (Interactive Server) using Microsoft FluentUI Blazor
+  components, driving Agent Sync through `AgentSync.Ui.Abstractions` (`AgentSyncApp`).
+  `agent ui` launches it: free port + per-launch session token, `/healthz` readiness
+  poll, opens the browser at the token URL (prints only the clean URL; falls back to the
+  token URL on open failure / `--no-open`), exit-3 with install guidance when absent. The
+  host binds `127.0.0.1`, exchanges the token into an HttpOnly cookie and strips it from
+  the URL on first use. All screens are wired with mutations; file-writing actions use
+  explicit submit buttons and destructive ones (delete, force sync, install hooks) require
+  a second confirmation. The CLI never references the UI/web/FluentUI assemblies
+  (test-guarded). **Separate GUI release packaging is not wired yet** (Milestone UI-3).
+- **Tests:** all suites pass; run `dotnet test` for the current count.
+  `dotnet build -c Release` clean.
 - **Release automation:** `.github/workflows/release.yml` (tag `v*.*.*`) publishes
-  self-contained binaries for linux-x64/arm64, osx-x64/arm64, win-x64, plus
+  self-contained CLI binaries for linux-x64/arm64, osx-x64/arm64, win-x64, plus
   `checksums.txt`; `scripts/install.sh` and `scripts/install.ps1` install from releases.
+  The `dotnet tool` packages stay CLI-only. (Separate `agent-sync-ui` artifacts are
+  Milestone UI-3, not yet wired.)
 - **CI:** `.github/workflows/agent-sync-check.yml` builds/tests on push (`main`/`master`)
   and PRs, and runs an end-to-end drift check in a throwaway repo.
 - This repo does **not** dogfood Agent Sync on its own hand-authored `AGENTS.md` /
