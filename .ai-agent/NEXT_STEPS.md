@@ -13,13 +13,16 @@ compatible and the GUI optional (the headless CLI must not depend on the UI).
 - **Skill/target CRUD** — `agent skill …` / `agent target …` (implemented;
   `features/CRUD_COMMANDS.md`).
 - **`agent ui` launcher** — launches a *separately installed* `agent-sync-ui` with
-  `--repo`/`--port`/`--token`, opens the loopback URL, exit-3 with install guidance when
-  absent (implemented; `features/UI_LOCALHOST_BLAZOR.md`).
+  `--repo`/`--port`/`--token` (`--no-open`), waits for its `/healthz` readiness endpoint,
+  opens the browser at the token URL (printing only the clean URL), and exits 3 with
+  install guidance when absent or on readiness timeout (implemented;
+  `features/UI_LOCALHOST_BLAZOR.md`).
 - **Localhost Blazor Web UI** — `AgentSync.Ui.Web` (executable `agent-sync-ui`) using
   **Microsoft FluentUI Blazor components**, bound to `127.0.0.1` with a random port and a
-  short-lived session token. Minimal host implemented (dashboard + read-only screens);
-  remaining work: wire mutations with confirmations and finish placeholder screens
-  (Milestone UI-2).
+  per-launch session token (exchanged into an HttpOnly cookie and stripped from the URL on
+  first use; unauthenticated `/healthz`). Minimal host implemented (dashboard + read-only
+  screens); remaining work: wire mutations with confirmations and finish placeholder
+  screens (Milestone UI-2).
 - **Separate GUI packaging** — `agent-sync-ui` ships as its own release artifacts,
   independent of the CLI / `dotnet tool` release (Milestone UI-3, not yet done).
 

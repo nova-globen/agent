@@ -19,15 +19,28 @@ public sealed class CliRunner
     private readonly TextWriter _err;
     private readonly string _workingDirectory;
     private readonly IUiLauncher _uiLauncher;
+    private readonly IBrowserLauncher _browserLauncher;
+    private readonly IUiReadinessProbe _readinessProbe;
+
+    /// <summary>How long <c>agent ui</c> waits for the web host to become ready.</summary>
+    private static readonly TimeSpan UiReadyTimeout = TimeSpan.FromSeconds(5);
 
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
-    public CliRunner(TextWriter? output = null, TextWriter? error = null, string? workingDirectory = null, IUiLauncher? uiLauncher = null)
+    public CliRunner(
+        TextWriter? output = null,
+        TextWriter? error = null,
+        string? workingDirectory = null,
+        IUiLauncher? uiLauncher = null,
+        IBrowserLauncher? browserLauncher = null,
+        IUiReadinessProbe? readinessProbe = null)
     {
         _out = output ?? Console.Out;
         _err = error ?? Console.Error;
         _workingDirectory = workingDirectory ?? Directory.GetCurrentDirectory();
         _uiLauncher = uiLauncher ?? new UiLauncher();
+        _browserLauncher = browserLauncher ?? new BrowserLauncher();
+        _readinessProbe = readinessProbe ?? new HttpUiReadinessProbe();
     }
 
     public int Run(string[] args)
@@ -1116,9 +1129,17 @@ public sealed class CliRunner
 
     private int RunUi(string[] args)
     {
+        var noOpen = false;
         foreach (var arg in args)
         {
-            return UnknownOption("ui", arg);
+            switch (arg)
+            {
+                case "--no-open":
+                    noOpen = true;
+                    break;
+                default:
+                    return UnknownOption("ui", arg);
+            }
         }
 
         var root = GitRepository.Discover(_workingDirectory);
@@ -1139,7 +1160,8 @@ public sealed class CliRunner
 
         var port = UiSession.FindFreePort();
         var token = UiSession.NewToken();
-        var url = UiSession.Url(port, token);
+
+        _out.WriteLine($"Launching Agent Sync UI for {repoPath}...");
 
         if (!_uiLauncher.Launch(new UiLaunchRequest(executable, repoPath, port, token)))
         {
@@ -1147,8 +1169,31 @@ public sealed class CliRunner
             return ExitCodes.EnvironmentProblem;
         }
 
-        _out.WriteLine($"Launching Agent Sync UI for {repoPath}...");
-        _out.WriteLine($"Open {url}");
+        // Confirm the host actually started (the chosen port may have been taken before it
+        // bound, or the process may have failed) before pointing the user at it.
+        if (!_readinessProbe.WaitUntilReady(port, UiReadyTimeout))
+        {
+            _err.WriteLine("error: the Agent Sync UI did not become ready in time.");
+            _err.WriteLine("The port may be in use, or the UI failed to start. Try again.");
+            return ExitCodes.EnvironmentProblem;
+        }
+
+        // The token URL is what authenticates the first navigation; the host then exchanges
+        // it into an HttpOnly cookie and strips it from the address bar.
+        var tokenUrl = UiSession.Url(port, token);
+
+        if (!noOpen && _browserLauncher.Open(tokenUrl))
+        {
+            // The browser already carries the token; print only the clean loopback URL.
+            _out.WriteLine($"Opened {UiSession.BaseUrl(port)}");
+        }
+        else
+        {
+            // Fall back to printing the token URL (on stdout, never stderr) so the user can
+            // open it manually.
+            _out.WriteLine($"Open {tokenUrl}");
+        }
+
         return ExitCodes.Success;
     }
 
@@ -1441,7 +1486,7 @@ public sealed class CliRunner
         _out.WriteLine("  import agent        Import an existing instruction file/folder (AGENTS.md, CLAUDE.md, Cursor, ...) (--type, --split, --id, --dry-run, --force, --json).");
         _out.WriteLine("  skill               Manage canonical skills: add | edit | delete | list | show.");
         _out.WriteLine("  target              Manage projection targets: add | edit | delete | list | show.");
-        _out.WriteLine("  ui                  Launch the optional local web UI (separate install; CLI stays GUI-free).");
+        _out.WriteLine("  ui                  Launch the optional local web UI (separate install; CLI stays GUI-free) (--no-open).");
         _out.WriteLine("  install-hooks       Configure core.hooksPath and make hooks executable.");
         _out.WriteLine("  doctor              Diagnose Git repo, PATH, hooks, and config (--json).");
         _out.WriteLine();

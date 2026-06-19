@@ -65,20 +65,22 @@ Razor components (FluentUI)  ->  AgentSyncApp (AgentSync.Ui.Abstractions)  ->  A
 2. Locate `agent-sync-ui` (`AGENT_SYNC_UI` override → next to the `agent` binary →
    `PATH`).
 3. Choose a free loopback port (`UiSession.FindFreePort`).
-4. Generate a short-lived session token (`UiSession.NewToken`).
+4. Generate a per-launch session token (`UiSession.NewToken`).
 5. Launch:
 
    ```bash
-   agent-sync-ui --repo <repo-path> --port <port> --token <token>
+   agent-sync-ui --repo <repo-path> --port <port> --token <token> [--no-open]
    ```
 
-6. Open the browser at:
-
-   ```text
-   http://127.0.0.1:<port>/?token=<token>
-   ```
-
-7. Always print that URL so the user can open it if the browser does not.
+6. Poll the host's readiness endpoint (`GET /healthz`, unauthenticated, returns `ok`)
+   for a few seconds (`IUiReadinessProbe` / `HttpUiReadinessProbe`). If it never becomes
+   ready, print a clear error and exit **3** (so there is no confusing "launched" output
+   for a host that did not start, e.g. when the chosen port was taken before it bound).
+7. Open the browser at `http://127.0.0.1:<port>/?token=<token>` via a small
+   `IBrowserLauncher` abstraction (Windows shell-execute, macOS `open`, Linux `xdg-open`).
+   - On success, print only the clean URL: `Opened http://127.0.0.1:<port>/`.
+   - On failure (or with `--no-open`), print the token URL on **stdout** so the user can
+     open it manually. The token is never written to stderr or logs.
 
 If the GUI is missing, `agent ui` exits with code **3** and prints:
 
@@ -96,11 +98,17 @@ name only (guarded by a test).
 - **Bind to `127.0.0.1` by default** — loopback only (`builder.WebHost.UseUrls`). Never
   bind `0.0.0.0`; that would require a future explicit, reviewed flag.
 - **Random/free port by default.**
-- **Short-lived session token**, generated per launch and passed to the host.
+- **Per-launch session token**, generated per launch and passed to the host; valid for the
+  lifetime of the UI process (a session token, not a time-expiring one — the wording is
+  kept accurate).
 - **Validate the token before any operation** — a middleware (`SessionGate`) rejects
   every request lacking a valid token (query `?token=` on first navigation, then an
   HttpOnly, `SameSite=Strict` cookie). Token comparison is fixed-time (`TokenCheck`).
-- **No unauthenticated mutation endpoints**; the token gate is global.
+- **Token is removed from the URL after first use** — on a valid `?token=` request the
+  host sets the cookie and **302-redirects to the same path without the token**, so it
+  does not stay in the address bar or browser history.
+- **No unauthenticated mutation endpoints**; the token gate is global. The only public
+  path is `GET /healthz`, which returns a minimal `ok` and exposes no repository data.
 - **Explicit confirmation for destructive operations** (force-overwrite, delete,
   disable a target) before calling `AgentSyncApp`.
 - **Avoid logging tokens** — the token is never written to logs or stderr; it appears
@@ -148,24 +156,34 @@ explicit confirmation dialogs.
 
 ## Implementation status
 
-- **`agent ui` launcher — implemented.** Free port + token + repo passed to
-  `agent-sync-ui`; prints the loopback URL; exit-3 with install guidance when absent.
-  No compile-time UI reference in the CLI (test-guarded).
+- **`agent ui` launcher — implemented + hardened.** Free port + token + repo passed to
+  `agent-sync-ui`; polls `/healthz` readiness before opening the browser
+  (`IBrowserLauncher`) at the token URL and printing only the clean URL; falls back to the
+  token URL on open failure / `--no-open`; exit-3 with install guidance when absent or on
+  readiness timeout. No compile-time UI reference in the CLI (test-guarded).
 - **`AgentSync.Ui.Abstractions` (`AgentSyncApp`) — implemented + tested** (no UI deps).
-- **`AgentSync.Ui.Web` — minimal FluentUI Blazor host implemented.** Binds `127.0.0.1`,
-  token middleware, dashboard + read-only screens + placeholders. Builds with the
-  standard SDK (no special workloads); verified at runtime (401 without token, 200 +
-  FluentUI dashboard with token).
+- **`AgentSync.Ui.Web` — FluentUI Blazor host, hardened launch.** Binds `127.0.0.1`,
+  strict option parsing (`WebOptions.TryParse`), token middleware that exchanges the token
+  into an HttpOnly cookie and strips it from the URL, unauthenticated `/healthz`; dashboard
+  + read-only screens + placeholders. Builds with the standard SDK (no special workloads).
 - **Remaining:** wire mutations with confirmations, finish placeholder screens, and add
   separate GUI release artifacts (Milestones UI-2 / UI-3 in `ROADMAP.md`).
 
 ## Tests
 
-- `WebOptions.Parse` (repo/port/token/`--no-open`) and `TokenCheck.Matches`
-  (`AgentSync.Ui.Web.Tests`) — no browser required.
-- `agent ui` launcher: locates `agent-sync-ui`, passes repo/port/token, prints the
-  loopback URL, keeps the token out of stderr, exit-3 when absent
-  (`AgentSync.Cli.Tests/UiCommandTests`).
+- `WebOptions.TryParse` strict validation (missing/empty repo, nonexistent repo,
+  missing/invalid/out-of-range port, missing/empty token, unknown option, value-less
+  option, valid parse) and `TokenCheck.Matches` (`AgentSync.Ui.Web.Tests`) — no browser
+  required.
+- `SessionGate` decision logic (cookie vs query vs deny, empty-token denies everything),
+  `IsPublicPath` (`/healthz`), and `RedirectWithoutToken` (token stripped, other params
+  preserved) — pure, no ASP.NET host required.
+- `agent ui` launcher (`AgentSync.Cli.Tests/UiCommandTests`): locates `agent-sync-ui`,
+  passes repo/port/token, polls readiness on the launched port, opens the browser at the
+  token URL but prints only the clean URL, falls back to the token URL on open failure or
+  `--no-open`, exits 3 on readiness timeout / launch failure / when absent, and keeps the
+  token out of stderr. Browser/readiness are injected fakes (`IBrowserLauncher` /
+  `IUiReadinessProbe`) so tests need no real process or socket.
 - `AgentSyncApp` capability coverage (`AgentSync.Ui.Abstractions.Tests`).
 - Build isolation: the CLI/Core/GitAgent and tool packages build with no GUI assemblies;
   `AgentSync.Cli` references neither the web host nor FluentUI (test-guarded).

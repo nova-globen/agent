@@ -59,17 +59,81 @@ public sealed class UiCommandTests
     }
 
     [Fact]
-    public void Ui_PrintsLoopbackUrlWithPortAndToken()
+    public void Ui_OpensBrowserAtTokenUrl_AndPrintsCleanUrl()
     {
         using var h = new CliTestHarness();
         h.MakeGitRepo();
         var launcher = new FakeUiLauncher(path: "/opt/agent-sync-ui");
+        var browser = new FakeBrowserLauncher(succeeds: true);
 
-        var result = h.InvokeWithUi(launcher, "ui");
+        var result = h.InvokeWithUi(launcher, browser, readiness: null, "ui");
 
         var req = launcher.Request!;
-        Assert.Contains($"http://127.0.0.1:{req.Port}/?token={req.Token}", result.StdOut);
+        // The browser is opened with the token URL...
+        Assert.Equal($"http://127.0.0.1:{req.Port}/?token={req.Token}", browser.OpenedUrl);
+        // ...but the printed confirmation is the clean URL (no token).
+        Assert.Contains($"Opened http://127.0.0.1:{req.Port}/", result.StdOut);
         Assert.Contains("Launching Agent Sync UI", result.StdOut);
+        Assert.DoesNotContain(req.Token, result.StdOut);
+    }
+
+    [Fact]
+    public void Ui_BrowserOpenFails_PrintsTokenUrlOnStdout()
+    {
+        using var h = new CliTestHarness();
+        h.MakeGitRepo();
+        var launcher = new FakeUiLauncher(path: "/opt/agent-sync-ui");
+        var browser = new FakeBrowserLauncher(succeeds: false);
+
+        var result = h.InvokeWithUi(launcher, browser, readiness: null, "ui");
+
+        var req = launcher.Request!;
+        Assert.Equal(ExitCodes.Success, result.ExitCode);
+        Assert.Contains($"Open http://127.0.0.1:{req.Port}/?token={req.Token}", result.StdOut);
+    }
+
+    [Fact]
+    public void Ui_NoOpen_DoesNotOpenBrowser_PrintsTokenUrl()
+    {
+        using var h = new CliTestHarness();
+        h.MakeGitRepo();
+        var launcher = new FakeUiLauncher(path: "/opt/agent-sync-ui");
+        var browser = new FakeBrowserLauncher(succeeds: true);
+
+        var result = h.InvokeWithUi(launcher, browser, readiness: null, "ui", "--no-open");
+
+        var req = launcher.Request!;
+        Assert.Equal(ExitCodes.Success, result.ExitCode);
+        Assert.Null(browser.OpenedUrl);
+        Assert.Contains($"Open http://127.0.0.1:{req.Port}/?token={req.Token}", result.StdOut);
+    }
+
+    [Fact]
+    public void Ui_ReadinessTimeout_Exits3()
+    {
+        using var h = new CliTestHarness();
+        h.MakeGitRepo();
+        var launcher = new FakeUiLauncher(path: "/opt/agent-sync-ui");
+        var readiness = new FakeReadinessProbe(ready: false);
+
+        var result = h.InvokeWithUi(launcher, browser: null, readiness, "ui");
+
+        Assert.Equal(ExitCodes.EnvironmentProblem, result.ExitCode);
+        Assert.Contains("did not become ready", result.StdErr);
+    }
+
+    [Fact]
+    public void Ui_ReadinessPolledOnLaunchedPort()
+    {
+        using var h = new CliTestHarness();
+        h.MakeGitRepo();
+        var launcher = new FakeUiLauncher(path: "/opt/agent-sync-ui");
+        var readiness = new FakeReadinessProbe(ready: true);
+
+        var result = h.InvokeWithUi(launcher, browser: null, readiness, "ui");
+
+        Assert.Equal(ExitCodes.Success, result.ExitCode);
+        Assert.Equal(launcher.Request!.Port, readiness.PolledPort);
     }
 
     [Fact]
@@ -132,6 +196,7 @@ public sealed class UiCommandTests
                 Assert.DoesNotContain("maui", name, StringComparison.OrdinalIgnoreCase);
                 Assert.DoesNotContain("fluentui", name, StringComparison.OrdinalIgnoreCase);
                 Assert.DoesNotContain("AgentSync.Ui.Web", name, StringComparison.OrdinalIgnoreCase);
+                Assert.DoesNotContain("AgentSync.Ui.Abstractions", name, StringComparison.OrdinalIgnoreCase);
             }
         }
     }

@@ -125,14 +125,17 @@ Specs live under `.ai-agent/features/`. Status:
   `src/AgentSync.Core/Authoring/` (`features/CRUD_COMMANDS.md`).
 - **`agent ui` — implemented as a launcher.** It starts a separately installed
   `agent-sync-ui` via `AgentSync.Core.UiLauncher` / `UiSession`
-  (`--repo`/`--port`/`--token`), prints the loopback URL, and exits 3 with install
-  guidance when absent. No compile-time UI reference from the CLI (guarded by a test).
+  (`--repo`/`--port`/`--token`, `--no-open`), polls its `/healthz` readiness endpoint,
+  opens the browser at the token URL (printing only the clean URL), falls back to the
+  token URL on open failure / `--no-open`, and exits 3 with install guidance when absent
+  or on readiness timeout. No compile-time UI reference from the CLI (guarded by a test).
 - **Localhost web UI — minimal host implemented.** `AgentSync.Ui.Abstractions`
   (`AgentSyncApp`) is the UI-independent service layer; `AgentSync.Ui.Web` (executable
   `agent-sync-ui`) is an ASP.NET Core + Blazor host using **Microsoft FluentUI Blazor
-  components**, bound to `127.0.0.1` with a random port and short-lived session token.
-  Dashboard + read-only screens are wired; mutation wiring + packaging remain
-  (`features/UI_LOCALHOST_BLAZOR.md`, Milestones UI-2/UI-3).
+  components**, bound to `127.0.0.1` with a random port and a per-launch session token
+  (exchanged into an HttpOnly cookie and stripped from the URL on first use;
+  unauthenticated `/healthz`). Dashboard + read-only screens are wired; mutation wiring +
+  packaging remain (`features/UI_LOCALHOST_BLAZOR.md`, Milestones UI-2/UI-3).
 
 > The earlier .NET MAUI / OpenMaui GUI direction was **dropped** in favour of the
 > localhost web UI; the MAUI project and the OpenMaui spike doc were removed.
@@ -149,9 +152,10 @@ Guidance for continuing this wave:
   any UI dependency and must **never** reference `AgentSync.Ui.Web` or FluentUI.
 - **`agent ui` is a launcher**: it starts the external `agent-sync-ui` and fails
   gracefully with install guidance when absent.
-- **The web UI binds `127.0.0.1`** with a random port and a short-lived session token;
-  never `0.0.0.0`. Destructive actions require explicit confirmation; no repository
-  mutation logic in Razor components.
+- **The web UI binds `127.0.0.1`** with a random port and a per-launch session token
+  (exchanged into an HttpOnly cookie and stripped from the URL after first use); never
+  `0.0.0.0`. Destructive actions require explicit confirmation; no repository mutation
+  logic in Razor components.
 - **The CLI remains the primary supported interface**; the GUI is an optional layer.
 - Preserve the core invariants below and in `CLAUDE.md` (path safety, marker handling,
   manual-edit protection, `net10.0`, `git-agent` delegation).

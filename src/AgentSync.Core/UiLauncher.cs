@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Net;
+using System.Net.Http;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 
@@ -125,7 +126,101 @@ public static class UiSession
     public static string NewToken()
         => Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
 
-    /// <summary>Builds the loopback access URL the browser should open.</summary>
+    /// <summary>Builds the loopback access URL the browser should open (carries the token).</summary>
     public static string Url(int port, string token)
         => $"http://127.0.0.1:{port}/?token={token}";
+
+    /// <summary>The loopback base URL without the token (safe to print after the browser opens).</summary>
+    public static string BaseUrl(int port)
+        => $"http://127.0.0.1:{port}/";
+
+    /// <summary>The loopback readiness URL the launcher polls before opening the browser.</summary>
+    public static string HealthUrl(int port)
+        => $"http://127.0.0.1:{port}/healthz";
+}
+
+/// <summary>
+/// Opens a URL in the user's default browser. Abstracted so <c>agent ui</c> can be tested
+/// without actually launching a browser.
+/// </summary>
+public interface IBrowserLauncher
+{
+    /// <summary>Attempts to open <paramref name="url"/>. Returns false if the browser could not be launched.</summary>
+    bool Open(string url);
+}
+
+/// <summary>
+/// Default <see cref="IBrowserLauncher"/>: opens the URL using the platform's standard
+/// mechanism (shell-execute on Windows, <c>open</c> on macOS, <c>xdg-open</c> on Linux).
+/// Never throws — failure is reported by returning false so the caller can print the URL.
+/// </summary>
+public sealed class BrowserLauncher : IBrowserLauncher
+{
+    public bool Open(string url)
+    {
+        try
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                using var p = Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+                return p is not null;
+            }
+
+            var exe = OperatingSystem.IsMacOS() ? "open" : "xdg-open";
+            var psi = new ProcessStartInfo(exe) { UseShellExecute = false };
+            psi.ArgumentList.Add(url);
+            using var process = Process.Start(psi);
+            return process is not null;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+}
+
+/// <summary>
+/// Polls the local web UI's readiness endpoint until it responds or a timeout elapses, so
+/// <c>agent ui</c> can confirm the host actually started before opening the browser.
+/// Abstracted to keep the launcher deterministic in tests (no real process/socket needed).
+/// </summary>
+public interface IUiReadinessProbe
+{
+    /// <summary>Returns true once the host on <paramref name="port"/> is ready, or false on timeout.</summary>
+    bool WaitUntilReady(int port, TimeSpan timeout);
+}
+
+/// <summary>
+/// Default <see cref="IUiReadinessProbe"/>: repeatedly GETs <c>/healthz</c> on the loopback
+/// port until it returns success or the timeout elapses. The endpoint is unauthenticated
+/// and returns only a minimal "ok" (no repository data).
+/// </summary>
+public sealed class HttpUiReadinessProbe : IUiReadinessProbe
+{
+    public bool WaitUntilReady(int port, TimeSpan timeout)
+    {
+        var url = UiSession.HealthUrl(port);
+        using var client = new HttpClient { Timeout = TimeSpan.FromMilliseconds(500) };
+        var deadline = DateTime.UtcNow + timeout;
+
+        while (DateTime.UtcNow < deadline)
+        {
+            try
+            {
+                using var response = client.GetAsync(url).GetAwaiter().GetResult();
+                if (response.IsSuccessStatusCode)
+                {
+                    return true;
+                }
+            }
+            catch
+            {
+                // Host not up yet; keep polling until the deadline.
+            }
+
+            Thread.Sleep(100);
+        }
+
+        return false;
+    }
 }

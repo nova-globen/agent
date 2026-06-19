@@ -408,15 +408,22 @@ agent ui    # locates and launches the separately installed web UI (agent-sync-u
 ```
 
 `agent ui` discovers the `agent-sync-ui` executable, picks a free port, generates a
-short-lived session token, launches the host, and opens your browser at
-`http://127.0.0.1:<port>/?token=<token>` (it also prints that URL). If the UI is not
-installed, it says so and exits without affecting the CLI.
+per-launch session token, launches the host, and waits for it to report ready (a small
+unauthenticated `/healthz` endpoint) before continuing. It then opens your default
+browser at `http://127.0.0.1:<port>/?token=<token>`. On the first request the host
+exchanges that token into an HttpOnly, `SameSite=Strict` cookie and **redirects to the
+same path without the token in the URL**, so the token does not linger in your address
+bar or history. If the browser cannot be opened (or you pass `--no-open`), the CLI prints
+the token URL so you can open it yourself. If the host does not become ready, `agent ui`
+reports the failure and exits non-zero. If the UI is not installed, it says so and exits
+without affecting the CLI.
 
 The UI is a Blazor web app built with Microsoft FluentUI Blazor components. It binds to
-**`127.0.0.1`** only (never `0.0.0.0`), uses a random port, and gates access with the
-session token. It ships as **separate release artifacts** on its own cadence — the CLI
-release and the `dotnet tool` packages never include it. See
-`.ai-agent/features/UI_LOCALHOST_BLAZOR.md` and `RELEASE_CHECKLIST.md`.
+**`127.0.0.1`** only (never `0.0.0.0`), uses a random port, and gates every request with
+the session token (valid for the lifetime of the UI process). It ships as **separate
+release artifacts** on its own cadence — the CLI release and the `dotnet tool` packages
+never include it. See `.ai-agent/features/UI_LOCALHOST_BLAZOR.md` and
+`RELEASE_CHECKLIST.md`.
 
 ## Drift detection
 

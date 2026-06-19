@@ -41,14 +41,19 @@ Specs live under `.ai-agent/features/` (`IMPORTS.md`, `CRUD_COMMANDS.md`,
   `src/AgentSync.Core/Authoring/`.
 - **`agent ui`** — a **launcher/discovery command only**: `AgentSync.Core.UiLauncher` /
   `UiSession` locate and start a separately installed `agent-sync-ui` with
-  `--repo`/`--port`/`--token`, print the loopback URL, and exit 3 with install guidance
-  when absent. `AgentSync.Cli` has **no** compile-time UI reference (guarded by a test).
+  `--repo`/`--port`/`--token` (`--no-open` supported), poll its `/healthz` readiness
+  endpoint (`IUiReadinessProbe`), open the browser (`IBrowserLauncher`) at the token URL
+  but print only the clean URL, fall back to the token URL on open failure / `--no-open`,
+  and exit 3 with install guidance when absent or on readiness timeout. `AgentSync.Cli`
+  has **no** compile-time UI reference (guarded by a test).
 - **`AgentSync.Ui.Abstractions`** — UI-independent application service (`AgentSyncApp`)
   over Core; the UI binds to it (no repository logic in Razor components).
 - **`AgentSync.Ui.Web`** — a minimal **localhost Blazor Web UI** host (executable
   `agent-sync-ui`) using **Microsoft FluentUI Blazor components**. Binds `127.0.0.1`,
-  random port, short-lived session token (`SessionGate`/`TokenCheck`). Dashboard +
-  read-only screens wired; builds with the standard SDK (no special workloads).
+  random port, per-launch session token (`SessionGate`/`TokenCheck`; the token is
+  exchanged into an HttpOnly `SameSite=Strict` cookie and stripped from the URL on first
+  use, with an unauthenticated `/healthz` readiness endpoint). Builds with the standard
+  SDK (no special workloads).
 
 **In progress / not shipped:**
 
