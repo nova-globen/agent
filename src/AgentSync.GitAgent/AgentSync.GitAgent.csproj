@@ -17,10 +17,10 @@
          PATH, so `git agent` only resolves for global installs.) -->
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>git-agent</ToolCommandName>
-    <PackageId>Agent.Sync.Git</PackageId>
+    <PackageId>AgentSync.Git</PackageId>
     <IsPackable>true</IsPackable>
     <RollForward>Major</RollForward>
-    <Description>Git extension for Agent Sync. Installing this .NET tool globally puts `git-agent` on PATH so `git agent &lt;command&gt;` behaves exactly like `agent &lt;command&gt;`. See the Agent.Sync package for the primary `agent` CLI.</Description>
+    <Description>Git extension for Agent Sync. Installing this .NET tool globally puts `git-agent` on PATH so `git agent &lt;command&gt;` behaves exactly like `agent &lt;command&gt;`. See the AgentSync package for the primary `agent` CLI.</Description>
   </PropertyGroup>
 
 </Project>

@@ -26,7 +26,7 @@ Current limitations:
 - Manually validated on Windows; needs more real-world testing on Linux and macOS.
 - Install scripts are new and should be tested across more environments.
 - Symlink escape hardening is not yet implemented.
-- Published as a .NET tool on NuGet (`Agent.Sync` / `Agent.Sync.Git`); other
+- Published as a .NET tool on NuGet (`AgentSync` / `AgentSync.Git`); other
   package managers (Homebrew, winget, etc.) are not available yet.
 - Generated output conventions may change based on feedback.
 
@@ -135,8 +135,8 @@ requires the **.NET 10 runtime** on the machine.
 
 Two packages are published:
 
-- [`Agent.Sync`](https://www.nuget.org/packages/Agent.Sync) — the `agent` command.
-- [`Agent.Sync.Git`](https://www.nuget.org/packages/Agent.Sync.Git) — the `git-agent`
+- [`AgentSync`](https://www.nuget.org/packages/AgentSync) — the `agent` command.
+- [`AgentSync.Git`](https://www.nuget.org/packages/AgentSync.Git) — the `git-agent`
   command, so `git agent <command>` works.
 
 **Per-repository (recommended): a tool manifest.** One developer adds the dependency
@@ -145,8 +145,8 @@ and commits the manifest; everyone else restores it:
 ```bash
 # once per repo, by whoever adds the dependency
 dotnet new tool-manifest          # creates .config/dotnet-tools.json
-dotnet tool install Agent.Sync
-dotnet tool install Agent.Sync.Git
+dotnet tool install AgentSync
+dotnet tool install AgentSync.Git
 
 # every other developer, after cloning
 dotnet tool restore
@@ -159,8 +159,8 @@ This produces a committed `.config/dotnet-tools.json`:
   "version": 1,
   "isRoot": true,
   "tools": {
-    "agent.sync": { "version": "0.1.0-alpha.4", "commands": ["agent"] },
-    "agent.sync.git": { "version": "0.1.0-alpha.4", "commands": ["git-agent"] }
+    "agentsync": { "version": "0.1.0-alpha.4", "commands": ["agent"] },
+    "agentsync.git": { "version": "0.1.0-alpha.4", "commands": ["git-agent"] }
   }
 }
 ```
@@ -181,8 +181,8 @@ dotnet tool run agent -- status   # equivalent
 `~/.dotnet/tools`), so both `agent ...` and `git agent ...` work:
 
 ```bash
-dotnet tool install --global Agent.Sync
-dotnet tool install --global Agent.Sync.Git
+dotnet tool install --global AgentSync
+dotnet tool install --global AgentSync.Git
 
 agent --version
 git agent --version

@@ -12,13 +12,13 @@
     <AssemblyName>agent</AssemblyName>
     <RootNamespace>AgentSync.Cli</RootNamespace>
 
-    <!-- Publish as a .NET tool: `dotnet tool install Agent.Sync` exposes `agent`. -->
+    <!-- Publish as a .NET tool: `dotnet tool install AgentSync` exposes `agent`. -->
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>agent</ToolCommandName>
-    <PackageId>Agent.Sync</PackageId>
+    <PackageId>AgentSync</PackageId>
     <IsPackable>true</IsPackable>
     <RollForward>Major</RollForward>
-    <Description>Agent Sync — a Git-native consistency manager for AI-agent skills and instructions. Define a canonical skill once under .agent/ and project it into AGENTS.md, CLAUDE.md, Cursor rules, GitHub Copilot, Gemini, and OpenAI/Claude skill folders, with drift detection and Git-hook/CI enforcement. Installs the `agent` command (also usable as `git agent` with the Agent.Sync.Git package).</Description>
+    <Description>Agent Sync — a Git-native consistency manager for AI-agent skills and instructions. Define a canonical skill once under .agent/ and project it into AGENTS.md, CLAUDE.md, Cursor rules, GitHub Copilot, Gemini, and OpenAI/Claude skill folders, with drift detection and Git-hook/CI enforcement. Installs the `agent` command (also usable as `git agent` with the AgentSync.Git package).</Description>
   </PropertyGroup>
 
 </Project>

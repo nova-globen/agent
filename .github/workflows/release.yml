@@ -185,10 +185,38 @@ jobs:
         if: ${{ github.event_name == 'push' }}
         run: |
           set -euo pipefail
+          # --skip-duplicate keeps re-runs idempotent (an already-published version is
+          # not an error). The synchronous push only confirms NuGet *accepted* the
+          # upload; async validation can still reject it (e.g. reserved id / failed
+          # scan), so the "Verify" step below is what actually proves publication.
           dotnet nuget push "nupkgs/*.nupkg" \
             --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
+
+      - name: Verify packages are live on NuGet.org
+        if: ${{ github.event_name == 'push' }}
+        run: |
+          set -euo pipefail
+          version="${{ steps.version.outputs.version }}"
+          # Lowercased package ids (NuGet flat-container paths are lowercase).
+          ids="agentsync agentsync.git"
+          for id in $ids; do
+            url="https://api.nuget.org/v3-flatcontainer/${id}/${version}/${id}.${version}.nupkg"
+            echo "Waiting for ${id} ${version} to appear on the feed..."
+            ok=""
+            for i in $(seq 1 20); do   # up to ~10 minutes (20 x 30s)
+              code="$(curl -fsS -o /dev/null -w '%{http_code}' "$url" || true)"
+              if [ "$code" = "200" ]; then ok=1; echo "  available (HTTP 200)"; break; fi
+              echo "  not yet (HTTP ${code}); retry ${i}/20"
+              sleep 30
+            done
+            if [ -z "$ok" ]; then
+              echo "::error::${id} ${version} was pushed but never became installable on NuGet.org. The async validation likely rejected it (reserved package id, failed malware scan, or unconfirmed owner). Check the owner email on the NuGet account for the reason."
+              exit 1
+            fi
+          done
+          echo "All packages are live on NuGet.org."
 
       - name: Upload .nupkg as release assets
         if: ${{ github.event_name == 'push' }}

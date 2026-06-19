@@ -181,8 +181,8 @@ testing on Linux/macOS is still needed.
 - Install scripts: `scripts/install.sh` (Linux/macOS) and `scripts/install.ps1`
   (Windows). `scripts/release-smoke.sh` validates naming/mapping and that both binaries
   publish and `git-agent` delegates to `agent`.
-- .NET tool packages: `src/AgentSync.Cli` packs as `Agent.Sync` (command `agent`) and
-  `src/AgentSync.GitAgent` packs as `Agent.Sync.Git` (command `git-agent`); tool/package
+- .NET tool packages: `src/AgentSync.Cli` packs as `AgentSync` (command `agent`) and
+  `src/AgentSync.GitAgent` packs as `AgentSync.Git` (command `git-agent`); tool/package
   metadata lives in the two csproj plus shared bits in `Directory.Build.props`
   (`IsPackable` is off by default and opted into per tool project). The release workflow
   packs both and `dotnet nuget push`es them to NuGet.org via **Trusted Publishing**
@@ -190,6 +190,15 @@ testing on Linux/macOS is still needed.
   nuget.org policy — see `RELEASE_CHECKLIST.md`). Tools are framework-dependent, so they
   need the .NET 10 runtime (unlike the self-contained release binaries). Description
   fields must XML-escape `<` / `>` (use `&lt;`/`&gt;`).
+  - **Package ids are `AgentSync` / `AgentSync.Git`** (command names stay `agent` /
+    `git-agent`). The dotted `Agent.*` prefix is a **reserved NuGet prefix** owned by
+    someone else — `Agent.Sync` pushes are accepted synchronously but silently rejected
+    by async validation (never publish, re-push returns 409). Do not reuse `Agent.*`.
+  - The push step keeps `--skip-duplicate` (idempotent re-runs) but a synchronous push
+    success does **not** prove publication; the **Verify packages are live** step polls
+    the flat-container (`v3-flatcontainer/<id-lowercased>/<version>/...nupkg`) and fails
+    the job if a version never becomes installable. If you change a package id, update
+    the lowercased ids in that step.
 - The public repo is `https://github.com/nova-globen/agent`; the default branch in CI
   triggers is both `main` and `master`.
 

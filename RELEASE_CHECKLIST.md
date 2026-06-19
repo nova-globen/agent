@@ -3,8 +3,8 @@
 Releases are driven by Git tags. Pushing a tag matching `v*.*.*` triggers
 `.github/workflows/release.yml`, which builds, tests, publishes self-contained
 `agent` and `git-agent` binaries for every supported runtime, generates
-`checksums.txt`, creates the GitHub Release, and pushes the `Agent.Sync` /
-`Agent.Sync.Git` .NET tool packages to NuGet.org. `workflow_dispatch` runs the same
+`checksums.txt`, creates the GitHub Release, and pushes the `AgentSync` /
+`AgentSync.Git` .NET tool packages to NuGet.org. `workflow_dispatch` runs the same
 pipeline for testing without creating a release or publishing to NuGet (artifacts,
 including the `.nupkg` files, are uploaded to the run).
 
@@ -27,8 +27,8 @@ Each archive contains `agent`, `git-agent`, `LICENSE`, and `README.md`
 The release also publishes two .NET tool packages to NuGet.org:
 
 ```text
-Agent.Sync       -> command `agent`
-Agent.Sync.Git   -> command `git-agent`
+AgentSync       -> command `agent`
+AgentSync.Git   -> command `git-agent`
 ```
 
 Publishing uses **NuGet Trusted Publishing** (GitHub OIDC), so no long-lived API key
@@ -92,8 +92,8 @@ publishing account must be allowed to register that id).
 
    ```bash
    # NuGet versions have no leading 'v' (tag v0.1.0 -> package version 0.1.0).
-   dotnet tool install --global Agent.Sync --version 0.1.0
-   dotnet tool install --global Agent.Sync.Git --version 0.1.0
+   dotnet tool install --global AgentSync --version 0.1.0
+   dotnet tool install --global AgentSync.Git --version 0.1.0
    agent --version
    git agent --version
    ```
