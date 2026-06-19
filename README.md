@@ -275,6 +275,7 @@ agent status          # report state and drift (--json, --fail-on-drift, --ci)
 agent sync            # write missing/outdated projections (--check, --write, --force)
 agent diff            # show canonical-to-projection differences
 agent validate        # validate config and skills
+agent import skill    # import an existing SKILL.md / skill folder into .agent/skills
 agent install-hooks   # configure core.hooksPath and make hooks executable
 agent doctor          # diagnose Git repo, PATH, hooks, and config
 
@@ -312,6 +313,25 @@ agent install-hooks   # wire .githooks via core.hooksPath
 agent sync            # mirror the change into every target
 agent status          # confirm no drift
 ```
+
+## Importing existing skills
+
+If you already have a skill folder or a standalone `SKILL.md` (for example under
+`.claude/skills/` or `.chatgpt/skills/`), import it into the canonical `.agent/` layout:
+
+```bash
+agent import skill .claude/skills/code-review        # a skill folder
+agent import skill path/to/SKILL.md                  # a standalone file
+agent import skill path/to/SKILL.md --id my-skill --name "My Skill"
+agent import skill path/to/SKILL.md --dry-run        # preview; writes nothing
+agent import skill path/to/SKILL.md --force          # overwrite an existing canonical skill
+```
+
+Import parses any YAML frontmatter, infers `id`/`name`/`description` when possible,
+writes `.agent/skills/<id>/skill.yaml` and `SKILL.md`, and validates the result. It
+never overwrites an existing canonical skill unless you pass `--force`. After importing,
+run `agent sync` to project the skill into your targets. JSON output is available with
+`--json`.
 
 ## Drift detection
 

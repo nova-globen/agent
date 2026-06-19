@@ -3,6 +3,7 @@ using System.Text.Json;
 using AgentSync.Core;
 using AgentSync.Core.Configuration;
 using AgentSync.Core.Drift;
+using AgentSync.Core.Import;
 using AgentSync.Core.Projections;
 
 namespace AgentSync.Cli;
@@ -59,6 +60,7 @@ public sealed class CliRunner
             "sync" => RunSync(rest),
             "diff" => RunDiff(rest),
             "validate" => RunValidate(rest),
+            "import" => RunImport(rest),
             "install-hooks" => RunInstallHooks(rest),
             "doctor" => RunDoctor(rest),
             _ => UnknownCommand(command),
@@ -567,7 +569,207 @@ public sealed class CliRunner
         return workspace.IsValid ? ExitCodes.Success : ExitCodes.DriftOrValidationFailed;
     }
 
+    // --- import ---------------------------------------------------------------
+
+    private int RunImport(string[] args)
+    {
+        if (args.Length == 0)
+        {
+            _err.WriteLine("error: 'import' requires a subcommand: skill | agent.");
+            _err.WriteLine("Run 'agent --help' for usage.");
+            return ExitCodes.InvalidUsage;
+        }
+
+        var sub = args[0];
+        var rest = args.Skip(1).ToArray();
+        return sub switch
+        {
+            "skill" => RunImportSkill(rest),
+            _ => UnknownSubcommand("import", sub),
+        };
+    }
+
+    private int RunImportSkill(string[] args)
+    {
+        string? path = null;
+        string? id = null;
+        string? name = null;
+        var targets = new List<string>();
+        var force = false;
+        var dryRun = false;
+        var json = false;
+
+        for (var i = 0; i < args.Length; i++)
+        {
+            var arg = args[i];
+            switch (arg)
+            {
+                case "--id":
+                    if (!TryValue(args, ref i, "--id", out id)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--name":
+                    if (!TryValue(args, ref i, "--name", out name)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--target":
+                    if (!TryValue(args, ref i, "--target", out var t)) return ExitCodes.InvalidUsage;
+                    targets.Add(t!);
+                    break;
+                case "--force":
+                    force = true;
+                    break;
+                case "--dry-run":
+                    dryRun = true;
+                    break;
+                case "--json":
+                    json = true;
+                    break;
+                default:
+                    if (arg.StartsWith('-'))
+                    {
+                        return UnknownOption("import skill", arg);
+                    }
+
+                    if (path is not null)
+                    {
+                        _err.WriteLine($"error: unexpected argument '{arg}'.");
+                        return ExitCodes.InvalidUsage;
+                    }
+
+                    path = arg;
+                    break;
+            }
+        }
+
+        if (path is null)
+        {
+            _err.WriteLine("error: 'import skill' requires a <path>.");
+            return ExitCodes.InvalidUsage;
+        }
+
+        var root = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
+        var options = new SkillImportOptions(id, name, targets.Count > 0 ? targets : null, force, dryRun);
+        var report = new SkillImporter(root).Import(path, options);
+
+        return RenderImport(report, json);
+    }
+
+    private int RenderImport(ImportReport report, bool json)
+    {
+        if (json)
+        {
+            WriteImportJson(report);
+        }
+        else
+        {
+            WriteImportHuman(report);
+        }
+
+        return ImportExitCode(report.Status);
+    }
+
+    private void WriteImportHuman(ImportReport report)
+    {
+        _out.WriteLine(report.DryRun ? "Agent Sync import (dry-run)" : "Agent Sync import");
+        _out.WriteLine();
+
+        if (report.Items.Count == 0)
+        {
+            _out.WriteLine($"  [ERROR] {report.Message}");
+            return;
+        }
+
+        foreach (var item in report.Items)
+        {
+            var verb = item.Action switch
+            {
+                ImportAction.Create => report.DryRun ? "would create" : "created",
+                ImportAction.Overwrite => report.DryRun ? "would overwrite" : "overwritten",
+                _ => "skipped",
+            };
+            _out.WriteLine($"  {verb,-16} {item.Id} ({item.Name})");
+            _out.WriteLine($"    from {item.SourceRelativePath}");
+            _out.WriteLine($"    -> {item.SkillYamlPath}");
+            _out.WriteLine($"    -> {item.SkillMdPath}");
+            if (item.Note is not null)
+            {
+                _out.WriteLine($"    note: {item.Note}");
+            }
+
+            foreach (var m in item.Validation)
+            {
+                var marker = m.Severity == ValidationSeverity.Error ? "ERROR" : "WARN";
+                _out.WriteLine($"    [{marker}] {m.Message}");
+            }
+        }
+
+        _out.WriteLine();
+        if (report.AnyWritten && !report.DryRun)
+        {
+            _out.WriteLine("Run 'agent sync' to project the imported skill(s) into your targets.");
+        }
+        else if (report.DryRun && report.Items.Any(i => i.Action != ImportAction.Skip))
+        {
+            _out.WriteLine("Dry run: nothing was written. Re-run without --dry-run to import.");
+        }
+    }
+
+    private void WriteImportJson(ImportReport report)
+    {
+        var payload = new
+        {
+            status = report.Status.ToString(),
+            dryRun = report.DryRun,
+            message = report.Message,
+            items = report.Items.Select(i => new
+            {
+                id = i.Id,
+                name = i.Name,
+                description = i.Description,
+                action = i.Action.ToString(),
+                source = i.SourceRelativePath,
+                skillYaml = i.SkillYamlPath,
+                skillMd = i.SkillMdPath,
+                note = i.Note,
+                validation = i.Validation.Select(m => new
+                {
+                    code = m.Code,
+                    severity = m.Severity.ToString().ToLowerInvariant(),
+                    message = m.Message,
+                }),
+            }),
+        };
+        _out.WriteLine(JsonSerializer.Serialize(payload, JsonOptions));
+    }
+
+    private static int ImportExitCode(ImportStatus status) => status switch
+    {
+        ImportStatus.Ok => ExitCodes.Success,
+        ImportStatus.Problem => ExitCodes.DriftOrValidationFailed,
+        ImportStatus.UnsafePath => ExitCodes.EnvironmentProblem,
+        _ => ExitCodes.InvalidUsage,
+    };
+
     // --- helpers --------------------------------------------------------------
+
+    private bool TryValue(string[] args, ref int i, string option, out string? value)
+    {
+        if (i + 1 >= args.Length)
+        {
+            value = null;
+            _err.WriteLine($"error: option '{option}' requires a value.");
+            return false;
+        }
+
+        value = args[++i];
+        return true;
+    }
+
+    private int UnknownSubcommand(string command, string sub)
+    {
+        _err.WriteLine($"error: unknown '{command}' subcommand '{sub}'.");
+        _err.WriteLine("Run 'agent --help' for usage.");
+        return ExitCodes.InvalidUsage;
+    }
 
     private int UnknownOption(string command, string option)
     {
@@ -590,6 +792,7 @@ public sealed class CliRunner
         _out.WriteLine("  sync                Write missing/outdated projections (--check, --write, --force, --json).");
         _out.WriteLine("  diff                Show canonical-to-projection differences (--json).");
         _out.WriteLine("  validate            Validate config and skills (--json).");
+        _out.WriteLine("  import skill        Import a SKILL.md/skill folder into .agent/skills (--id, --name, --target, --dry-run, --force, --json).");
         _out.WriteLine("  install-hooks       Configure core.hooksPath and make hooks executable.");
         _out.WriteLine("  doctor              Diagnose Git repo, PATH, hooks, and config (--json).");
         _out.WriteLine();
