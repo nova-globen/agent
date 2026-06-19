@@ -112,6 +112,31 @@ The tool must not overwrite user-authored content outside managed sections.
 
 ---
 
+## Planned major features (not yet implemented)
+
+The next feature wave is planned but **not implemented** — do not treat it as shipped.
+Implementation-ready specs live under `.ai-agent/features/`:
+
+- **Import** — `agent import skill` / `agent import agent` to adopt existing skill
+  files/folders and instruction files (`AGENTS.md`, `CLAUDE.md`, Copilot, Gemini,
+  Cursor, skill folders) into canonical `.agent/skills/` (`features/IMPORTS.md`).
+- **CRUD** — `agent skill add/edit/delete/list/show` and
+  `agent target add/edit/delete/list/show` (`features/CRUD_COMMANDS.md`).
+- **`agent ui`** — an optional GUI built with **.NET MAUI Blazor Hybrid**
+  (`src/AgentSync.Ui`), reusing `AgentSync.Core` services (`features/UI_MAUI_BLAZOR.md`).
+
+Guidance for implementing this wave:
+
+- Implementation must be **milestone-based** — see `features/ROADMAP.md`. Land one
+  milestone at a time with tests.
+- **Keep existing CLI behavior backward compatible.** These are additive commands;
+  don't change current command semantics or exit codes.
+- **Keep the UI optional.** The headless CLI (`AgentSync.Cli`, `AgentSync.Core`,
+  `AgentSync.GitAgent`) must build, test, and run without the MAUI workload and must
+  not depend on MAUI. `agent ui` launches a separate UI executable.
+- Preserve the core invariants below and in `CLAUDE.md` (path safety, marker handling,
+  manual-edit protection, `net10.0`, `git-agent` delegation).
+
 ## Notes for future sessions
 
 This section captures non-obvious implementation facts to speed up future work. It is

@@ -3,6 +3,26 @@
 Future work, organized by horizon. Keep alpha positioning honest; preserve the core
 invariants (see `CLAUDE.md` → "Do not accidentally break").
 
+## Next major feature wave
+
+Planned (not yet implemented) — implementation-ready specs live under
+`.ai-agent/features/`. Build milestone by milestone; keep CLI behavior backward
+compatible and the GUI optional (headless CLI must not depend on MAUI).
+
+- **Import a skill file/folder** — `agent import skill` (see `features/IMPORTS.md` §A).
+- **Import an agent/instruction file/folder** — `agent import agent` for existing
+  `AGENTS.md` / `CLAUDE.md` / Copilot / Gemini / Cursor / skill folders
+  (`features/IMPORTS.md` §B).
+- **Skill CRUD commands** — `agent skill add/edit/delete/list/show`
+  (`features/CRUD_COMMANDS.md`).
+- **Target CRUD commands** — `agent target add/edit/delete/list/show`
+  (`features/CRUD_COMMANDS.md`).
+- **`agent ui`** — a GUI exposing the major features (`features/UI_MAUI_BLAZOR.md`).
+- **MAUI Blazor Hybrid UI** — `src/AgentSync.Ui` reusing `AgentSync.Core` services
+  (`features/UI_MAUI_BLAZOR.md`).
+
+Milestone breakdown and acceptance criteria: `features/ROADMAP.md`.
+
 ## Before wider promotion
 
 - Final README / public-announcement review (clarity, accuracy, alpha framing).

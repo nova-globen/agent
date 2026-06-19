@@ -25,6 +25,24 @@ Repository: https://github.com/nova-globen/agent
   `Directory.Build.props`; the released artifact's version comes from the Git tag.
 - **Target framework:** `.NET 10` (`net10.0`).
 
+## Planned major features
+
+Planned, **not yet implemented** — do not describe these as shipped. Implementation-ready
+specs live under `.ai-agent/features/` (`IMPORTS.md`, `CRUD_COMMANDS.md`,
+`UI_MAUI_BLAZOR.md`, `ROADMAP.md`):
+
+- **Import commands** — `agent import skill` and `agent import agent` to adopt existing
+  skill files/folders and instruction files (`AGENTS.md`, `CLAUDE.md`, Copilot, Gemini,
+  Cursor, skill folders) into canonical `.agent/skills/`.
+- **Skill/target CRUD commands** — `agent skill add/edit/delete/list/show` and
+  `agent target add/edit/delete/list/show`.
+- **`agent ui`** — an optional GUI exposing the major features.
+- **MAUI Blazor Hybrid GUI** — `src/AgentSync.Ui` reusing `AgentSync.Core` services;
+  the headless CLI must not depend on MAUI.
+
+Build milestone by milestone (`features/ROADMAP.md`) and keep existing CLI behavior
+backward compatible.
+
 ## CLI entry points
 
 - `agent` — the primary CLI (`src/AgentSync.Cli`, `AssemblyName=agent`).
