@@ -12,6 +12,15 @@ Copilot instructions, Gemini instructions, and OpenAI/Claude skill folders in sy
 The core problem it solves is **agent instruction drift**: the same guidance,
 duplicated by hand across many files, slowly diverging until the agents disagree.
 
+The CLI is the primary interface; an optional local web UI (`agent ui`) wraps the same
+engine for those who prefer a screen:
+
+<p align="center">
+  <img src="docs/ui-demo.gif" alt="The Agent Sync local web UI cycling through the Dashboard, Skills, Targets, Status/Drift, Hooks/CI, and Imports screens" width="900">
+</p>
+
+<p align="center"><em>The optional local web UI — bound to <code>127.0.0.1</code>, driving the same canonical-skill engine as the CLI.</em></p>
+
 ## Status: alpha (developer preview)
 
 Agent Sync is an **alpha / developer preview**. The core workflow — author canonical
@@ -234,8 +243,10 @@ Put both on your `PATH` to use `agent ...` and `git agent ...`.
 
 ## Quick demo
 
-Scaffold a repo, sync the default `code-review` skill into every target, and wire the
-hooks:
+Scaffold a repo, project the starter skills into every target, and wire the hooks.
+`agent init` seeds two canonical skills: a `code-review` skill (enabled for all targets)
+and `using-agent-sync`, a short guide that teaches AI agents how to work in an Agent Sync
+repo (it projects to `.claude/skills/` only, so it never bloats `AGENTS.md`/`CLAUDE.md`).
 
 ```bash
 mkdir agent-sync-demo
@@ -274,7 +285,7 @@ agent status --fail-on-drift --ci
 ## Commands
 
 ```bash
-agent init            # scaffold .agent/ and .githooks/
+agent init            # scaffold .agent/ (code-review + using-agent-sync skills) and .githooks/
 agent status          # report state and drift (--json, --fail-on-drift, --ci)
 agent sync            # write missing/outdated projections (--check, --write, --force)
 agent diff            # show canonical-to-projection differences
@@ -462,8 +473,10 @@ in-page confirmation step before anything is written. Functional screens: **Dash
 (state + quick actions), **Skills** (add / edit / enable-disable targets / delete),
 **Imports** (import skill and import agent, with dry-run preview), **Targets** (add / edit
 / delete), **Status / Drift** (status, drift, validate, and run-sync / force-sync),
-**Diff**, and **Hooks / CI** (copyable CI command + confirmed install-hooks). Separate GUI
-release artifacts are built by the `release-ui` job and attached to tagged GitHub Releases.
+**Diff**, **Hooks / CI** (copyable CI command + confirmed install-hooks), and **Settings**.
+A live drift-status pill in the header reflects the repository state on every screen.
+Separate GUI release artifacts are built by the `release-ui` job and attached to tagged
+GitHub Releases.
 
 ## Drift detection
 
@@ -512,13 +525,20 @@ repository.
 
 ```text
 src/
-  AgentSync.Cli/        # the 'agent' CLI
-  AgentSync.GitAgent/   # the 'git-agent' extension (delegates to the CLI)
-  AgentSync.Core/       # config, skills, projections, adapters, drift
+  AgentSync.Cli/             # the 'agent' CLI
+  AgentSync.GitAgent/        # the 'git-agent' extension (delegates to the CLI)
+  AgentSync.Core/            # config, skills, projections, adapters, drift, UI launch/install
+  AgentSync.Ui.Abstractions/ # UI-independent application service over Core
+  AgentSync.Ui.Web/          # optional localhost Blazor web UI ('agent-sync-ui')
 tests/
   AgentSync.Core.Tests/
   AgentSync.Cli.Tests/
+  AgentSync.Ui.Abstractions.Tests/
+  AgentSync.Ui.Web.Tests/
 ```
+
+The CLI/Core/Git stack never references the UI projects; the headless tooling builds and
+ships without any web-UI dependency.
 
 ## Contributing
 
