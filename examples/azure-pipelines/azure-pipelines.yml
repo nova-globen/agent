@@ -1,0 +1,24 @@
+# Fail the build if any AI-agent instruction file has drifted from its canonical skill.
+trigger:
+  branches:
+    include: [main, master]
+
+pr:
+  branches:
+    include: [main, master]
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - checkout: self
+
+  - script: |
+      # Pin to a released tag so CI is reproducible; bump it when you upgrade.
+      curl -fsSL https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.sh \
+        | bash -s -- v0.2.0-alpha.3
+      echo "##vso[task.prependpath]$HOME/.agent-sync/bin"
+    displayName: Install Agent Sync
+
+  - script: agent status --fail-on-drift --ci
+    displayName: Check for agent-instruction drift

@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "projections": {
+    "code-review/agents_md": {
+      "skill": "code-review",
+      "target": "agents_md",
+      "path": "AGENTS.md",
+      "hash": "sha256:a8a662f5648f865460036839880e4f49840d63dc03cb575f55129e618ee87de3"
+    },
+    "code-review/claude_md": {
+      "skill": "code-review",
+      "target": "claude_md",
+      "path": "CLAUDE.md",
+      "hash": "sha256:a8a662f5648f865460036839880e4f49840d63dc03cb575f55129e618ee87de3"
+    },
+    "code-review/copilot": {
+      "skill": "code-review",
+      "target": "copilot",
+      "path": ".github/copilot-instructions.md",
+      "hash": "sha256:a8a662f5648f865460036839880e4f49840d63dc03cb575f55129e618ee87de3"
+    },
+    "code-review/gemini": {
+      "skill": "code-review",
+      "target": "gemini",
+      "path": ".gemini/GEMINI.md",
+      "hash": "sha256:a8a662f5648f865460036839880e4f49840d63dc03cb575f55129e618ee87de3"
+    },
+    "code-review/claude_skill": {
+      "skill": "code-review",
+      "target": "claude_skill",
+      "path": ".claude/skills/code-review/SKILL.md",
+      "hash": "sha256:fcbda3a4b883f06e2c932ecadcb55f2255554583c8757005c32378df44924c9f"
+    },
+    "conventional-commit/agents_md": {
+      "skill": "conventional-commit",
+      "target": "agents_md",
+      "path": "AGENTS.md",
+      "hash": "sha256:a7773b25dcab174d6a487fbb13b294bcbffcc7608b4bec8dcf2a0d6285fde9c4"
+    },
+    "conventional-commit/claude_md": {
+      "skill": "conventional-commit",
+      "target": "claude_md",
+      "path": "CLAUDE.md",
+      "hash": "sha256:a7773b25dcab174d6a487fbb13b294bcbffcc7608b4bec8dcf2a0d6285fde9c4"
+    },
+    "conventional-commit/copilot": {
+      "skill": "conventional-commit",
+      "target": "copilot",
+      "path": ".github/copilot-instructions.md",
+      "hash": "sha256:a7773b25dcab174d6a487fbb13b294bcbffcc7608b4bec8dcf2a0d6285fde9c4"
+    },
+    "conventional-commit/gemini": {
+      "skill": "conventional-commit",
+      "target": "gemini",
+      "path": ".gemini/GEMINI.md",
+      "hash": "sha256:a7773b25dcab174d6a487fbb13b294bcbffcc7608b4bec8dcf2a0d6285fde9c4"
+    },
+    "conventional-commit/claude_skill": {
+      "skill": "conventional-commit",
+      "target": "claude_skill",
+      "path": ".claude/skills/conventional-commit/SKILL.md",
+      "hash": "sha256:4de3703724fe1fa86f13ccb0479e6d156c811c57bc69e9bcf39f0568e935e4d1"
+    }
+  }
+}

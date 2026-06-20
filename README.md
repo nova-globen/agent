@@ -516,10 +516,14 @@ Agent Sync is required for this repository.
 Install it, then retry.
 ```
 
-## Example
+## Examples
 
-See [`examples/sample`](examples/sample) for a fully initialized and synced
-repository.
+- [`examples/sample`](examples/sample) — a fully initialized and synced repository.
+- [`examples/github-actions`](examples/github-actions) — gate pull requests on
+  agent-instruction drift with a **GitHub Actions** workflow; includes `conventional-commit`
+  and `code-review` skills.
+- [`examples/azure-pipelines`](examples/azure-pipelines) — the same drift gate as an
+  **Azure Pipelines** definition.
 
 ## Repository layout
 

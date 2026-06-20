@@ -1,0 +1,16 @@
+id: conventional-commit
+name: Conventional Commits
+description: Write commit messages and PR titles that follow the Conventional Commits specification. Use whenever you author a commit message, amend one, or set a squash-merge title.
+version: 1.0.0
+
+targets:
+  agents_md:
+    enabled: true
+  claude_md:
+    enabled: true
+  copilot:
+    enabled: true
+  gemini:
+    enabled: true
+  claude_skill:
+    enabled: true

@@ -1,0 +1,30 @@
+version: 1
+
+# A focused subset of targets for this example. Enable the rest (cursor, openai_skill)
+# with `agent target add ...` if your team uses Cursor or ChatGPT/OpenAI skills.
+targets:
+  agents_md:
+    enabled: true
+    path: AGENTS.md
+
+  claude_md:
+    enabled: true
+    path: CLAUDE.md
+
+  copilot:
+    enabled: true
+    path: .github/copilot-instructions.md
+
+  gemini:
+    enabled: true
+    path: .gemini/GEMINI.md
+
+  claude_skill:
+    enabled: true
+    path: .claude/skills
+
+policy:
+  fail_on_missing_projection: true
+  fail_on_outdated_projection: true
+  fail_on_manual_edit: true
+  allow_target_specific_overrides: true

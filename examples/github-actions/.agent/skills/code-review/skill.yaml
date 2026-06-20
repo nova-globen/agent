@@ -1,0 +1,16 @@
+id: code-review
+name: Code Review
+description: Reviews changes using repository conventions and flags risky edits. Use when reviewing a pull request, a generated patch, or local changes before committing.
+version: 1.0.0
+
+targets:
+  agents_md:
+    enabled: true
+  claude_md:
+    enabled: true
+  copilot:
+    enabled: true
+  gemini:
+    enabled: true
+  claude_skill:
+    enabled: true
