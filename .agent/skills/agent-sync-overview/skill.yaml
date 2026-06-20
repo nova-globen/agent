@@ -1,0 +1,20 @@
+id: agent-sync-overview
+name: Agent Sync Overview
+description: What Agent Sync is, the product shape it must keep, its CLI commands, and how drift detection works. Read this first when orienting in this repository.
+version: 0.2.0
+
+targets:
+  agents_md:
+    enabled: true
+  claude_md:
+    enabled: true
+  cursor:
+    enabled: false
+  copilot:
+    enabled: true
+  gemini:
+    enabled: true
+  openai_skill:
+    enabled: false
+  claude_skill:
+    enabled: true

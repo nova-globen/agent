@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "projections": {
+    "agent-sync-maintainer/agents_md": {
+      "skill": "agent-sync-maintainer",
+      "target": "agents_md",
+      "path": "AGENTS.md",
+      "hash": "sha256:923411267295f8fee707e34a620080e926cc44acf28e2c6740238cfc7a482fe2"
+    },
+    "agent-sync-maintainer/claude_md": {
+      "skill": "agent-sync-maintainer",
+      "target": "claude_md",
+      "path": "CLAUDE.md",
+      "hash": "sha256:923411267295f8fee707e34a620080e926cc44acf28e2c6740238cfc7a482fe2"
+    },
+    "agent-sync-maintainer/copilot": {
+      "skill": "agent-sync-maintainer",
+      "target": "copilot",
+      "path": ".github/copilot-instructions.md",
+      "hash": "sha256:923411267295f8fee707e34a620080e926cc44acf28e2c6740238cfc7a482fe2"
+    },
+    "agent-sync-maintainer/gemini": {
+      "skill": "agent-sync-maintainer",
+      "target": "gemini",
+      "path": ".gemini/GEMINI.md",
+      "hash": "sha256:923411267295f8fee707e34a620080e926cc44acf28e2c6740238cfc7a482fe2"
+    },
+    "agent-sync-overview/agents_md": {
+      "skill": "agent-sync-overview",
+      "target": "agents_md",
+      "path": "AGENTS.md",
+      "hash": "sha256:59dc609f5ff841ff20f153ee79551d81064377ec1dd239d42ca5cfc3d15941bd"
+    },
+    "agent-sync-overview/claude_md": {
+      "skill": "agent-sync-overview",
+      "target": "claude_md",
+      "path": "CLAUDE.md",
+      "hash": "sha256:59dc609f5ff841ff20f153ee79551d81064377ec1dd239d42ca5cfc3d15941bd"
+    },
+    "agent-sync-overview/copilot": {
+      "skill": "agent-sync-overview",
+      "target": "copilot",
+      "path": ".github/copilot-instructions.md",
+      "hash": "sha256:59dc609f5ff841ff20f153ee79551d81064377ec1dd239d42ca5cfc3d15941bd"
+    },
+    "agent-sync-overview/gemini": {
+      "skill": "agent-sync-overview",
+      "target": "gemini",
+      "path": ".gemini/GEMINI.md",
+      "hash": "sha256:59dc609f5ff841ff20f153ee79551d81064377ec1dd239d42ca5cfc3d15941bd"
+    },
+    "agent-sync-overview/claude_skill": {
+      "skill": "agent-sync-overview",
+      "target": "claude_skill",
+      "path": ".claude/skills/agent-sync-overview/SKILL.md",
+      "hash": "sha256:0d9e65fa874dba037e07745850a9d66230a297a88ba56b03507744d53b0de80f"
+    },
+    "using-agent-sync/claude_skill": {
+      "skill": "using-agent-sync",
+      "target": "claude_skill",
+      "path": ".claude/skills/using-agent-sync/SKILL.md",
+      "hash": "sha256:eda43e502a500022c74cb09ca39aeaad81923bb6b2347a88e7ecc1ca5c68057f"
+    },
+    "agent-sync-maintainer/claude_skill": {
+      "skill": "agent-sync-maintainer",
+      "target": "claude_skill",
+      "path": ".claude/skills/agent-sync-maintainer/SKILL.md",
+      "hash": "sha256:5fbcfa7bb97f52ff41c5b06d18b7ef4659d57a711d70b4504bba2cd807b44936"
+    }
+  }
+}

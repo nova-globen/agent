@@ -28,6 +28,16 @@ jobs:
       - name: Test
         run: dotnet test --configuration Release --no-build
 
+      # Dogfood: this repository's own agent instruction files (AGENTS.md, CLAUDE.md,
+      # the Copilot/Gemini files, and the .claude skill folders) are generated from the
+      # canonical skills under .agent/skills/. Run the freshly built CLI against the repo
+      # root and fail if any projection has drifted from its skill, is missing, or was
+      # hand-edited — the same gate consuming repositories run in their own pipelines.
+      - name: Verify this repository is in sync (dogfood)
+        run: dotnet run -c Release --no-build --project src/AgentSync.Cli -- status --fail-on-drift --ci
+        env:
+          DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+
       # End-to-end drift check: scaffold a throwaway repo, sync it, and confirm
       # `status --fail-on-drift --ci` reports no drift (exit 0). This is the same
       # command consuming repositories run in their own pipelines.

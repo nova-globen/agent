@@ -1,78 +1,90 @@
 # AGENTS.md
 
-This repository builds **Agent Sync**, a Git-native consistency manager for AI-agent skills, instructions, and configuration files.
+This repository builds **Agent Sync**, a Git-native consistency manager for AI-agent
+skills, instructions, and configuration files.
 
-## Product Goal
+> **Agent Sync runs on itself.** The sections below are **generated** from the canonical
+> skills under `.agent/skills/` — do not edit them by hand. Edit the skill, run
+> `agent sync`, and commit the canonical change with its regenerated projections. See the
+> `using-agent-sync` skill in `.claude/skills/`, and `.agent/` for deeper specs and plans
+> (`PRODUCT_SPEC.md`, `ARCHITECTURE.md`, `CLI_CONTRACT.md`, `CURRENT_STATE.md`,
+> `NEXT_STEPS.md`, `features/`).
 
-Build a command-line tool that works as both:
+<!-- agent-sync:start id=agent-sync-overview target=agents_md hash=sha256:59dc609f5ff841ff20f153ee79551d81064377ec1dd239d42ca5cfc3d15941bd -->
+## Agent Sync Overview
 
-```bash
-agent status
-git agent status
+What Agent Sync is, the product shape it must keep, its CLI commands, and how drift detection works. Read this first when orienting in this repository.
+
+## What Agent Sync is
+
+Agent Sync is a Git-native consistency manager for AI-agent skills, instructions, and
+configuration files. Developers define a **canonical skill once** under `.agent/` and
+Agent Sync **projects** it into agent-specific formats: `AGENTS.md`, `CLAUDE.md`, Cursor
+rules, GitHub Copilot instructions, Gemini instructions, and OpenAI/Claude skill folders.
+It then detects drift and enforces consistency through Git hooks and CI.
+
+The core problem is **agent instruction drift** — the same guidance copied into many
+agent files that slowly diverge. Repository: https://github.com/nova-globen/agent
+
+## Status
+
+- **Alpha / developer preview.** The core workflow works end to end; the surface may still
+  change. Current release line: `v0.2.0-alpha.3` (imports, CRUD, `agent ui` and the
+  localhost web UI). Target framework: **.NET 10** (`net10.0`). The full release history and
+  current-state notes live under `.agent/CURRENT_STATE.md` and `.agent/NEXT_STEPS.md`.
+
+## Core product invariant
+
+```text
+canonical skill -> generated projections -> drift detection -> Git hook / CI enforcement
 ```
 
-The tool helps developers define AI-agent skills once and mirror them to multiple AI agent systems such as Claude, ChatGPT/OpenAI Skills, Cursor rules, GitHub Copilot instructions, Gemini instructions, and generic `AGENTS.md`.
+## Required product shape
 
-The core problem is **agent instruction drift**.
+The project ships as two entry points over one implementation:
 
-## Required Product Shape
+- A CLI named `agent` (`src/AgentSync.Cli`, `AssemblyName=agent`).
+- A Git extension named `git-agent` (`src/AgentSync.GitAgent`, `AssemblyName=git-agent`)
+  that delegates to `AgentSync.Cli.CliRunner`, so **`git agent ...` behaves exactly like
+  `agent ...`**.
 
-The project must produce:
+It must support repository wiring via `.githooks`, be usable in CI, fail loudly when the
+tool is required but not installed, and stay open-source and copyleft-friendly.
 
-- A CLI command named `agent`.
-- A Git extension command named `git-agent`, so users can run `git agent ...`.
-- Support for `agent status` and `git agent status`.
-- Repository wiring via `.githooks`.
-- CI/pipeline usability.
-- Failure behavior when the tool is required but not installed.
-- Open-source, copyleft-friendly structure.
+## Core commands
 
-The project currently targets **.NET 10** (`net10.0`). The original guidance was
-".NET 8 or newer"; .NET 10 is the chosen target. Keep the project files on `net10.0`.
-
-## Required Commands
-
-Minimum MVP commands:
-
-```bash
-agent init
-agent status
-agent sync
-agent diff
-agent validate
-agent doctor
-agent install-hooks
-
-git agent init
-git agent status
-git agent sync
-git agent diff
-git agent validate
-git agent doctor
-git agent install-hooks
+```text
+agent init            # scaffold .agent/ (code-review + using-agent-sync skills) and .githooks/
+agent sync            # write missing/outdated projections (--check, --write, --force)
+agent status          # report state + drift (--json, --fail-on-drift, --ci)
+agent diff            # show canonical-to-projection differences
+agent validate        # validate config and skills
+agent doctor          # diagnose Git repo, PATH, hooks, config
+agent install-hooks   # set core.hooksPath=.githooks and make hooks executable
+agent import skill    # import a SKILL.md / skill folder into .agent/skills
+agent import agent    # import an existing instruction file/folder into canonical skills
+agent skill ...       # add | edit | delete | list | show  (alias: agent skills)
+agent target ...      # add | edit | delete | list | show  (alias: agent targets)
+agent ui              # launch the optional local web UI (agent-sync-ui); auto-installs it on first run
 ```
 
-`git-agent` may delegate to `agent`.
+Every command also works as `git agent <command>` (for example `git agent status`).
 
-## Canonical File Structure
-
-Agent Sync should manage this structure:
+## Canonical file structure
 
 ```text
 .agent/
-  agent.yaml
-  lock.json
+  agent.yaml          # enabled targets and their paths
+  lock.json           # recorded hash for each projection
   skills/
     <skill-id>/
-      skill.yaml
-      SKILL.md
+      skill.yaml      # id, name, description, version, per-target enable flags
+      SKILL.md        # the instruction body (no leading "# Name" heading)
       assets/
       scripts/
 ```
 
-## Projection Targets
-
-Initial projection targets:
+Projection targets (each path is configurable in `agent.yaml`):
 
 ```text
 AGENTS.md
@@ -84,13 +96,11 @@ CLAUDE.md
 .claude/skills/<skill-id>/SKILL.md
 ```
 
-Actual paths must be configurable in `.agent/agent.yaml`.
+## Drift detection
 
-## Drift Detection
-
-`agent status` detects missing projections, outdated projections, manually edited generated projections, missing canonical skills / no skills, invalid config, missing lockfile entries, and orphaned lockfile entries.
-
-For CI usage:
+`agent status` detects missing projections, outdated projections, manually edited
+generated projections, missing canonical skills / no skills, invalid config, missing
+lockfile entries, and orphaned lockfile entries. For CI:
 
 ```bash
 agent status --fail-on-drift --ci
@@ -98,144 +108,83 @@ agent status --fail-on-drift --ci
 
 must exit non-zero if drift or invalid state exists.
 
-## Generated Section Markers
+## Generated section markers
 
-Generated sections must include stable markers:
-
-```md
-<!-- agent-sync:start id=<skill-id> target=<target-id> hash=sha256:<hash> -->
-...
+In shared files, each generated section is wrapped in stable HTML-comment markers — an
+`agent-sync:start` comment carrying the skill id, target id, and a `sha256:` content hash,
+and a matching `agent-sync:end` comment. The tool must not overwrite user-authored content
+outside these markers. Whole-file targets (Cursor rules, OpenAI/Claude skill folders) are
+managed in full and detect manual edits via the lockfile hash instead of markers. The exact
+marker syntax is documented in `.agent/PRODUCT_SPEC.md`.
 <!-- agent-sync:end -->
+
+<!-- agent-sync:start id=agent-sync-maintainer target=agents_md hash=sha256:923411267295f8fee707e34a620080e926cc44acf28e2c6740238cfc7a482fe2 -->
+## Agent Sync Maintainer
+
+How to work on the Agent Sync codebase — invariants you must not break, build/test commands, project layout, key design points, and the release process. Use when implementing features or fixes, updating adapters, adjusting drift detection, or preparing a release.
+
+## When to use
+
+Use this when working on the Agent Sync codebase: implementing features or fixes,
+updating adapters, adjusting drift detection, writing docs, or preparing a release.
+
+## Do not accidentally break
+
+- Do not change `agent sync` **write-by-default** behavior without explicit maintainer
+  instruction. (`--check` previews and exits non-zero on changes; `--force` overwrites
+  manually edited generated sections.)
+- Do not retarget away from `net10.0` without explicit maintainer instruction.
+- Do not remove `git-agent`; `git agent ...` is a core product requirement. It delegates
+  to `AgentSync.Cli.CliRunner`, so keep the two entry points in sync.
+- Do not weaken path-traversal protection — `RepoPath` is the central guard (it rejects
+  absolute, Windows drive/UNC, and `..`-escaping paths).
+- Do not overwrite manually edited generated sections unless `--force` is passed.
+- Keep release artifact names stable (`agent-sync-<tag>-<rid>.tar.gz` /
+  `...-win-x64.zip`, plus `checksums.txt`).
+- Keep install-script URLs on the `master` branch while the default branch is `master`.
+- Keep the headless stack — `AgentSync.Cli`, `AgentSync.Core`, `AgentSync.GitAgent`, Git
+  hooks, CI, the `dotnet tool` packages, and container images — free of any UI (web host /
+  FluentUI) dependency. It must never reference `AgentSync.Ui.Web` or FluentUI.
+
+## Build, test, run
+
+```bash
+dotnet build --configuration Release
+dotnet test
+scripts/release-smoke.sh   # publishes both binaries; checks git-agent delegation
 ```
 
-The tool must not overwrite user-authored content outside managed sections.
+- Target framework is `net10.0` (only the .NET 10 SDK/runtime is installed here). Do not
+  retarget to net8.0.
+- The solution file is `AgentSync.slnx` (the newer XML solution format).
+- `nuget.config` pins to nuget.org; the inherited `nova-globen` private feed fails auth in
+  this environment (harmless `NU1900` warnings).
 
----
+## Projects
 
-## Major feature wave (import + CRUD + UI shipped)
-
-Specs live under `.ai-agent/features/`. Status:
-
-- **`agent init` scaffolds two skills — implemented.** Besides the default `code-review`
-  skill, init writes `using-agent-sync`, a guide teaching AI agents how to handle an Agent
-  Sync repo. It targets `claude_skill` only (its `skill.yaml` disables the rest), so it
-  projects to `.claude/skills/using-agent-sync/SKILL.md` without bloating the always-loaded
-  AGENTS.md/CLAUDE.md. Templates in `src/AgentSync.Core/Templates.cs`; written by
-  `InitService`.
-- **Import — implemented.** `agent import skill` / `agent import agent` adopt existing
-  skill files/folders and instruction files (`AGENTS.md`, `CLAUDE.md`, Copilot, Gemini,
-  Cursor, skill folders) into canonical `.agent/skills/`. Logic in
-  `src/AgentSync.Core/Import/` (`features/IMPORTS.md`).
-- **CRUD — implemented.** `agent skill add/edit/delete/list/show` (+ `skills`) and
-  `agent target add/edit/delete/list/show` (+ `targets`). Logic in
-  `src/AgentSync.Core/Authoring/` (`features/CRUD_COMMANDS.md`).
-- **`agent ui` — implemented as a launcher + installer.** It starts `agent-sync-ui` via
-  `AgentSync.Core.UiLauncher` / `UiSession` (`--repo`/`--port`/`--token`, `--no-open`),
-  polls its `/healthz` readiness endpoint, opens the browser at the token URL (printing
-  only the clean URL), and falls back to the token URL on open failure / `--no-open`. If
-  the UI is not found, `AgentSync.Core.UiInstaller` auto-installs it on first run — the
-  `AgentSync.Ui` .NET tool when a `dotnet` SDK is present, otherwise the matching
-  `agent-sync-ui-v<version>-<rid>` release archive (extracted under `~/.agent-sync/ui/`).
-  It exits 3 with install guidance only when both install paths fail or the host never
-  becomes ready. No compile-time UI reference from the CLI (guarded by a test).
-- **Localhost web UI — UI-2 wired.** `AgentSync.Ui.Abstractions` (`AgentSyncApp`) is the
-  UI-independent service layer; `AgentSync.Ui.Web` (executable `agent-sync-ui`) is an
-  ASP.NET Core + Blazor host (**Interactive Server**) using **Microsoft FluentUI Blazor
-  components**, bound to `127.0.0.1` with a random port and a per-launch session token
-  (exchanged into an HttpOnly cookie and stripped from the URL on first use;
-  unauthenticated `/healthz`). Dashboard, Skills, Imports, Targets, Status/Drift, Diff,
-  Hooks/CI, and Settings drive `AgentSyncApp`; file-writing actions (add/edit/import/sync)
-  use explicit submit buttons and destructive ones (delete skill/target, force sync,
-  install hooks) require a second confirmation step. Page interaction lives in
-  `AgentSync.Ui.Web/ViewModels/*` (testable); no repository logic lives in Razor
-  components. Static files are served with `app.MapStaticAssets()` (required so
-  `_framework/blazor.web.js` and the FluentUI `_content/...` assets resolve in a published
-  host; `UseStaticFiles()` 404s them), and the host pins its content root to
-  `AppContext.BaseDirectory` (the executable's directory) rather than the current working
-  directory — `agent ui` runs the host inside the user's repo, and the default (CWD-based)
-  content root made `MapStaticAssets` find no `wwwroot`/manifest and serve empty `200`s.
-  `App.razor` also links the Blazor CSS-isolation bundle `@Assets["AgentSync.Ui.styles.css"]`,
-  which `@import`s the FluentUI component CSS — without it the FluentUI components render
-  unstyled. `MainLayout.razor` is a custom app shell (dark header/nav rail, light content,
-  footer, live drift-status pill) styled by a global `wwwroot/app.css`. The UI deliberately
-  avoids both `<FluentDesignTheme>` (its JS interop crashes the Interactive Server circuit,
-  killing all button interactivity) and the heavy
-  `Microsoft.FluentUI.AspNetCore.Components.Icons` package.
-  **GUI packaging is implemented**: a separate
-  `release-ui` job publishes `agent-sync-ui-<tag>-<rid>` archives independently of the CLI
-  release and also packs/pushes the `AgentSync.Ui` .NET tool (command `agent-sync-ui`)
-  (`features/UI_LOCALHOST_BLAZOR.md`, Milestone UI-3).
-
-> The earlier .NET MAUI / OpenMaui GUI direction was **dropped** in favour of the
-> localhost web UI; the MAUI project and the OpenMaui spike doc were removed.
-
-Guidance for continuing this wave:
-
-- Work **milestone-based** — see `features/ROADMAP.md` (Milestones UI-1 … UI-3). Land
-  one milestone at a time with tests.
-- **Keep existing CLI behavior backward compatible.** These are additive commands;
-  don't change current command semantics or exit codes.
-- **The UI must not make the CLI depend on the web host / FluentUI.** The headless
-  stack — `AgentSync.Cli`, `AgentSync.Core`, `AgentSync.GitAgent`, Git hooks, CI, the
-  `dotnet tool` packages, and container images — must build, test, run, and ship without
-  any UI dependency and must **never** reference `AgentSync.Ui.Web` or FluentUI.
-- **`agent ui` is a launcher + installer**: it starts the external `agent-sync-ui`, and
-  when that is absent it auto-installs it (the `AgentSync.Ui` .NET tool, else the release
-  archive) via `AgentSync.Core.UiInstaller`, falling back to printed install guidance only
-  if installation fails. The installer lives in Core, so the CLI keeps no UI reference.
-- **The web UI binds `127.0.0.1`** with a random port and a per-launch session token
-  (exchanged into an HttpOnly cookie and stripped from the URL after first use); never
-  `0.0.0.0`. File-writing actions (add/edit/import/sync) use explicit submit buttons;
-  destructive/environment-changing actions (delete, force sync, install hooks) require a
-  second confirmation step. No repository mutation logic in Razor components — it lives in
-  `AgentSync.Ui.Web/ViewModels/*` and `AgentSyncApp`.
-- **The CLI remains the primary supported interface**; the GUI is an optional layer.
-- Preserve the core invariants below and in `CLAUDE.md` (path safety, marker handling,
-  manual-edit protection, `net10.0`, `git-agent` delegation).
-
-## Notes for future sessions
-
-This section captures non-obvious implementation facts to speed up future work. It is
-maintained by hand (this repository does not run Agent Sync on itself — `AGENTS.md`
-and `CLAUDE.md` here are hand-authored, not generated).
-
-### Build, test, run
-
-- Target framework is `net10.0` (only the .NET 10 SDK/runtime is installed here).
-  Do not retarget to net8.0.
-- `dotnet build --configuration Release` and `dotnet test` from the repo root.
-- Solution file is `AgentSync.slnx` (the newer XML solution format).
-- `nuget.config` pins to nuget.org; the inherited `nova-globen` private feed fails
-  auth in this environment (harmless `NU1900` warnings).
-
-### Projects
-
-- `src/AgentSync.Core` — all domain logic (config, skills, projections, adapters,
-  drift, services). Keep behavior here. Includes `Import/` (skill + agent import) and
-  `Authoring/` (skill + target CRUD writers), and `UiLauncher` (discovers/launches the
-  external `agent-sync-ui`; no UI reference), `UiInstaller` (installs the UI on demand via
-  the `AgentSync.Ui` .NET tool or a release-archive download), and `UiSession` (free port +
-  session token).
+- `src/AgentSync.Core` — all domain logic (config, skills, projections, adapters, drift,
+  services). Includes `Import/` (skill + agent import), `Authoring/` (skill + target CRUD
+  writers), `UiLauncher` (discovers/launches the external `agent-sync-ui`; no UI reference),
+  `UiInstaller` (installs the UI on demand via the `AgentSync.Ui` .NET tool or a
+  release-archive download), and `UiSession` (free port + session token).
 - `src/AgentSync.Cli` — the `agent` binary (`AssemblyName=agent`); logic lives in the
   public `CliRunner` so tests drive it without spawning a process.
 - `src/AgentSync.GitAgent` — the `git-agent` binary (`AssemblyName=git-agent`); its
   `Program` just calls `new CliRunner().Run(args)`, so `git agent <cmd>` == `agent <cmd>`.
 - `src/AgentSync.Ui.Abstractions` — UI-independent application service (`AgentSyncApp`)
-  over Core, for the UI; no web/UI dependency; in `AgentSync.slnx` and unit-tested.
-- `src/AgentSync.Ui.Web` — localhost Blazor Web UI host (executable `agent-sync-ui`)
-  using Microsoft FluentUI Blazor components; binds `127.0.0.1` with a session token;
-  references `AgentSync.Ui.Abstractions`/`AgentSync.Core` only. In `AgentSync.slnx`;
-  builds with the standard SDK (no special workloads). The CLI never references it.
+  over Core, for the UI; no web/UI dependency.
+- `src/AgentSync.Ui.Web` — localhost Blazor Web UI host (executable `agent-sync-ui`) using
+  Microsoft FluentUI Blazor components; binds `127.0.0.1` with a session token; references
+  `AgentSync.Ui.Abstractions`/`AgentSync.Core` only. The CLI never references it.
 
-### Key design points
+## Key design points
 
-- Projections: shared files (AGENTS.md, CLAUDE.md, copilot, gemini) use
-  `agent-sync` markers via `MarkedDocument`; dedicated files (cursor, openai/claude
-  skill folders) are whole-file with manual-edit detection via the lockfile hash.
-- Path safety: every projection read/write resolves through `RepoPath` (rejects
-  absolute, Windows drive/UNC, and `..`-escaping paths). `ConfigValidator` also flags
-  unsafe target paths (`config.target-unsafe-path`).
-- YAML frontmatter (cursor/skill folders) is emitted via `Yaml.Scalar(...)`, which
+- Projections: shared files (AGENTS.md, CLAUDE.md, Copilot, Gemini) use `agent-sync`
+  markers via `MarkedDocument`; dedicated files (Cursor, OpenAI/Claude skill folders) are
+  whole-file with manual-edit detection via the lockfile hash.
+- Path safety: every projection read/write resolves through `RepoPath`. `ConfigValidator`
+  also flags unsafe target paths (`config.target-unsafe-path`).
+- YAML frontmatter (Cursor/skill folders) is emitted via `Yaml.Scalar(...)`, which
   quotes/escapes values that are not safe plain scalars. Do not hand-concatenate.
 - Heading strategy: `skill.yaml` owns `name`/`description`/`version`; `SKILL.md` is the
   body only and must not start with a `# Name` heading. Adapters add one heading and
@@ -249,68 +198,73 @@ and `CLAUDE.md` here are hand-authored, not generated).
   drift detection, and golden-file tests stay stable.
 - Git hooks must **fail when `agent` is missing** (the scaffolded hooks exit 3 with the
   required message), never silently pass.
-- `git-agent` delegates to `AgentSync.Cli.CliRunner`; keep the two entry points in sync.
 - Exit codes: 0 success, 1 drift/validation, 2 invalid usage, 3 environment, 4 unexpected.
 
-### Current validated state (v0.1.0-alpha.1)
+## Web UI gotchas (when touching `AgentSync.Ui.Web`)
 
-Manually validated on Windows with the globally installed binaries: `agent --version`
-and `git agent --version` (both `agent 0.1.0-alpha.1`), `agent init`, `agent sync`,
-`agent status --fail-on-drift --ci`, `git agent status`, `agent install-hooks`, the
-pre-commit hook running Agent Sync, manual-edit drift detection in `AGENTS.md`, and a
-commit being **blocked** by the hook when drift exists. See
-`.ai-agent/VALIDATION_LOG.md`. The published releases through `v0.1.0-alpha.4` were
-CLI-focused (`alpha.4` added the `AgentSync` / `AgentSync.Git` NuGet tools); `v0.2.0-alpha.1`
-was the first to ship imports, CRUD, `agent ui`, and the localhost UI; `v0.2.0-alpha.2`
-made `agent ui` self-installing (auto-installs the UI — the `AgentSync.Ui` .NET tool or a
-release-archive download), shipped the UI as a `dotnet tool`, and switched the host to
-`MapStaticAssets` — which fixed the asset `404`s but **not** the empty asset bodies, so the
-UI still loaded without CSS/JS. The next release, `v0.2.0-alpha.3`, fixes that: the host now
-pins its content root to `AppContext.BaseDirectory` (the executable's own directory) instead
-of the current working directory, so `MapStaticAssets` finds `wwwroot`/the static-web-assets
-manifest and serves real asset bytes even though `agent ui` launches it inside the user's
-repo. `alpha.3` also links the FluentUI CSS-isolation bundle in `App.razor` and adds a
-custom app shell (`wwwroot/app.css`), so the UI — which previously rendered as bare, unstyled
-HTML — now looks styled, and removes `<FluentDesignTheme>` (its JS interop crashed the
-Interactive Server circuit and left every button dead). It also makes `agent init` scaffold a
-second skill, `using-agent-sync` (`claude_skill`-only), that teaches AI agents how to handle
-an Agent Sync repo. More real-world testing on Linux/macOS is still needed.
+- Serve static files with `app.MapStaticAssets()`, not `UseStaticFiles()` — the latter
+  404s `_framework/blazor.web.js` and the FluentUI `_content/...` assets in a published
+  host.
+- Build the host with `WebApplicationOptions.ContentRootPath = AppContext.BaseDirectory`,
+  not the default current-working-directory root: `agent ui` launches the host inside the
+  user's repo, and a CWD content root makes `MapStaticAssets` find no `wwwroot`/manifest and
+  serve empty `200`s.
+- `App.razor` must link the Blazor CSS-isolation bundle `@Assets["AgentSync.Ui.styles.css"]`
+  (it `@import`s the FluentUI component CSS); without it the FluentUI components render
+  unstyled. `MainLayout.razor` is a custom app shell styled by `wwwroot/app.css`.
+- Do **not** add `<FluentDesignTheme>`: its JS interop (`clearLocalStorage`) crashes the
+  Interactive Server circuit and leaves every button dead. Keep the heavy
+  `Microsoft.FluentUI.AspNetCore.Components.Icons` package out too.
 
-### Releases
+## Testing expectations
+
+- Add/update tests for every behavior change. Core logic → `tests/AgentSync.Core.Tests`,
+  CLI → `tests/AgentSync.Cli.Tests`. Adapter output is covered by golden files under
+  `tests/AgentSync.Core.Tests/Golden`.
+- Keep generated output deterministic so hashing and golden tests stay stable.
+- Test-environment note: a stray `/tmp/.git` in some sandboxes makes temp dirs under
+  `/tmp` look like a Git repo; a few tests tolerate an ancestor repo rather than assume its
+  absence.
+
+## Releases
 
 - Tag-driven: pushing `v*.*.*` runs `.github/workflows/release.yml`, which publishes
   self-contained `agent`/`git-agent` for linux-x64, linux-arm64, osx-x64, osx-arm64,
-  win-x64, generates `checksums.txt`, and creates the GitHub Release via `gh`.
-  Release commands: `git tag v0.1.0 && git push origin v0.1.0` (see `RELEASE_CHECKLIST.md`).
-- Install scripts: `scripts/install.sh` (Linux/macOS) and `scripts/install.ps1`
-  (Windows). `scripts/release-smoke.sh` validates naming/mapping and that both binaries
-  publish and `git-agent` delegates to `agent`.
+  win-x64, generates `checksums.txt`, and creates the GitHub Release via `gh`. Follow
+  `RELEASE_CHECKLIST.md`.
 - .NET tool packages: `src/AgentSync.Cli` packs as `AgentSync` (command `agent`) and
-  `src/AgentSync.GitAgent` packs as `AgentSync.Git` (command `git-agent`); tool/package
-  metadata lives in the two csproj plus shared bits in `Directory.Build.props`
-  (`IsPackable` is off by default and opted into per tool project). The release workflow
-  packs both and `dotnet nuget push`es them to NuGet.org via **Trusted Publishing**
-  (`NuGet/login@v1`, job permission `id-token: write`, secret `NUGET_USER`, one-time
-  nuget.org policy — see `RELEASE_CHECKLIST.md`). Tools are framework-dependent, so they
-  need the .NET 10 runtime (unlike the self-contained release binaries). Description
-  fields must XML-escape `<` / `>` (use `&lt;`/`&gt;`).
-  - **Package ids are `AgentSync` / `AgentSync.Git`** (command names stay `agent` /
-    `git-agent`). The dotted `Agent.*` prefix is a **reserved NuGet prefix** owned by
-    someone else — `Agent.Sync` pushes are accepted synchronously but silently rejected
-    by async validation (never publish, re-push returns 409). Do not reuse `Agent.*`.
-  - The push step keeps `--skip-duplicate` (idempotent re-runs) but a synchronous push
-    success does **not** prove publication; the **Verify packages are live** step polls
-    the flat-container (`v3-flatcontainer/<id-lowercased>/<version>/...nupkg`) and fails
-    the job if a version never becomes installable. If you change a package id, update
-    the lowercased ids in that step.
-- The public repo is `https://github.com/nova-globen/agent`; the default branch in CI
-  triggers is both `main` and `master`.
+  `src/AgentSync.GitAgent` packs as `AgentSync.Git` (command `git-agent`); the UI packs as
+  `AgentSync.Ui` (command `agent-sync-ui`). Pushed to NuGet via Trusted Publishing. The
+  dotted `Agent.*` prefix is a reserved NuGet prefix owned by someone else — do not reuse
+  it. A synchronous push success does not prove publication; the **Verify packages are
+  live** step polls the flat-container and fails the job if a version never becomes
+  installable.
 
-### Test environment gotchas
+## Working conventions
 
-- There is a stray `/tmp/.git` in this sandbox, so temp dirs under `/tmp` can look like
-  a Git repo. A few tests are written to tolerate an ancestor repo rather than assume
-  its absence.
-- CI's drift check and the committed `examples/sample` are verified by running the tool
-  from a standalone repo (Agent Sync resolves the Git root upward, so running it inside
-  this repo would target the parent project).
+- Run build + tests before and after changes; add tests for behavior changes.
+- Prefer small, focused commits. Do not add AI/Claude trailers to commit messages.
+- Keep public docs clean: no private conversation URLs and no local machine paths.
+- Keep alpha positioning honest in any public-facing wording.
+
+## This repository runs Agent Sync on itself
+
+The agent instruction files here — `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`,
+`.gemini/GEMINI.md`, and the `.claude/skills/` folders — are **generated projections** of the
+skills under `.agent/skills/`. Edit the canonical skill, run `agent sync`, and commit the
+canonical change with its regenerated projections. Never hand-edit a generated section; the
+Git hooks and the CI drift check (`agent status --fail-on-drift --ci`, run against the repo
+root) will block it. Deeper specs and plans live under `.agent/` (`PRODUCT_SPEC.md`,
+`ARCHITECTURE.md`, `ADAPTERS.md`, `CLI_CONTRACT.md`, `GIT_AND_CI.md`, `TEST_PLAN.md`,
+`features/`, `CURRENT_STATE.md`, `NEXT_STEPS.md`).
+<!-- agent-sync:end -->
+```
+
+Whole-file targets (Cursor rules, OpenAI/Claude skill folders) are managed in full and
+detect manual edits via the lockfile hash instead of markers.
+<!-- agent-sync:end -->
+```
+
+Whole-file targets (Cursor rules, OpenAI/Claude skill folders) are managed in full and
+detect manual edits via the lockfile hash instead of markers.
+<!-- agent-sync:end -->

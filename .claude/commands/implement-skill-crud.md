@@ -1,7 +1,7 @@
 Implement **only Milestone D (skill CRUD)** from the CRUD plan.
 
-1. Read `.ai-agent/features/CRUD_COMMANDS.md` (skill commands) and
-   `.ai-agent/features/ROADMAP.md` (Milestone D).
+1. Read `.agent/features/CRUD_COMMANDS.md` (skill commands) and
+   `.agent/features/ROADMAP.md` (Milestone D).
 2. Put logic in `AgentSync.Core` (`Authoring/SkillWriter.cs`), add a nested `skill`
    dispatch in `CliRunner`, reuse `SkillValidator`, `Yaml.Scalar`, `RepoPath`, and the
    lockfile (`Projections/Lockfile.cs`) so deletes don't leave orphans.

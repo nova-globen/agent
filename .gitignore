@@ -35,4 +35,4 @@ dist/checksums.txt
 release/checksums.txt
 
 # Agent session data (local only)
-.ai-agent/sessions/
+.agent/sessions/

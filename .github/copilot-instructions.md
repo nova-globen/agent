@@ -1,13 +1,4 @@
-# CLAUDE.md
-
-@AGENTS.md
-
-This file orients a future Claude session quickly. The sections below are **generated**
-from the canonical skills under `.agent/skills/` — do not edit them by hand; edit the skill
-and run `agent sync`. For deeper detail, read `AGENTS.md` (imported above) and the specs
-under `.agent/` (`CURRENT_STATE.md`, `NEXT_STEPS.md`, `PRODUCT_SPEC.md`, `ARCHITECTURE.md`).
-
-<!-- agent-sync:start id=agent-sync-overview target=claude_md hash=sha256:59dc609f5ff841ff20f153ee79551d81064377ec1dd239d42ca5cfc3d15941bd -->
+<!-- agent-sync:start id=agent-sync-overview target=copilot hash=sha256:59dc609f5ff841ff20f153ee79551d81064377ec1dd239d42ca5cfc3d15941bd -->
 ## Agent Sync Overview
 
 What Agent Sync is, the product shape it must keep, its CLI commands, and how drift detection works. Read this first when orienting in this repository.
@@ -115,7 +106,7 @@ managed in full and detect manual edits via the lockfile hash instead of markers
 marker syntax is documented in `.agent/PRODUCT_SPEC.md`.
 <!-- agent-sync:end -->
 
-<!-- agent-sync:start id=agent-sync-maintainer target=claude_md hash=sha256:923411267295f8fee707e34a620080e926cc44acf28e2c6740238cfc7a482fe2 -->
+<!-- agent-sync:start id=agent-sync-maintainer target=copilot hash=sha256:923411267295f8fee707e34a620080e926cc44acf28e2c6740238cfc7a482fe2 -->
 ## Agent Sync Maintainer
 
 How to work on the Agent Sync codebase — invariants you must not break, build/test commands, project layout, key design points, and the release process. Use when implementing features or fixes, updating adapters, adjusting drift detection, or preparing a release.

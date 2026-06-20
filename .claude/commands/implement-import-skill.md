@@ -1,6 +1,6 @@
 Implement **only Milestone B (`agent import skill`)** from the import plan.
 
-1. Read `.ai-agent/features/IMPORTS.md` (§A) and `.ai-agent/features/ROADMAP.md`
+1. Read `.agent/features/IMPORTS.md` (§A) and `.agent/features/ROADMAP.md`
    (Milestone B). Milestone A (import foundation) must exist first — if it doesn't,
    implement A before B.
 2. Put logic in `AgentSync.Core` (`Import/`), keep `CliRunner` a thin dispatcher, reuse

@@ -461,7 +461,7 @@ tool only — it makes no claim to remote/server/team use. The release workflow 
 a **separate, optional job** that publishes the `agent-sync-ui-<version>-<rid>` archives
 and the `AgentSync.Ui` .NET tool independently of the CLI artifacts — the CLI release and
 the CLI `dotnet tool` packages never include it, and a UI build failure never blocks a CLI
-release. See `.ai-agent/features/UI_LOCALHOST_BLAZOR.md` and `RELEASE_CHECKLIST.md`.
+release. See `.agent/features/UI_LOCALHOST_BLAZOR.md` and `RELEASE_CHECKLIST.md`.
 
 The screens drive the same services as the CLI through `AgentSync.Ui.Abstractions`
 (`AgentSyncApp`) — no repository logic lives in the Razor components. File-writing
@@ -528,6 +528,11 @@ Install it, then retry.
 ## Repository layout
 
 ```text
+.agent/                      # this repo runs Agent Sync on itself
+  agent.yaml                 #   enabled targets
+  lock.json                  #   projection hashes
+  skills/                    #   canonical skills, projected into AGENTS.md/CLAUDE.md/etc.
+  *.md, features/, prompts/  #   project specs & planning docs
 src/
   AgentSync.Cli/             # the 'agent' CLI
   AgentSync.GitAgent/        # the 'git-agent' extension (delegates to the CLI)
@@ -541,6 +546,12 @@ tests/
   AgentSync.Ui.Web.Tests/
 ```
 
+Agent Sync **manages its own agent instructions**: `AGENTS.md`, `CLAUDE.md`,
+`.github/copilot-instructions.md`, `.gemini/GEMINI.md`, and the `.claude/skills/` folders
+are generated from the canonical skills under `.agent/skills/`, and CI fails the build if
+any of them drifts. Edit the skill and run `agent sync` — never hand-edit a generated
+section.
+
 The CLI/Core/Git stack never references the UI projects; the headless tooling builds and
 ships without any web-UI dependency.
 
@@ -552,7 +563,7 @@ Maintainers cutting a release: see [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md).
 
 **AI-agent maintainers:** for project context and guardrails, start with
 [CLAUDE.md](CLAUDE.md), [AGENTS.md](AGENTS.md), and
-[.ai-agent/CURRENT_STATE.md](.ai-agent/CURRENT_STATE.md).
+[.agent/CURRENT_STATE.md](.agent/CURRENT_STATE.md).
 
 ## License
 

@@ -1,9 +1,9 @@
 # Feature plan: Import commands
 
-> **Status: planned, not implemented.** This is an implementation-ready spec for a
-> future Claude/AI coding session. No import code exists yet. Build it milestone by
-> milestone (see `ROADMAP.md`), preserve all current behavior, and do not run Agent
-> Sync on this repository's own hand-authored `AGENTS.md` / `CLAUDE.md`.
+> **Status: implemented.** This was the original implementation-ready spec; the import
+> commands (`agent import skill` / `agent import agent`) now ship. Kept for historical
+> design context. (This repository itself now runs Agent Sync on its own instruction
+> files — see `.agent/CURRENT_STATE.md`.)
 
 Import lets a repository that *already has* AI-agent instruction files adopt Agent
 Sync without re-typing everything. It reverses the normal data flow: instead of

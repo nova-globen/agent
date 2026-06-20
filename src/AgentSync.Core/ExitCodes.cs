@@ -1,7 +1,7 @@
 namespace AgentSync.Core;
 
 /// <summary>
-/// Process exit codes as defined in <c>.ai-agent/CLI_CONTRACT.md</c>.
+/// Process exit codes as defined in <c>.agent/CLI_CONTRACT.md</c>.
 /// </summary>
 public static class ExitCodes
 {

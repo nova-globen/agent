@@ -5,7 +5,7 @@ invariants (see `CLAUDE.md` → "Do not accidentally break").
 
 ## Feature wave (import + CRUD + UI shipped)
 
-Implementation-ready specs live under `.ai-agent/features/`. Keep CLI behavior backward
+Implementation-ready specs live under `.agent/features/`. Keep CLI behavior backward
 compatible and the GUI optional (the headless CLI must not depend on the UI).
 
 - **Import** — `agent import skill` and `agent import agent` (implemented;
@@ -60,7 +60,8 @@ Milestone breakdown and acceptance criteria: `features/ROADMAP.md`.
 - Add more realistic starter skills beyond the default `code-review`.
 - Add adapter-specific options (per-target formatting/config knobs).
 - Consider an `agent check` alias for `status --fail-on-drift --ci` if it reads better.
-- Add CI examples for GitHub Actions, Azure DevOps, and GitLab.
+- Add a GitLab CI example (`examples/github-actions` and `examples/azure-pipelines` ship;
+  GitLab still to do).
 
 ## Distribution
 

@@ -1,6 +1,6 @@
 Plan/extend the Agent Sync GUI (`agent ui`) — produce a plan before implementing.
 
-1. Read `.ai-agent/features/UI_LOCALHOST_BLAZOR.md` and `.ai-agent/features/ROADMAP.md`
+1. Read `.agent/features/UI_LOCALHOST_BLAZOR.md` and `.agent/features/ROADMAP.md`
    (Milestones UI-1 … UI-3).
 2. Honor the decision (UI_LOCALHOST_BLAZOR.md → "Decision"):
    - The GUI is a **separate, optional localhost Blazor Web UI** (`agent-sync-ui`) built

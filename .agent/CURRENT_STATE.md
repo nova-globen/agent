@@ -1,7 +1,7 @@
 # Current State
 
-Compact handoff for AI sessions. Pair with `.ai-agent/NEXT_STEPS.md` and
-`.ai-agent/VALIDATION_LOG.md`.
+Compact handoff for AI sessions. Pair with `.agent/NEXT_STEPS.md` and
+`.agent/VALIDATION_LOG.md`.
 
 ## Release
 
@@ -76,9 +76,16 @@ Compact handoff for AI sessions. Pair with `.ai-agent/NEXT_STEPS.md` and
   checksums in, **and** packs/pushes the `AgentSync.Ui` .NET tool; it can fail independently
   without affecting the CLI release.
 - **CI:** `.github/workflows/agent-sync-check.yml` builds/tests on push (`main`/`master`)
-  and PRs, and runs an end-to-end drift check in a throwaway repo.
-- This repo does **not** dogfood Agent Sync on its own hand-authored `AGENTS.md` /
-  `CLAUDE.md` (no root `.agent/`).
+  and PRs, runs the drift gate against this repository itself (the dogfood check below),
+  and also runs an end-to-end drift check in a throwaway repo.
+- **This repo now dogfoods Agent Sync.** Its agent instruction files — `AGENTS.md`,
+  `CLAUDE.md`, `.github/copilot-instructions.md`, `.gemini/GEMINI.md`, and the
+  `.claude/skills/` folders — are generated projections of the canonical skills under
+  `.agent/skills/` (`agent-sync-overview`, `agent-sync-maintainer`, `using-agent-sync`).
+  Edit the skill, run `agent sync`, and commit the regenerated projections together; never
+  hand-edit a generated section (the Git hooks and CI enforce it). The planning/spec docs
+  (this file, `NEXT_STEPS.md`, `PRODUCT_SPEC.md`, `ARCHITECTURE.md`, `features/`, `prompts/`,
+  …) also live under `.agent/` now — moved from the former `.ai-agent/`.
 
 ## Validated workflows (Windows, v0.1.0-alpha.1)
 
@@ -91,7 +98,7 @@ manual edit -> drift detected -> CI/status fails -> Git commit blocked
 Covered: install, `agent --version` / `git agent --version`, `init`, `sync`,
 `status --fail-on-drift --ci`, `git agent status`, `install-hooks`, pre-commit hook
 running Agent Sync, manual-edit drift detection in `AGENTS.md`, and a commit being
-blocked on drift. Details in `.ai-agent/VALIDATION_LOG.md`.
+blocked on drift. Details in `.agent/VALIDATION_LOG.md`.
 
 ## Known limitations
 
@@ -106,5 +113,5 @@ blocked on drift. Details in `.ai-agent/VALIDATION_LOG.md`.
 
 ## Next recommended work
 
-See `.ai-agent/NEXT_STEPS.md`. Highest-leverage now: real-world Linux/macOS validation,
+See `.agent/NEXT_STEPS.md`. Highest-leverage now: real-world Linux/macOS validation,
 symlink escape hardening, and broader install-script testing before wider promotion.

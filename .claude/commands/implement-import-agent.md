@@ -1,6 +1,6 @@
 Implement **only Milestone C (`agent import agent`)** from the import plan.
 
-1. Read `.ai-agent/features/IMPORTS.md` (§B) and `.ai-agent/features/ROADMAP.md`
+1. Read `.agent/features/IMPORTS.md` (§B) and `.agent/features/ROADMAP.md`
    (Milestone C). Milestones A and B must exist first — implement them first if not.
 2. Put logic in `AgentSync.Core` (`Import/AgentImporter.cs`), keep `CliRunner` thin, and
    be marker-aware (`MarkedDocument`) so generated sections aren't re-imported. Never

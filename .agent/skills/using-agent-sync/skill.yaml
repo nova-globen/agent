@@ -1,0 +1,20 @@
+id: using-agent-sync
+name: Using Agent Sync
+description: How to create, edit, and project AI-agent skills with Agent Sync in this repo. Edit canonical .agent/ sources, run agent sync, and never hand-edit generated AGENTS.md, CLAUDE.md, or .claude skill files. Use when adding or changing agent skills or instructions, or when agent status reports drift.
+version: 0.1.0
+
+targets:
+  agents_md:
+    enabled: false
+  claude_md:
+    enabled: false
+  cursor:
+    enabled: false
+  copilot:
+    enabled: false
+  gemini:
+    enabled: false
+  openai_skill:
+    enabled: false
+  claude_skill:
+    enabled: true

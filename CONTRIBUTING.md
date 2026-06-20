@@ -37,7 +37,7 @@ exit codes and output. This keeps behavior testable without spawning processes.
   so golden-file and hash-based tests stay stable.
 - Generated content written into shared files must use the `agent-sync` markers and
   must never overwrite user-authored content outside the managed section.
-- Honor the exit-code contract (see `.ai-agent/CLI_CONTRACT.md`).
+- Honor the exit-code contract (see `.agent/CLI_CONTRACT.md`).
 
 ## Tests
 

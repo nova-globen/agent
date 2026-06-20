@@ -8,10 +8,10 @@ Read, in order:
 
 1. `CLAUDE.md` — fast orientation + "do not break" rules.
 2. `AGENTS.md` — product goal, architecture, and implementation facts.
-3. `.ai-agent/CURRENT_STATE.md` — current release + status snapshot.
-4. `.ai-agent/NEXT_STEPS.md` — what to work on next.
+3. `.agent/CURRENT_STATE.md` — current release + status snapshot.
+4. `.agent/NEXT_STEPS.md` — what to work on next.
 
-For the verified behavior, see `.ai-agent/VALIDATION_LOG.md`.
+For the verified behavior, see `.agent/VALIDATION_LOG.md`.
 
 ## Workflow
 
@@ -37,10 +37,13 @@ For the verified behavior, see `.ai-agent/VALIDATION_LOG.md`.
 - Do not change `agent sync` write-by-default behavior, retarget off `net10.0`, remove
   `git-agent`, weaken `RepoPath` traversal protection, or overwrite manually edited
   generated sections without `--force` — unless a maintainer explicitly asks.
-- This repo does not dogfood Agent Sync on its own `AGENTS.md` / `CLAUDE.md`; don't add a
-  root `.agent/` without explicit instruction.
+- This repo **dogfoods** Agent Sync: `AGENTS.md`, `CLAUDE.md`, the Copilot/Gemini files,
+  and the `.claude/skills/` folders are generated from the canonical skills under
+  `.agent/skills/`. Edit the skill and run `agent sync`; never hand-edit a generated
+  section (the Git hooks and CI enforce it).
 
 ## Handy reusable prompts
 
-See `.claude/commands/` and the maintainer skill in
+See `.claude/commands/` and the maintainer skill — authored canonically at
+`.agent/skills/agent-sync-maintainer/SKILL.md` and projected to
 `.claude/skills/agent-sync-maintainer/SKILL.md`.

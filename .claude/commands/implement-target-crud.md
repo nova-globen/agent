@@ -1,7 +1,7 @@
 Implement **only Milestone E (target CRUD)** from the CRUD plan.
 
-1. Read `.ai-agent/features/CRUD_COMMANDS.md` (target commands) and
-   `.ai-agent/features/ROADMAP.md` (Milestone E).
+1. Read `.agent/features/CRUD_COMMANDS.md` (target commands) and
+   `.agent/features/ROADMAP.md` (Milestone E).
 2. Put logic in `AgentSync.Core` (`Authoring/TargetWriter.cs` / `ConfigEditor.cs`), add
    a nested `target` dispatch in `CliRunner`. Target ids must be known
    (`TargetIds.IsKnown`); paths must pass `RepoPath`; round-trip `agent.yaml` without

@@ -1,0 +1,20 @@
+id: agent-sync-maintainer
+name: Agent Sync Maintainer
+description: How to work on the Agent Sync codebase — invariants you must not break, build/test commands, project layout, key design points, and the release process. Use when implementing features or fixes, updating adapters, adjusting drift detection, or preparing a release.
+version: 0.2.0
+
+targets:
+  agents_md:
+    enabled: true
+  claude_md:
+    enabled: true
+  cursor:
+    enabled: false
+  copilot:
+    enabled: true
+  gemini:
+    enabled: true
+  openai_skill:
+    enabled: false
+  claude_skill:
+    enabled: true
