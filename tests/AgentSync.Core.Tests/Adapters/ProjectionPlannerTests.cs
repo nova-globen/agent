@@ -6,7 +6,7 @@ namespace AgentSync.Core.Tests.Adapters;
 public sealed class ProjectionPlannerTests
 {
     [Fact]
-    public void Plan_DefaultInit_ProducesAllSevenTargets()
+    public void Plan_DefaultInit_ProducesProjectionsForBothScaffoldedSkills()
     {
         using var temp = new TempDir();
         new InitService(temp.Path).Run();
@@ -14,10 +14,15 @@ public sealed class ProjectionPlannerTests
 
         var plan = new ProjectionPlanner().Plan(ws);
 
-        Assert.Equal(7, plan.Count);
+        // code-review projects to all 7 targets; using-agent-sync projects to claude_skill
+        // only (its skill.yaml disables the rest), so 8 projections in total.
+        Assert.Equal(8, plan.Count);
         Assert.Contains(plan, p => p.TargetId == TargetIds.AgentsMd && p.Mode == ProjectionMode.SharedSection);
         Assert.Contains(plan, p => p.TargetId == TargetIds.Cursor && p.Mode == ProjectionMode.WholeFile);
         Assert.Contains(plan, p => p.RelativePath == ".claude/skills/code-review/SKILL.md");
+        Assert.Contains(plan, p => p.RelativePath == ".claude/skills/using-agent-sync/SKILL.md");
+        // The using-agent-sync skill does not bloat the always-loaded shared files.
+        Assert.DoesNotContain(plan, p => p.SkillId == "using-agent-sync" && p.TargetId == TargetIds.AgentsMd);
     }
 
     [Fact]

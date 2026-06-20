@@ -118,6 +118,44 @@ and serves them. `App.razor` resolves fingerprinted assets via `@Assets["..."]` 
 `<ImportMap />`), keeps the Blazor framework script reference unfingerprinted, and links a
 `wwwroot/favicon.svg` so the browser stops requesting a missing `/favicon.ico`.
 
+`App.razor` **must** also link the Blazor CSS-isolation bundle
+`@Assets["AgentSync.Ui.styles.css"]`. That bundle `@import`s the FluentUI Blazor component
+CSS (`Microsoft.FluentUI.AspNetCore.Components.*.bundle.scp.css`); without the link, the
+FluentUI components (nav menu, cards, `FluentLayout`, type ramp) render as bare, unstyled
+HTML even though `reboot.css` and the web-component JS load — the symptom that made the UI
+look broken before alpha.3. `MainLayout.razor` provides a **custom** app shell — a dark
+header (brand + live drift-status pill + repo path), a dark nav rail of plain `NavLink`s
+(`NavMenu.razor`), a light content frame, and a pinned footer — styled by a global
+`wwwroot/app.css` linked via `@Assets["app.css"]`.
+
+Two FluentUI features are deliberately **avoided**:
+
+- **`<FluentDesignTheme>`** — its `OnAfterRenderAsync` calls `clearLocalStorage` over JS
+  interop and throws `Cannot read properties of undefined (reading 'clearLocalStorage')`,
+  which **terminates the Interactive Server circuit**. The page still prerenders (so it
+  *looks* fine in a screenshot), but every button is dead. Theming is not needed — the
+  FluentUI web components apply their default theme without it — so the shell does its own
+  styling instead.
+- The **`Microsoft.FluentUI.AspNetCore.Components.Icons`** package (no `FluentIcon`/`Icons.*`),
+  to keep the tool/archive small.
+
+`scripts/release-smoke.sh` asserts the rendered page links the CSS bundle. Interactivity (a
+live circuit, not just prerender) was verified with a headless browser that clicks a skill's
+**Edit** button and confirms the edit form appears with no console errors.
+
+`MapStaticAssets` alone is **not** sufficient: it resolves `wwwroot` and the
+`*.staticwebassets.endpoints.json` manifest relative to the host's **content root**, and
+the default content root is the **current working directory**. `agent ui` launches the
+host with the working directory set to the user's repo (via `--repo`), so the default
+content root points there, the manifest/`wwwroot` are not found, and every asset request
+returns an **empty `200`** (the page renders but has no CSS/JS — and `/healthz` and a
+status-only smoke check still pass, which is how this slipped past alpha.2). The host
+therefore builds with `WebApplicationOptions.ContentRootPath = AppContext.BaseDirectory`,
+pinning the content root to the executable's own directory. `AppContext.BaseDirectory` is
+correct for a normal build, a single-file self-contained publish, and a `dotnet tool`
+install alike. `scripts/release-smoke.sh` launches the UI from a foreign working directory
+and asserts a **non-empty** asset body to guard this.
+
 ## Security
 
 - **Bind to `127.0.0.1` by default** — loopback only (`builder.WebHost.UseUrls`). Never

@@ -113,7 +113,8 @@ public sealed class CliRunnerTests
         Assert.Equal(ExitCodes.Success, result.ExitCode);
         using var doc = JsonDocument.Parse(result.StdOut);
         Assert.True(doc.RootElement.GetProperty("initialized").GetBoolean());
-        Assert.Equal(1, doc.RootElement.GetProperty("skills").GetInt32());
+        // init scaffolds two skills: code-review and using-agent-sync.
+        Assert.Equal(2, doc.RootElement.GetProperty("skills").GetInt32());
         Assert.False(doc.RootElement.GetProperty("hasProblems").GetBoolean());
     }
 

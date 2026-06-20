@@ -195,8 +195,10 @@ public sealed class SkillCrudCommandTests
         var result = h.Invoke("skill", "list", "--json");
 
         using var doc = JsonDocument.Parse(result.StdOut);
-        Assert.Equal(1, doc.RootElement.GetArrayLength());
+        // init scaffolds two skills: code-review and using-agent-sync (ordered by id).
+        Assert.Equal(2, doc.RootElement.GetArrayLength());
         Assert.Equal("code-review", doc.RootElement[0].GetProperty("id").GetString());
+        Assert.Equal("using-agent-sync", doc.RootElement[1].GetProperty("id").GetString());
     }
 
     [Fact]

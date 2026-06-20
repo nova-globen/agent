@@ -127,7 +127,11 @@ if command -v curl >/dev/null 2>&1; then
     exec 3>&- 2>/dev/null || true
   done
   [ -n "$ui_port" ] || ui_port=41099
-  "$ui_exe" --repo "$ui_repo" --port "$ui_port" --token "$ui_token" --no-open >/dev/null 2>&1 &
+  # Launch with the working directory set to the managed repo (NOT the UI's install dir) —
+  # this is what `agent ui` does, and it is the case that broke static assets: the content
+  # root must come from the executable's base directory, not the CWD, or MapStaticAssets
+  # finds no wwwroot/manifest and serves empty 200s. Running from $ui_repo guards that.
+  ( cd "$ui_repo" && exec "$ui_exe" --repo "$ui_repo" --port "$ui_port" --token "$ui_token" --no-open >/dev/null 2>&1 ) &
   ui_pid=$!
   ok=""
   for _ in $(seq 1 40); do
@@ -136,20 +140,32 @@ if command -v curl >/dev/null 2>&1; then
     sleep 0.25
   done
   unauth="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:${ui_port}/" 2>/dev/null || true)"
-  # Exchange the token for the session cookie, then confirm a static asset serves (200, not
-  # 404) — guards the MapStaticAssets fix so the UI's CSS/JS keep loading.
-  asset="404"
+  # Exchange the token for the session cookie, then confirm a static asset serves with a
+  # NON-EMPTY body. Checking the status code alone is not enough: the content-root bug
+  # returned 200 with Content-Length 0 (no CSS/JS), which a 200-only check would pass. We
+  # assert both the code and the downloaded size (blazor.web.js is ~200 KB).
+  asset="000"; asset_size="0"; styles_link=""
   if [ "$ok" = "1" ]; then
     cj="$ui_out/cookies.txt"
     curl -s -c "$cj" -o /dev/null "http://127.0.0.1:${ui_port}/?token=${ui_token}" 2>/dev/null || true
-    asset="$(curl -s -b "$cj" -o /dev/null -w '%{http_code}' "http://127.0.0.1:${ui_port}/_framework/blazor.web.js" 2>/dev/null || true)"
+    read -r asset asset_size <<EOF
+$(curl -s -b "$cj" -o /dev/null -w '%{http_code} %{size_download}' "http://127.0.0.1:${ui_port}/_framework/blazor.web.js" 2>/dev/null || echo "000 0")
+EOF
+    # The rendered page must link the CSS-isolation bundle (AgentSync.Ui.styles.css), which
+    # @imports the FluentUI component CSS. Without that link the FluentUI components render
+    # as bare, unstyled HTML even though reboot.css and the web-component JS load.
+    # The bundle name carries a fingerprint (e.g. AgentSync.Ui.fr5tct7ywz.styles.css), so
+    # match the prefix and the .styles.css suffix with the hash in between.
+    styles_link="$(curl -s -b "$cj" "http://127.0.0.1:${ui_port}/" 2>/dev/null | grep -oE 'AgentSync\.Ui[^"]*styles\.css' | head -1 || true)"
   fi
   kill "$ui_pid" >/dev/null 2>&1 || true
   rm -rf "$ui_repo"
   [ "$ok" = "1" ] || fail "agent-sync-ui did not answer /healthz with 200."
   [ "$unauth" = "401" ] || fail "agent-sync-ui served '/' without a token (expected 401, got $unauth)."
   [ "$asset" = "200" ] || fail "agent-sync-ui did not serve /_framework/blazor.web.js (expected 200, got $asset) — static assets are 404ing."
-  pass "agent-sync-ui serves /healthz (200), gates '/' without a token (401), and serves static assets (200)."
+  [ -n "$styles_link" ] || fail "the rendered page does not link AgentSync.Ui.styles.css — the FluentUI component CSS bundle is missing, so the UI renders unstyled."
+  [ "${asset_size:-0}" -gt 1000 ] || fail "agent-sync-ui served /_framework/blazor.web.js with an empty/short body (${asset_size} bytes) — the content root is wrong, so MapStaticAssets cannot read the asset."
+  pass "agent-sync-ui serves /healthz (200), gates '/' without a token (401), serves static assets (200, ${asset_size} bytes), and links the FluentUI CSS bundle."
 else
   echo "SKIP: curl not found; skipped the live /healthz check."
 fi

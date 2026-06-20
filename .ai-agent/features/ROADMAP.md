@@ -150,14 +150,18 @@ hooks/CI/`dotnet tool`/containers free of any UI dependency.
   are unchanged. `agent ui` now **auto-installs** the UI when absent
   (`AgentSync.Core.UiInstaller`: the `AgentSync.Ui` tool when `dotnet` is present, else a
   release-archive download into `~/.agent-sync/ui/`), only printing manual install guidance
-  if that fails. The host serves static assets with `MapStaticAssets` so CSS/JS load in
-  published and tool-installed hosts. `scripts/release-smoke.sh` validates the UI publish
-  shape, invalid-args usage, and a live `/healthz`/`401` check headlessly. README +
-  `RELEASE_CHECKLIST.md` document the optional UI install.
+  if that fails. The host serves static assets with `MapStaticAssets` **and** pins its
+  content root to `AppContext.BaseDirectory` (not the CWD) so CSS/JS load with real bytes in
+  published and tool-installed hosts even when `agent ui` launches the host inside the user's
+  repo — the CWD-based default content root made `MapStaticAssets` serve empty `200`s.
+  `scripts/release-smoke.sh` validates the UI publish shape, invalid-args usage, a live
+  `/healthz`/`401` check, and a non-empty static-asset body (from a foreign working
+  directory) headlessly. README + `RELEASE_CHECKLIST.md` document the optional UI install.
 - **Acceptance criteria (met):** the CLI release ships without the GUI; the GUI ships
   independently (archives + `AgentSync.Ui` tool); CLI artifact names unchanged; a GUI build
   never blocks a CLI release; `agent ui` installs the UI on first run; the installed/published
-  UI serves its CSS/JS (no 404s).
+  UI serves its CSS/JS with real content (no 404s and no empty `200`s) regardless of the
+  launch working directory.
 
 > **Historical (rejected):** an earlier plan used .NET MAUI Blazor Hybrid (Windows/macOS)
 > plus an experimental OpenMaui Linux spike. That direction was dropped in favour of the

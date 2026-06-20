@@ -23,7 +23,8 @@ public sealed class WorkspaceLoaderTests
 
         Assert.True(ws.IsValid);
         Assert.NotNull(ws.Config);
-        Assert.Single(ws.Skills);
+        // init scaffolds two skills: code-review and using-agent-sync.
+        Assert.Equal(2, ws.Skills.Count);
     }
 
     [Fact]

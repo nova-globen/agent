@@ -67,6 +67,8 @@ public sealed class SyncCommandTests
 
         using var doc = JsonDocument.Parse(result.StdOut);
         Assert.True(doc.RootElement.GetProperty("configValid").GetBoolean());
-        Assert.Equal(7, doc.RootElement.GetProperty("outcomes").GetArrayLength());
+        // code-review projects to all 7 targets; using-agent-sync projects to claude_skill
+        // only, for 8 projections in total.
+        Assert.Equal(8, doc.RootElement.GetProperty("outcomes").GetArrayLength());
     }
 }

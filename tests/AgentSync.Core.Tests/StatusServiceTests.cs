@@ -23,7 +23,7 @@ public sealed class StatusServiceTests
         var report = new StatusService(temp.Path).Run();
 
         Assert.True(report.Initialized);
-        Assert.Equal(1, report.SkillCount);
+        Assert.Equal(2, report.SkillCount);
         // Projections have not been written yet, so drift is expected.
         Assert.True(report.HasProblems);
         Assert.Contains(report.Issues, i => i.Code == "drift-missing");
@@ -40,7 +40,7 @@ public sealed class StatusServiceTests
 
         Assert.True(report.Initialized);
         Assert.False(report.HasProblems);
-        Assert.Equal(1, report.SkillCount);
+        Assert.Equal(2, report.SkillCount);
     }
 
     [Fact]
@@ -76,7 +76,11 @@ public sealed class StatusServiceTests
     {
         using var temp = new TempDir();
         new InitService(temp.Path).Run();
-        Directory.Delete(Path.Combine(temp.Path, ".agent", "skills", "code-review"), recursive: true);
+        // Remove every scaffolded skill so the "no skills" warning is exercised.
+        foreach (var dir in Directory.GetDirectories(Path.Combine(temp.Path, ".agent", "skills")))
+        {
+            Directory.Delete(dir, recursive: true);
+        }
 
         var report = new StatusService(temp.Path).Run();
 

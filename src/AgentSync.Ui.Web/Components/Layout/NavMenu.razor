@@ -1,10 +1,10 @@
-<FluentNavMenu>
-    <FluentNavLink Href="/">Dashboard</FluentNavLink>
-    <FluentNavLink Href="/skills">Skills</FluentNavLink>
-    <FluentNavLink Href="/imports">Imports</FluentNavLink>
-    <FluentNavLink Href="/targets">Targets</FluentNavLink>
-    <FluentNavLink Href="/status">Status / Drift</FluentNavLink>
-    <FluentNavLink Href="/diff">Diff</FluentNavLink>
-    <FluentNavLink Href="/hooks">Hooks / CI</FluentNavLink>
-    <FluentNavLink Href="/settings">Settings</FluentNavLink>
-</FluentNavMenu>
+@* Plain NavLinks styled by app.css. Match=All on the root so "Dashboard" is only active
+   on "/", not on every route. *@
+<NavLink class="nav-item" href="/" Match="NavLinkMatch.All">Dashboard</NavLink>
+<NavLink class="nav-item" href="skills">Skills</NavLink>
+<NavLink class="nav-item" href="imports">Imports</NavLink>
+<NavLink class="nav-item" href="targets">Targets</NavLink>
+<NavLink class="nav-item" href="status">Status / Drift</NavLink>
+<NavLink class="nav-item" href="diff">Diff</NavLink>
+<NavLink class="nav-item" href="hooks">Hooks / CI</NavLink>
+<NavLink class="nav-item" href="settings">Settings</NavLink>

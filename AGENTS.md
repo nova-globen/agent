@@ -116,6 +116,12 @@ The tool must not overwrite user-authored content outside managed sections.
 
 Specs live under `.ai-agent/features/`. Status:
 
+- **`agent init` scaffolds two skills — implemented.** Besides the default `code-review`
+  skill, init writes `using-agent-sync`, a guide teaching AI agents how to handle an Agent
+  Sync repo. It targets `claude_skill` only (its `skill.yaml` disables the rest), so it
+  projects to `.claude/skills/using-agent-sync/SKILL.md` without bloating the always-loaded
+  AGENTS.md/CLAUDE.md. Templates in `src/AgentSync.Core/Templates.cs`; written by
+  `InitService`.
 - **Import — implemented.** `agent import skill` / `agent import agent` adopt existing
   skill files/folders and instruction files (`AGENTS.md`, `CLAUDE.md`, Copilot, Gemini,
   Cursor, skill folders) into canonical `.agent/skills/`. Logic in
@@ -144,7 +150,18 @@ Specs live under `.ai-agent/features/`. Status:
   `AgentSync.Ui.Web/ViewModels/*` (testable); no repository logic lives in Razor
   components. Static files are served with `app.MapStaticAssets()` (required so
   `_framework/blazor.web.js` and the FluentUI `_content/...` assets resolve in a published
-  host; `UseStaticFiles()` 404s them). **GUI packaging is implemented**: a separate
+  host; `UseStaticFiles()` 404s them), and the host pins its content root to
+  `AppContext.BaseDirectory` (the executable's directory) rather than the current working
+  directory — `agent ui` runs the host inside the user's repo, and the default (CWD-based)
+  content root made `MapStaticAssets` find no `wwwroot`/manifest and serve empty `200`s.
+  `App.razor` also links the Blazor CSS-isolation bundle `@Assets["AgentSync.Ui.styles.css"]`,
+  which `@import`s the FluentUI component CSS — without it the FluentUI components render
+  unstyled. `MainLayout.razor` is a custom app shell (dark header/nav rail, light content,
+  footer, live drift-status pill) styled by a global `wwwroot/app.css`. The UI deliberately
+  avoids both `<FluentDesignTheme>` (its JS interop crashes the Interactive Server circuit,
+  killing all button interactivity) and the heavy
+  `Microsoft.FluentUI.AspNetCore.Components.Icons` package.
+  **GUI packaging is implemented**: a separate
   `release-ui` job publishes `agent-sync-ui-<tag>-<rid>` archives independently of the CLI
   release and also packs/pushes the `AgentSync.Ui` .NET tool (command `agent-sync-ui`)
   (`features/UI_LOCALHOST_BLAZOR.md`, Milestone UI-3).
@@ -244,11 +261,20 @@ pre-commit hook running Agent Sync, manual-edit drift detection in `AGENTS.md`, 
 commit being **blocked** by the hook when drift exists. See
 `.ai-agent/VALIDATION_LOG.md`. The published releases through `v0.1.0-alpha.4` were
 CLI-focused (`alpha.4` added the `AgentSync` / `AgentSync.Git` NuGet tools); `v0.2.0-alpha.1`
-was the first to ship imports, CRUD, `agent ui`, and the localhost UI; the next release,
-`v0.2.0-alpha.2`, makes `agent ui` self-installing (auto-installs the UI — the `AgentSync.Ui`
-.NET tool or a release-archive download), ships the UI as a `dotnet tool`, and fixes the web
-UI's static-asset 404s via `MapStaticAssets`. More real-world testing on Linux/macOS is
-still needed.
+was the first to ship imports, CRUD, `agent ui`, and the localhost UI; `v0.2.0-alpha.2`
+made `agent ui` self-installing (auto-installs the UI — the `AgentSync.Ui` .NET tool or a
+release-archive download), shipped the UI as a `dotnet tool`, and switched the host to
+`MapStaticAssets` — which fixed the asset `404`s but **not** the empty asset bodies, so the
+UI still loaded without CSS/JS. The next release, `v0.2.0-alpha.3`, fixes that: the host now
+pins its content root to `AppContext.BaseDirectory` (the executable's own directory) instead
+of the current working directory, so `MapStaticAssets` finds `wwwroot`/the static-web-assets
+manifest and serves real asset bytes even though `agent ui` launches it inside the user's
+repo. `alpha.3` also links the FluentUI CSS-isolation bundle in `App.razor` and adds a
+custom app shell (`wwwroot/app.css`), so the UI — which previously rendered as bare, unstyled
+HTML — now looks styled, and removes `<FluentDesignTheme>` (its JS interop crashed the
+Interactive Server circuit and left every button dead). It also makes `agent init` scaffold a
+second skill, `using-agent-sync` (`claude_skill`-only), that teaches AI agents how to handle
+an Agent Sync repo. More real-world testing on Linux/macOS is still needed.
 
 ### Releases
 

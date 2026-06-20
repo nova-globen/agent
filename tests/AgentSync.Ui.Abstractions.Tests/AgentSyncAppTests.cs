@@ -46,7 +46,7 @@ public sealed class AgentSyncAppTests : IDisposable
         var state = app.GetState();
 
         Assert.True(state.Initialized);
-        Assert.Equal(1, state.SkillCount);
+        Assert.Equal(2, state.SkillCount);
     }
 
     [Fact]
@@ -56,8 +56,10 @@ public sealed class AgentSyncAppTests : IDisposable
 
         var skills = app.ListSkills();
 
-        Assert.Single(skills);
+        // init scaffolds two skills: code-review and using-agent-sync (ordered by id).
+        Assert.Equal(2, skills.Count);
         Assert.Equal("code-review", skills[0].Id);
+        Assert.Equal("using-agent-sync", skills[1].Id);
     }
 
     [Fact]

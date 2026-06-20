@@ -5,16 +5,26 @@ Compact handoff for AI sessions. Pair with `.ai-agent/NEXT_STEPS.md` and
 
 ## Release
 
-- **Latest tagged release:** `v0.2.0-alpha.1` — the first release to ship the import +
-  CRUD commands, `agent ui`, the localhost Blazor UI, and the separate UI release
-  artifacts. The earlier `v0.1.0-alpha.1…alpha.4` were CLI-focused (`alpha.4` added the
+- **Latest tagged release:** `v0.2.0-alpha.2` — made `agent ui` self-installing (installs
+  the optional UI on first run: the `AgentSync.Ui` .NET tool when a `dotnet` SDK is present,
+  otherwise the matching release archive), shipped the UI as a `dotnet tool`, and switched
+  the host to `MapStaticAssets`. That cleared the asset `404`s but **not** the empty asset
+  bodies, so the UI still came up with no CSS/JS. The earlier `v0.2.0-alpha.1` first shipped
+  the import + CRUD commands, `agent ui`, the localhost Blazor UI, and the separate UI
+  release artifacts; `v0.1.0-alpha.1…alpha.4` were CLI-focused (`alpha.4` added the
   `AgentSync` / `AgentSync.Git` NuGet tools; `alpha.2` was a version-only retag of
   `alpha.1`).
-- **Next intended release:** `v0.2.0-alpha.2` — makes `agent ui` self-installing: it
-  installs the optional UI on first run (the `AgentSync.Ui` .NET tool when a `dotnet` SDK is
-  present, otherwise by downloading the matching release archive), ships the UI as a
-  `dotnet tool`, and fixes the web UI's static-asset 404s (CSS/JS now load) by serving
-  assets with `MapStaticAssets`. Tag `v0.2.0-alpha.2` is pushed to cut it.
+- **Next intended release:** `v0.2.0-alpha.3` — makes the web UI usable. (a) The host pins
+  its content root to `AppContext.BaseDirectory` (the executable's own directory) instead of
+  the current working directory, so `MapStaticAssets` finds `wwwroot`/the static-web-assets
+  manifest even though `agent ui` launches the host inside the user's repo (the default CWD
+  content root made it serve empty `200`s — assets returned but blank). (b) `App.razor` links
+  the FluentUI CSS-isolation bundle and `MainLayout.razor` adds a custom app shell
+  (`wwwroot/app.css`), so the UI — previously bare, unstyled HTML — now renders styled. (c) It
+  removes `<FluentDesignTheme>`, whose JS interop crashed the Interactive Server circuit and
+  left every button dead. It also makes `agent init` scaffold a second skill, `using-agent-sync`
+  (a `claude_skill`-only guide teaching AI agents how to handle an Agent Sync repo). Push tag
+  `v0.2.0-alpha.3` to cut it.
 - **Release type:** public alpha / developer preview
 - **Repository:** https://github.com/nova-globen/agent (default branch `master`)
 
@@ -38,8 +48,14 @@ Compact handoff for AI sessions. Pair with `.ai-agent/NEXT_STEPS.md` and
   archive extracted under `~/.agent-sync/ui/`), only exiting 3 with install guidance when
   installation fails. The host binds `127.0.0.1`, exchanges the token into an HttpOnly
   cookie and strips it from the URL on first use, and serves static assets with
-  `app.MapStaticAssets()` (so `_framework/blazor.web.js` and the FluentUI `_content/...`
-  assets load instead of 404ing). All screens are wired with mutations; file-writing actions
+  `app.MapStaticAssets()` while pinning its content root to `AppContext.BaseDirectory` (not
+  the CWD) — so `_framework/blazor.web.js` and the FluentUI `_content/...` assets load with
+  real bytes instead of 404ing or returning empty `200`s, even though `agent ui` runs the
+  host inside the user's repo. `App.razor` links the FluentUI CSS-isolation bundle
+  (`AgentSync.Ui.styles.css`) and `MainLayout.razor` is a custom app shell styled by a global
+  `wwwroot/app.css` (dark header/nav rail, light content, live drift-status pill), so the
+  components render styled (no `FluentDesignTheme` — its JS interop crashed the circuit; no
+  Icons package — kept lean). All screens are wired with mutations; file-writing actions
   use explicit submit buttons and destructive ones (delete, force sync, install hooks)
   require a second confirmation. The CLI never references the UI/web/FluentUI assemblies
   (`UiInstaller` lives in Core; test-guarded). **Separate GUI release packaging is
@@ -47,7 +63,11 @@ Compact handoff for AI sessions. Pair with `.ai-agent/NEXT_STEPS.md` and
   `AgentSync.Ui` .NET tool — see "Release automation".
 - **Tests:** all suites pass; run `dotnet test` for the current count.
   `dotnet build -c Release` clean. `scripts/release-smoke.sh` also validates UI packaging
-  headlessly (publish shape, invalid-args usage, live `/healthz` + `401`).
+  headlessly (publish shape, invalid-args usage, live `/healthz` + `401`, and — launching
+  the UI from a foreign working directory — a **non-empty** static-asset body and a rendered
+  page that **links the FluentUI CSS bundle**, guarding the content-root and styling fixes).
+- **`agent init` scaffolds two skills:** `code-review` (all targets) and `using-agent-sync`
+  (`claude_skill`-only). Templates in `src/AgentSync.Core/Templates.cs`.
 - **Release automation:** `.github/workflows/release.yml` (tag `v*.*.*`) publishes
   self-contained CLI binaries for linux-x64/arm64, osx-x64/arm64, win-x64, plus
   `checksums.txt`; `scripts/install.sh` and `scripts/install.ps1` install from releases.

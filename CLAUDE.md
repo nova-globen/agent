@@ -18,13 +18,25 @@ Repository: https://github.com/nova-globen/agent
 ## Current status
 
 - **Alpha / developer preview.** Core workflow works end to end; surface may still change.
-- **Release version:** the next intended release is `0.2.0-alpha.2` — it makes `agent ui`
-  self-installing (auto-installs the optional UI on first run: the `AgentSync.Ui` .NET tool
-  when a `dotnet` SDK is present, otherwise the matching release archive), ships the UI as
-  a `dotnet tool`, and fixes the web UI's static-asset 404s (CSS/JS now load) via
-  `MapStaticAssets`. The prior tag `0.2.0-alpha.1` shipped the import/CRUD/`agent ui`/
-  localhost-UI wave and the separate UI release artifacts. The earlier
-  `0.1.0-alpha.1`…`0.1.0-alpha.4` were CLI binaries + NuGet tools only: `alpha.4` introduced
+- **Release version:** the next intended release is `0.2.0-alpha.3` — it makes the local
+  web UI actually usable: (a) it pins the host's content root to the executable's base
+  directory instead of the current working directory (`agent ui` launches the host with the
+  working directory set to the user's repo, and the previous default content root meant
+  `MapStaticAssets` could not find `wwwroot`/the static-web-assets manifest and served empty
+  `200`s), (b) it links the FluentUI CSS-isolation bundle in `App.razor` and adds a custom
+  app shell (`wwwroot/app.css`), so the previously unstyled UI now renders with real styling,
+  and (c) it removes `<FluentDesignTheme>`, whose JS interop crashed the Interactive Server
+  circuit and made every button dead. It also makes `agent init` scaffold a second skill,
+  `using-agent-sync`, that
+  teaches AI agents how to handle an Agent Sync repo (it targets `claude_skill` only, so it
+  lands in `.claude/skills/` and never bloats AGENTS.md/CLAUDE.md). The prior tag
+  `0.2.0-alpha.2` made `agent ui` self-installing (auto-installs the optional UI on first
+  run: the `AgentSync.Ui` .NET tool when a `dotnet` SDK is present, otherwise the matching
+  release archive), shipped the UI as a `dotnet tool`, and switched the host to
+  `MapStaticAssets` — necessary but, on its own, insufficient: the content-root bug fixed in
+  `alpha.3` still left the UI without CSS/JS. The earlier tag `0.2.0-alpha.1` shipped the
+  import/CRUD/`agent ui`/localhost-UI wave and the separate UI release artifacts. The
+  earlier `0.1.0-alpha.1`…`0.1.0-alpha.4` were CLI binaries + NuGet tools only: `alpha.4` introduced
   the .NET tool packages (`AgentSync` / `AgentSync.Git`) on NuGet; `alpha.3` published the
   GitHub Release binaries but its NuGet push did not clear validation; `alpha.2` was a
   version-only retag of `alpha.1`. Local dev builds report the base `Version` from
@@ -38,6 +50,13 @@ Specs live under `.ai-agent/features/` (`IMPORTS.md`, `CRUD_COMMANDS.md`,
 
 **Implemented:**
 
+- **`agent init` scaffolds two skills** — the default `code-review` skill (all targets)
+  **and** `using-agent-sync`, a guide that teaches AI agents how to handle an Agent Sync
+  repo (edit canonical `.agent/` sources, run `agent sync`, never hand-edit generated
+  projections). `using-agent-sync` enables `claude_skill` **only** (see its `skill.yaml`),
+  so it projects to `.claude/skills/using-agent-sync/SKILL.md` and never touches the
+  always-loaded AGENTS.md/CLAUDE.md. Both templates live in `src/AgentSync.Core/Templates.cs`
+  and are written by `InitService`.
 - **Import commands** — `agent import skill` and `agent import agent` adopt existing
   skill files/folders and instruction files (`AGENTS.md`, `CLAUDE.md`, Copilot, Gemini,
   Cursor, skill folders) into canonical `.agent/skills/`. Logic in
@@ -83,6 +102,31 @@ Specs live under `.ai-agent/features/` (`IMPORTS.md`, `CRUD_COMMANDS.md`,
   page with no CSS/JS. `App.razor` resolves fingerprinted assets via `@Assets[...]` (and an
   `<ImportMap />`); a `wwwroot/favicon.svg` is referenced so the browser stops requesting a
   missing `/favicon.ico`. Keep `MapStaticAssets`.
+- **Web UI FluentUI styling** — `App.razor` **must** link the Blazor CSS-isolation bundle
+  `@Assets["AgentSync.Ui.styles.css"]`. That bundle `@import`s the FluentUI Blazor component
+  CSS (`Microsoft.FluentUI.AspNetCore.Components.*.bundle.scp.css`); without the link the
+  FluentUI components (nav menu, cards, layout, type ramp) render as bare, unstyled HTML
+  even though `reboot.css` and the web-component JS load. `MainLayout.razor` provides a
+  **custom** app shell (dark header + nav rail, light content, footer, and a live drift-status
+  pill) styled by a global `wwwroot/app.css` (linked via `@Assets["app.css"]`); `NavMenu.razor`
+  is plain `NavLink`s. Do **not** add `<FluentDesignTheme>`: its `OnAfterRenderAsync` calls
+  `clearLocalStorage` over JS interop and throws `Cannot read properties of undefined`, which
+  **terminates the Interactive Server circuit** (the page prerenders fine but all buttons go
+  dead). The UI also does **not** reference the heavy
+  `Microsoft.FluentUI.AspNetCore.Components.Icons` package (no `FluentIcon`/`Icons.*` usage);
+  keep both out to keep the UI working and the tool/archive small. `scripts/release-smoke.sh`
+  asserts the rendered page links the bundle.
+- **Web UI content root** — `Program.cs` builds the host with
+  `WebApplicationOptions.ContentRootPath = AppContext.BaseDirectory`, **not** the default
+  (the current working directory). `agent ui` launches the host with the working directory
+  set to the user's repo, so with the default content root `MapStaticAssets` looks for
+  `wwwroot`/the `*.staticwebassets.endpoints.json` manifest inside that repo, finds nothing,
+  and serves **empty `200`s** for every asset (the page loads but has no CSS/JS — distinct
+  from the alpha.2 `MapStaticAssets` switch, which fixed `404`s but not these empties).
+  `AppContext.BaseDirectory` points at the executable's own directory for a normal build, a
+  single-file self-contained publish, and a `dotnet tool` install alike. Keep it pinned;
+  `scripts/release-smoke.sh` launches the UI from a foreign working directory and asserts a
+  non-empty asset body to guard this.
 
 The earlier MAUI/OpenMaui direction was **dropped**; the localhost web UI replaces it.
 Keep existing CLI behavior backward compatible; keep the CLI/`git-agent`/hooks/CI/
@@ -98,7 +142,7 @@ Keep existing CLI behavior backward compatible; keep the CLI/`git-agent`/hooks/C
 ## Core commands
 
 ```text
-agent init            # scaffold .agent/ (default code-review skill) and .githooks/
+agent init            # scaffold .agent/ (code-review + using-agent-sync skills) and .githooks/
 agent sync            # write missing/outdated projections (--check, --write, --force)
 agent status          # report state + drift (--json, --fail-on-drift, --ci)
 agent diff            # show canonical-to-projection differences

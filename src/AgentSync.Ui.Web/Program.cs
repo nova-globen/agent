@@ -10,7 +10,18 @@ if (!WebOptions.TryParse(args, out var options, out var error))
     return 2;
 }
 
-var builder = WebApplication.CreateBuilder(args);
+// Pin the content root to where this executable (and its wwwroot + the
+// `*.staticwebassets.endpoints.json` manifest) actually live, NOT the current working
+// directory. `agent ui` launches us with the working directory set to the user's repo
+// (via --repo), and the default content root is the CWD; MapStaticAssets would then look
+// for wwwroot/the manifest inside that repo, find nothing, and serve empty 200s for
+// _framework/_content assets (no CSS/JS). AppContext.BaseDirectory is correct for a normal
+// build, a single-file self-contained publish, and a `dotnet tool` install alike.
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    ContentRootPath = AppContext.BaseDirectory,
+});
 
 // Bind to loopback only on the chosen port. Never bind 0.0.0.0 (no remote exposure).
 builder.WebHost.UseUrls($"http://127.0.0.1:{options!.Port}");

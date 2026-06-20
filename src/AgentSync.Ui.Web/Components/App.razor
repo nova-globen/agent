@@ -7,6 +7,14 @@
     <title>Agent Sync</title>
     <link rel="icon" type="image/svg+xml" href="@Assets["favicon.svg"]" />
     <link rel="stylesheet" href="@Assets["_content/Microsoft.FluentUI.AspNetCore.Components/css/reboot.css"]" />
+    <!-- The Blazor CSS-isolation bundle. It @imports the FluentUI Blazor component CSS
+         (Microsoft.FluentUI.AspNetCore.Components.*.bundle.scp.css), so every FluentUI
+         component (nav menu, cards, layout, type ramp) is styled. Without this link the
+         components render as bare, unstyled HTML even though reboot.css and the web-component
+         JS load. Keep it. -->
+    <link rel="stylesheet" href="@Assets["AgentSync.Ui.styles.css"]" />
+    <!-- Application shell styling (header, nav rail, content frame, status pill). -->
+    <link rel="stylesheet" href="@Assets["app.css"]" />
     <ImportMap />
     <HeadOutlet @rendermode="InteractiveServer" />
 </head>

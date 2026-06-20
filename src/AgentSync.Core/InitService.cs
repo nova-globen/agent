@@ -33,12 +33,20 @@ public sealed class InitService
         var defaultSkillDir = Path.Combine(_layout.SkillsDir, Templates.DefaultSkillId);
         Directory.CreateDirectory(defaultSkillDir);
 
+        // A second skill that teaches AI agents how to work with this Agent Sync repo.
+        // It projects to .claude/skills only (see its skill.yaml), so it never touches the
+        // always-loaded AGENTS.md/CLAUDE.md projections.
+        var usingSkillDir = Path.Combine(_layout.SkillsDir, Templates.UsingAgentSyncSkillId);
+        Directory.CreateDirectory(usingSkillDir);
+
         var results = new List<InitFileResult>
         {
             WriteFile(_layout.ConfigFile, Templates.AgentYaml, force),
             WriteFile(_layout.LockFile, Templates.LockJson, force),
             WriteFile(Path.Combine(defaultSkillDir, "skill.yaml"), Templates.DefaultSkillYaml, force),
             WriteFile(Path.Combine(defaultSkillDir, "SKILL.md"), Templates.DefaultSkillMarkdown, force),
+            WriteFile(Path.Combine(usingSkillDir, "skill.yaml"), Templates.UsingAgentSyncSkillYaml, force),
+            WriteFile(Path.Combine(usingSkillDir, "SKILL.md"), Templates.UsingAgentSyncSkillMarkdown, force),
             WriteFile(_layout.PreCommitHook, Templates.PreCommitHook, force, executable: true),
             WriteFile(_layout.PrePushHook, Templates.PrePushHook, force, executable: true),
         };

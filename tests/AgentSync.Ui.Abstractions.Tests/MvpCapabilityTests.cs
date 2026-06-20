@@ -39,7 +39,7 @@ public sealed class MvpCapabilityTests : IDisposable
         var app = Init();
         var state = app.GetState();
         Assert.True(state.Initialized);
-        Assert.Equal(1, state.SkillCount);
+        Assert.Equal(2, state.SkillCount);
     }
 
     [Fact]

@@ -13,6 +13,8 @@ public sealed class InitServiceTests
         Assert.True(File.Exists(Path.Combine(temp.Path, ".agent", "lock.json")));
         Assert.True(File.Exists(Path.Combine(temp.Path, ".agent", "skills", "code-review", "skill.yaml")));
         Assert.True(File.Exists(Path.Combine(temp.Path, ".agent", "skills", "code-review", "SKILL.md")));
+        Assert.True(File.Exists(Path.Combine(temp.Path, ".agent", "skills", "using-agent-sync", "skill.yaml")));
+        Assert.True(File.Exists(Path.Combine(temp.Path, ".agent", "skills", "using-agent-sync", "SKILL.md")));
         Assert.True(File.Exists(Path.Combine(temp.Path, ".githooks", "pre-commit")));
         Assert.True(File.Exists(Path.Combine(temp.Path, ".githooks", "pre-push")));
 
