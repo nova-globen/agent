@@ -106,7 +106,8 @@ scripts/release-smoke.sh   # publishes both binaries; checks git-agent delegatio
 - Tag-driven: pushing `v*.*.*` runs `.github/workflows/release.yml`, which publishes
   self-contained `agent`/`git-agent` for linux-x64, linux-arm64, osx-x64, osx-arm64,
   win-x64, generates `checksums.txt`, and creates the GitHub Release via `gh`. Follow
-  `RELEASE_CHECKLIST.md`.
+  `RELEASE_CHECKLIST.md`. To cut a release step by step (confirm version, bump it across the
+  whole solution, commit), use the **`releasing-agent-sync`** skill.
 - .NET tool packages: `src/AgentSync.Cli` packs as `AgentSync` (command `agent`) and
   `src/AgentSync.GitAgent` packs as `AgentSync.Git` (command `git-agent`); the UI packs as
   `AgentSync.Ui` (command `agent-sync-ui`). Pushed to NuGet via Trusted Publishing. The

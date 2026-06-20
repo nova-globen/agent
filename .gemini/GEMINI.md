@@ -106,7 +106,7 @@ managed in full and detect manual edits via the lockfile hash instead of markers
 marker syntax is documented in `.agent/PRODUCT_SPEC.md`.
 <!-- agent-sync:end -->
 
-<!-- agent-sync:start id=agent-sync-maintainer target=gemini hash=sha256:923411267295f8fee707e34a620080e926cc44acf28e2c6740238cfc7a482fe2 -->
+<!-- agent-sync:start id=agent-sync-maintainer target=gemini hash=sha256:b39b661dccba48d0d1af20f1718747e94e16cf34dbbac8525a28bec00ab46650 -->
 ## Agent Sync Maintainer
 
 How to work on the Agent Sync codebase — invariants you must not break, build/test commands, project layout, key design points, and the release process. Use when implementing features or fixes, updating adapters, adjusting drift detection, or preparing a release.
@@ -219,7 +219,8 @@ scripts/release-smoke.sh   # publishes both binaries; checks git-agent delegatio
 - Tag-driven: pushing `v*.*.*` runs `.github/workflows/release.yml`, which publishes
   self-contained `agent`/`git-agent` for linux-x64, linux-arm64, osx-x64, osx-arm64,
   win-x64, generates `checksums.txt`, and creates the GitHub Release via `gh`. Follow
-  `RELEASE_CHECKLIST.md`.
+  `RELEASE_CHECKLIST.md`. To cut a release step by step (confirm version, bump it across the
+  whole solution, commit), use the **`releasing-agent-sync`** skill.
 - .NET tool packages: `src/AgentSync.Cli` packs as `AgentSync` (command `agent`) and
   `src/AgentSync.GitAgent` packs as `AgentSync.Git` (command `git-agent`); the UI packs as
   `AgentSync.Ui` (command `agent-sync-ui`). Pushed to NuGet via Trusted Publishing. The

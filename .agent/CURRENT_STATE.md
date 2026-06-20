@@ -81,7 +81,8 @@ Compact handoff for AI sessions. Pair with `.agent/NEXT_STEPS.md` and
 - **This repo now dogfoods Agent Sync.** Its agent instruction files — `AGENTS.md`,
   `CLAUDE.md`, `.github/copilot-instructions.md`, `.gemini/GEMINI.md`, and the
   `.claude/skills/` folders — are generated projections of the canonical skills under
-  `.agent/skills/` (`agent-sync-overview`, `agent-sync-maintainer`, `using-agent-sync`).
+  `.agent/skills/` (`agent-sync-overview`, `agent-sync-maintainer`, `using-agent-sync`,
+  `releasing-agent-sync`).
   Edit the skill, run `agent sync`, and commit the regenerated projections together; never
   hand-edit a generated section (the Git hooks and CI enforce it). The planning/spec docs
   (this file, `NEXT_STEPS.md`, `PRODUCT_SPEC.md`, `ARCHITECTURE.md`, `features/`, `prompts/`,

@@ -1,0 +1,20 @@
+id: releasing-agent-sync
+name: Releasing Agent Sync
+description: Cut a release of Agent Sync — confirm the next version with the user, bump the version across the whole solution (canonical skills + sync, Directory.Build.props, docs, README, examples), commit with no AI trailer, then hand the push/tag steps back to the user. Use when asked to cut, prepare, or ship a release or a new version.
+version: 0.1.0
+
+targets:
+  agents_md:
+    enabled: false
+  claude_md:
+    enabled: false
+  cursor:
+    enabled: false
+  copilot:
+    enabled: false
+  gemini:
+    enabled: false
+  openai_skill:
+    enabled: false
+  claude_skill:
+    enabled: true
