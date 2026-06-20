@@ -7,7 +7,7 @@ from the canonical skills under `.agent/skills/` — do not edit them by hand; e
 and run `agent sync`. For deeper detail, read `AGENTS.md` (imported above) and the specs
 under `.agent/` (`CURRENT_STATE.md`, `NEXT_STEPS.md`, `PRODUCT_SPEC.md`, `ARCHITECTURE.md`).
 
-<!-- agent-sync:start id=agent-sync-overview target=claude_md hash=sha256:59dc609f5ff841ff20f153ee79551d81064377ec1dd239d42ca5cfc3d15941bd -->
+<!-- agent-sync:start id=agent-sync-overview target=claude_md hash=sha256:e5f7a7b8497d89c1720bea589803d061075435f756dd24aefae512d806f6469f -->
 ## Agent Sync Overview
 
 What Agent Sync is, the product shape it must keep, its CLI commands, and how drift detection works. Read this first when orienting in this repository.
@@ -26,9 +26,11 @@ agent files that slowly diverge. Repository: https://github.com/nova-globen/agen
 ## Status
 
 - **Alpha / developer preview.** The core workflow works end to end; the surface may still
-  change. Current release line: `v0.2.0-alpha.3` (imports, CRUD, `agent ui` and the
-  localhost web UI). Target framework: **.NET 10** (`net10.0`). The full release history and
-  current-state notes live under `.agent/CURRENT_STATE.md` and `.agent/NEXT_STEPS.md`.
+  change. Current release line: `v0.2.0-alpha.4` (imports, CRUD, `agent ui` and the
+  localhost web UI; the repo now runs Agent Sync on itself, ships GitHub Actions / Azure
+  Pipelines CI examples, and includes marker round-trip and `sync --force` fixes). Target
+  framework: **.NET 10** (`net10.0`). The full release history and current-state notes live
+  under `.agent/CURRENT_STATE.md` and `.agent/NEXT_STEPS.md`.
 
 ## Core product invariant
 

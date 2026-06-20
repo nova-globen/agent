@@ -29,31 +29,31 @@
       "skill": "agent-sync-overview",
       "target": "agents_md",
       "path": "AGENTS.md",
-      "hash": "sha256:59dc609f5ff841ff20f153ee79551d81064377ec1dd239d42ca5cfc3d15941bd"
+      "hash": "sha256:e5f7a7b8497d89c1720bea589803d061075435f756dd24aefae512d806f6469f"
     },
     "agent-sync-overview/claude_md": {
       "skill": "agent-sync-overview",
       "target": "claude_md",
       "path": "CLAUDE.md",
-      "hash": "sha256:59dc609f5ff841ff20f153ee79551d81064377ec1dd239d42ca5cfc3d15941bd"
+      "hash": "sha256:e5f7a7b8497d89c1720bea589803d061075435f756dd24aefae512d806f6469f"
     },
     "agent-sync-overview/copilot": {
       "skill": "agent-sync-overview",
       "target": "copilot",
       "path": ".github/copilot-instructions.md",
-      "hash": "sha256:59dc609f5ff841ff20f153ee79551d81064377ec1dd239d42ca5cfc3d15941bd"
+      "hash": "sha256:e5f7a7b8497d89c1720bea589803d061075435f756dd24aefae512d806f6469f"
     },
     "agent-sync-overview/gemini": {
       "skill": "agent-sync-overview",
       "target": "gemini",
       "path": ".gemini/GEMINI.md",
-      "hash": "sha256:59dc609f5ff841ff20f153ee79551d81064377ec1dd239d42ca5cfc3d15941bd"
+      "hash": "sha256:e5f7a7b8497d89c1720bea589803d061075435f756dd24aefae512d806f6469f"
     },
     "agent-sync-overview/claude_skill": {
       "skill": "agent-sync-overview",
       "target": "claude_skill",
       "path": ".claude/skills/agent-sync-overview/SKILL.md",
-      "hash": "sha256:0d9e65fa874dba037e07745850a9d66230a297a88ba56b03507744d53b0de80f"
+      "hash": "sha256:4f8f1ad6568e329ee0236af747929022be0d8a8541bc39cfdab7a185d1a2daea"
     },
     "using-agent-sync/claude_skill": {
       "skill": "using-agent-sync",

@@ -5,26 +5,27 @@ Compact handoff for AI sessions. Pair with `.agent/NEXT_STEPS.md` and
 
 ## Release
 
-- **Latest tagged release:** `v0.2.0-alpha.2` — made `agent ui` self-installing (installs
-  the optional UI on first run: the `AgentSync.Ui` .NET tool when a `dotnet` SDK is present,
-  otherwise the matching release archive), shipped the UI as a `dotnet tool`, and switched
-  the host to `MapStaticAssets`. That cleared the asset `404`s but **not** the empty asset
-  bodies, so the UI still came up with no CSS/JS. The earlier `v0.2.0-alpha.1` first shipped
-  the import + CRUD commands, `agent ui`, the localhost Blazor UI, and the separate UI
-  release artifacts; `v0.1.0-alpha.1…alpha.4` were CLI-focused (`alpha.4` added the
-  `AgentSync` / `AgentSync.Git` NuGet tools; `alpha.2` was a version-only retag of
-  `alpha.1`).
-- **Next intended release:** `v0.2.0-alpha.3` — makes the web UI usable. (a) The host pins
-  its content root to `AppContext.BaseDirectory` (the executable's own directory) instead of
-  the current working directory, so `MapStaticAssets` finds `wwwroot`/the static-web-assets
-  manifest even though `agent ui` launches the host inside the user's repo (the default CWD
-  content root made it serve empty `200`s — assets returned but blank). (b) `App.razor` links
-  the FluentUI CSS-isolation bundle and `MainLayout.razor` adds a custom app shell
-  (`wwwroot/app.css`), so the UI — previously bare, unstyled HTML — now renders styled. (c) It
-  removes `<FluentDesignTheme>`, whose JS interop crashed the Interactive Server circuit and
-  left every button dead. It also makes `agent init` scaffold a second skill, `using-agent-sync`
-  (a `claude_skill`-only guide teaching AI agents how to handle an Agent Sync repo). Push tag
-  `v0.2.0-alpha.3` to cut it.
+- **Latest tagged release:** `v0.2.0-alpha.3` — made the web UI usable: (a) the host pins its
+  content root to `AppContext.BaseDirectory` (the executable's own directory) so
+  `MapStaticAssets` finds `wwwroot`/the static-web-assets manifest even though `agent ui`
+  launches the host inside the user's repo (the default CWD content root served empty `200`s);
+  (b) `App.razor` links the FluentUI CSS-isolation bundle and `MainLayout.razor` adds a custom
+  app shell (`wwwroot/app.css`), so the previously unstyled UI renders styled; (c) it removes
+  `<FluentDesignTheme>`, whose JS interop crashed the Interactive Server circuit and left every
+  button dead. It also made `agent init` scaffold the `using-agent-sync` skill. The earlier
+  `v0.2.0-alpha.2` made `agent ui` self-installing and switched to `MapStaticAssets` (cleared
+  the asset `404`s but not the empty bodies); `v0.2.0-alpha.1` first shipped import + CRUD,
+  `agent ui`, the localhost Blazor UI, and the separate UI release artifacts;
+  `v0.1.0-alpha.1…alpha.4` were CLI-focused.
+- **Next intended release:** `v0.2.0-alpha.4` — the repository now **runs Agent Sync on
+  itself** (AGENTS.md, CLAUDE.md, the Copilot/Gemini files, and the `.claude/skills/` folders
+  are generated from canonical skills under `.agent/skills/`, gated by the Git hooks and a CI
+  drift check); the former `.ai-agent/` planning docs moved under `.agent/`. It adds
+  **GitHub Actions and Azure Pipelines CI examples** (`examples/`), a **`releasing-agent-sync`**
+  skill, and a README demo GIF. Fixes: marker bodies that document the marker syntax now
+  round-trip without false drift, and `sync --force` no longer reports a spurious skip / exits
+  non-zero after overwriting a hand-edited section; the web-host smoke test is async (clears
+  the `xUnit1031` warnings). Push tag `v0.2.0-alpha.4` to cut it.
 - **Release type:** public alpha / developer preview
 - **Repository:** https://github.com/nova-globen/agent (default branch `master`)
 
