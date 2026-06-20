@@ -36,7 +36,7 @@ public sealed class WebHostSmokeTests : IDisposable
     private static string HostDll
         => Path.Combine(AppContext.BaseDirectory, "agent-sync-ui.dll");
 
-    private HttpClient StartHostAndConnect()
+    private async Task<HttpClient> StartHostAndConnectAsync()
     {
         var psi = new ProcessStartInfo("dotnet")
         {
@@ -68,12 +68,12 @@ public sealed class WebHostSmokeTests : IDisposable
         {
             if (_host!.HasExited)
             {
-                Assert.Fail($"host exited early (code {_host.ExitCode}): {_host.StandardError.ReadToEnd()}");
+                Assert.Fail($"host exited early (code {_host.ExitCode}): {await _host.StandardError.ReadToEndAsync()}");
             }
 
             try
             {
-                using var r = client.GetAsync("/healthz").GetAwaiter().GetResult();
+                using var r = await client.GetAsync("/healthz");
                 if (r.IsSuccessStatusCode)
                 {
                     return client;
@@ -84,7 +84,7 @@ public sealed class WebHostSmokeTests : IDisposable
                 // not up yet
             }
 
-            Thread.Sleep(200);
+            await Task.Delay(200);
         }
 
         Assert.Fail("host did not become ready within 30s");
@@ -92,32 +92,32 @@ public sealed class WebHostSmokeTests : IDisposable
     }
 
     [Fact]
-    public void Host_EnforcesAuth_RedirectsTokenToCookie_AndRendersPages()
+    public async Task Host_EnforcesAuth_RedirectsTokenToCookie_AndRendersPages()
     {
-        using var client = StartHostAndConnect();
+        using var client = await StartHostAndConnectAsync();
 
         // /healthz is public.
-        using (var health = client.GetAsync("/healthz").GetAwaiter().GetResult())
+        using (var health = await client.GetAsync("/healthz"))
         {
             Assert.Equal(HttpStatusCode.OK, health.StatusCode);
-            Assert.Equal("ok", health.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+            Assert.Equal("ok", await health.Content.ReadAsStringAsync());
         }
 
         // No token, no cookie => 401.
-        using (var denied = client.GetAsync("/").GetAwaiter().GetResult())
+        using (var denied = await client.GetAsync("/"))
         {
             Assert.Equal(HttpStatusCode.Unauthorized, denied.StatusCode);
         }
 
         // Wrong token => 401.
-        using (var wrong = client.GetAsync("/?token=nope").GetAwaiter().GetResult())
+        using (var wrong = await client.GetAsync("/?token=nope"))
         {
             Assert.Equal(HttpStatusCode.Unauthorized, wrong.StatusCode);
         }
 
         // Valid token query => 302 to the same path with the token stripped + Set-Cookie.
         string cookie;
-        using (var auth = client.GetAsync($"/?token={_token}").GetAwaiter().GetResult())
+        using (var auth = await client.GetAsync($"/?token={_token}"))
         {
             Assert.Equal(HttpStatusCode.Redirect, auth.StatusCode);
             Assert.Equal("/", auth.Headers.Location!.ToString());
@@ -129,21 +129,21 @@ public sealed class WebHostSmokeTests : IDisposable
         }
 
         // With the cookie, the dashboard and other pages render their SSR HTML.
-        AssertPageRenders(client, "/", "Dashboard", cookie);
-        AssertPageRenders(client, "/skills", "Skills", cookie);
-        AssertPageRenders(client, "/imports", "Imports", cookie);
-        AssertPageRenders(client, "/targets", "Targets", cookie);
-        AssertPageRenders(client, "/status", "Status", cookie);
-        AssertPageRenders(client, "/diff", "Diff", cookie);
+        await AssertPageRendersAsync(client, "/", "Dashboard", cookie);
+        await AssertPageRendersAsync(client, "/skills", "Skills", cookie);
+        await AssertPageRendersAsync(client, "/imports", "Imports", cookie);
+        await AssertPageRendersAsync(client, "/targets", "Targets", cookie);
+        await AssertPageRendersAsync(client, "/status", "Status", cookie);
+        await AssertPageRendersAsync(client, "/diff", "Diff", cookie);
     }
 
-    private static void AssertPageRenders(HttpClient client, string path, string expected, string cookie)
+    private static async Task AssertPageRendersAsync(HttpClient client, string path, string expected, string cookie)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, path);
         request.Headers.Add("Cookie", cookie);
-        using var response = client.SendAsync(request).GetAwaiter().GetResult();
+        using var response = await client.SendAsync(request);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var body = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+        var body = await response.Content.ReadAsStringAsync();
         Assert.Contains(expected, body);
     }
 }
