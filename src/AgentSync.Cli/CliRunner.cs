@@ -393,8 +393,9 @@ public sealed class CliRunner
             return ExitCodes.DriftOrValidationFailed;
         }
 
-        // In write mode, manual edits we refused to overwrite are a problem.
-        if (!check && report.AnyManualEdits)
+        // In write mode, manual edits we refused to overwrite are a problem. Edits that
+        // --force rewrote are not — the projection is back in sync.
+        if (!check && report.AnySkippedManualEdits)
         {
             return ExitCodes.DriftOrValidationFailed;
         }
@@ -436,7 +437,7 @@ public sealed class CliRunner
             _out.WriteLine($"  {verb,-22} {o.Projection.RelativePath} ({o.Projection.TargetId})");
         }
 
-        if (report.AnyManualEdits)
+        if (report.AnySkippedManualEdits)
         {
             _out.WriteLine();
             _out.WriteLine("Some projections were manually edited and left untouched. Use --force to overwrite.");
@@ -451,6 +452,7 @@ public sealed class CliRunner
             dryRun = report.DryRun,
             anyChanges = report.AnyChanges,
             anyManualEdits = report.AnyManualEdits,
+            anySkippedManualEdits = report.AnySkippedManualEdits,
             outcomes = report.Outcomes.Select(o => new
             {
                 skill = o.Projection.SkillId,

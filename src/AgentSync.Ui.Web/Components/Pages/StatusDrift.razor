@@ -83,7 +83,7 @@
                     <FluentStack Orientation="Orientation.Vertical" VerticalGap="2">
                         <FluentLabel>
                             <strong>Sync:</strong> @(_vm.Sync.DryRun ? "dry run — " : "")@(_vm.Sync.ConfigValid ? "config valid" : "config invalid"),
-                            @(_vm.Sync.AnyChanges ? "changes applied" : "no changes")@(_vm.Sync.AnyManualEdits ? ", manual edits skipped" : "")
+                            @(_vm.Sync.AnyChanges ? "changes applied" : "no changes")@(_vm.Sync.AnySkippedManualEdits ? ", manual edits skipped" : "")
                         </FluentLabel>
                         @foreach (var outcome in _vm.Sync.Outcomes)
                         {

@@ -98,7 +98,7 @@ public sealed class MarkedDocument
                     SkillId = start.Groups["id"].Value,
                     TargetId = start.Groups["target"].Value,
                     DeclaredHash = start.Groups["hash"].Value,
-                    Body = StripSurroundingNewlines(rawBody),
+                    Body = Markers.UnescapeBody(StripSurroundingNewlines(rawBody)),
                 },
             });
 
@@ -156,7 +156,7 @@ public sealed class MarkedDocument
             {
                 sb.Append(Markers.RenderStart(s.SkillId, s.TargetId, s.DeclaredHash));
                 sb.Append('\n');
-                sb.Append(s.Body);
+                sb.Append(Markers.EscapeBody(s.Body));
                 sb.Append('\n');
                 sb.Append(Markers.End);
             }

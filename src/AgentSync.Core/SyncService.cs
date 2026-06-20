@@ -10,12 +10,19 @@ public sealed record SyncReport(
     IReadOnlyList<ApplyOutcome> Outcomes,
     bool DryRun)
 {
+    /// <summary>A manual edit was detected on a projection (whether or not it was
+    /// overwritten). With <c>--force</c> these are rewritten rather than skipped.</summary>
     public bool AnyManualEdits => Outcomes.Any(o => o.ManualEditDetected);
+
+    /// <summary>A manually edited projection was left untouched because <c>--force</c> was
+    /// not passed. This is the unresolved-problem case (forced edits are rewritten).</summary>
+    public bool AnySkippedManualEdits =>
+        Outcomes.Any(o => o.Change == ProjectionChange.SkippedManualEdit);
 
     public bool AnyChanges => Outcomes.Any(o =>
         o.Change is ProjectionChange.Created or ProjectionChange.Updated);
 
-    public bool HasProblems => !ConfigValid || AnyManualEdits;
+    public bool HasProblems => !ConfigValid || AnySkippedManualEdits;
 }
 
 /// <summary>
