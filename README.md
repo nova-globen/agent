@@ -116,7 +116,7 @@ curl -fsSL https://raw.githubusercontent.com/nova-globen/agent/master/scripts/in
 Install a specific version:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.sh | bash -s -- v0.2.0-alpha.4
+curl -fsSL https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.sh | bash -s -- v0.2.0-alpha.5
 ```
 
 By default this installs into `$HOME/.agent-sync/bin`. Override with
@@ -134,7 +134,7 @@ Prefer to review the script before running it (recommended):
 ```powershell
 irm https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.ps1 -OutFile install.ps1
 # review install.ps1, then:
-.\install.ps1            # or: .\install.ps1 -Version v0.2.0-alpha.4
+.\install.ps1            # or: .\install.ps1 -Version v0.2.0-alpha.5
 ```
 
 Override the Windows install directory with `$env:AGENT_SYNC_INSTALL_DIR`. Installs
@@ -172,8 +172,8 @@ This produces a committed `.config/dotnet-tools.json`:
   "version": 1,
   "isRoot": true,
   "tools": {
-    "agentsync": { "version": "0.2.0-alpha.4", "commands": ["agent"] },
-    "agentsync.git": { "version": "0.2.0-alpha.4", "commands": ["git-agent"] }
+    "agentsync": { "version": "0.2.0-alpha.5", "commands": ["agent"] },
+    "agentsync.git": { "version": "0.2.0-alpha.5", "commands": ["git-agent"] }
   }
 }
 ```
@@ -205,7 +205,7 @@ git agent --version
 
 1. Go to the [GitHub Releases](https://github.com/nova-globen/agent/releases) page.
 2. Download the archive for your OS/architecture, e.g.
-   `agent-sync-v0.2.0-alpha.4-linux-x64.tar.gz` (or `...-win-x64.zip` on Windows).
+   `agent-sync-v0.2.0-alpha.5-linux-x64.tar.gz` (or `...-win-x64.zip` on Windows).
 3. Extract it.
 4. Put both `agent` and `git-agent` (or `agent.exe` and `git-agent.exe`) on your `PATH`.
 5. Verify:
@@ -291,8 +291,12 @@ agent sync            # write missing/outdated projections (--check, --write, --
 agent diff            # show canonical-to-projection differences
 agent validate        # validate config and skills
 agent import skill    # import an existing SKILL.md / skill folder into .agent/skills
+agent import agent    # import an existing instruction file/folder into canonical skills
+agent import subagent # import existing .claude/agents/*.md sub-agents into .agent/agents
 agent skill           # manage canonical skills: add | edit | delete | list | show
 agent target          # manage projection targets: add | edit | delete | list | show
+agent subagent        # manage canonical sub-agents: add | edit | delete | list | show
+agent sessions        # back up / restore agent session history: backup | restore | list | providers
 agent ui              # launch the optional local web UI (auto-installs it on first run)
 agent install-hooks   # configure core.hooksPath and make hooks executable
 agent doctor          # diagnose Git repo, PATH, hooks, and config
@@ -406,6 +410,55 @@ Target ids must be known adapter ids (`agents_md`, `claude_md`, `cursor`, `copil
 `gemini`, `openai_skill`, `claude_skill`) and paths must stay inside the repository.
 Edits round-trip `agent.yaml` through the parser, so hand-written comments in that file
 are not preserved.
+
+## Managing sub-agents
+
+Sub-agents (delegate agents such as Claude Code's `.claude/agents/*.md`) are managed the
+same canonical-once way as skills. Define one under `.agent/agents/<id>/` and project it:
+
+```bash
+agent subagent add reviewer \
+  --description "Reviews diffs for correctness bugs." \
+  --model sonnet --tools "Read, Grep, Glob"
+agent subagent list                     # or: agent subagents
+agent subagent show reviewer            # add --json for machine-readable output
+agent subagent edit reviewer --description "Reviews diffs and tests." --tool Bash
+agent subagent edit reviewer --body-file path/to/prompt.md
+agent subagent delete reviewer          # refused if projected; --force prunes the lockfile
+
+agent import subagent .claude/agents/reviewer.md   # import an existing sub-agent
+agent import subagent .claude/agents               # import a whole folder
+```
+
+`agent sync` projects each canonical sub-agent into a Claude Code sub-agent file
+(`.claude/agents/<id>.md`) with `name`/`description`/`tools`/`model` frontmatter, and
+`agent status` reports it as drift when it is missing, outdated, or manually edited — just
+like a skill projection. Sub-agent projections track their own hashes in
+`.agent/agents.lock.json`.
+
+## Backing up and restoring agent sessions
+
+`agent sessions` archives an AI agent's conversation history for the current project and
+restores it elsewhere — a different machine, OS, or project path. It understands Claude
+Code, OpenAI Codex, GitHub Copilot CLI, Gemini CLI, and Cursor.
+
+```bash
+agent sessions providers                       # list supported agents
+agent sessions list                            # per-agent session counts for this project
+agent sessions backup claude                   # -> agent-sessions-claude-<timestamp>.zip
+agent sessions backup codex --output codex.zip
+agent sessions restore agent-sessions-claude-*.zip            # into the current project
+agent sessions restore claude.zip --project /new/path --dry-run
+```
+
+The backup archive carries a manifest recording the source environment (OS, path style,
+home directory, project path). On restore, Agent Sync relocates the files to wherever the
+target agent expects them and **translates absolute paths** — both the storage location and
+the paths embedded inside the session files — across environments. A session captured on
+WSL at `/mnt/c/Users/you/proj` restores cleanly on Windows as `C:\Users\you\proj` (and
+vice-versa), with JSON contents kept valid. Restore never overwrites existing files unless
+you pass `--force`, and writes are confined to the agent's own directory under your home.
+Copilot, Gemini, and Cursor support is experimental (their on-disk layouts are less stable).
 
 ## Optional local web UI
 

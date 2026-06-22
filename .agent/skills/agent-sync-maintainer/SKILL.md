@@ -38,10 +38,15 @@ scripts/release-smoke.sh   # publishes both binaries; checks git-agent delegatio
 ## Projects
 
 - `src/AgentSync.Core` — all domain logic (config, skills, projections, adapters, drift,
-  services). Includes `Import/` (skill + agent import), `Authoring/` (skill + target CRUD
-  writers), `UiLauncher` (discovers/launches the external `agent-sync-ui`; no UI reference),
-  `UiInstaller` (installs the UI on demand via the `AgentSync.Ui` .NET tool or a
-  release-archive download), and `UiSession` (free port + session token).
+  services). Includes `Import/` (skill + agent + sub-agent import), `Authoring/` (skill +
+  target + sub-agent CRUD writers), `Subagents/` (canonical sub-agents under `.agent/agents/`
+  projected to `.claude/agents/<id>.md` via `SubagentProjector`, with their own
+  `agents.lock.json`), `Sessions/` (agent session backup/restore: `SessionProviderRegistry`
+  + per-agent providers, `PathConversion`/`PathRewriter` for WSL/Windows/Linux path
+  translation, `SessionBackupService`/`SessionRestoreService`), `UiLauncher`
+  (discovers/launches the external `agent-sync-ui`; no UI reference), `UiInstaller` (installs
+  the UI on demand via the `AgentSync.Ui` .NET tool or a release-archive download), and
+  `UiSession` (free port + session token).
 - `src/AgentSync.Cli` — the `agent` binary (`AssemblyName=agent`); logic lives in the
   public `CliRunner` so tests drive it without spawning a process.
 - `src/AgentSync.GitAgent` — the `git-agent` binary (`AssemblyName=git-agent`); its

@@ -7,7 +7,7 @@ from the canonical skills under `.agent/skills/` — do not edit them by hand; e
 and run `agent sync`. For deeper detail, read `AGENTS.md` (imported above) and the specs
 under `.agent/` (`CURRENT_STATE.md`, `NEXT_STEPS.md`, `PRODUCT_SPEC.md`, `ARCHITECTURE.md`).
 
-<!-- agent-sync:start id=agent-sync-overview target=claude_md hash=sha256:e5f7a7b8497d89c1720bea589803d061075435f756dd24aefae512d806f6469f -->
+<!-- agent-sync:start id=agent-sync-overview target=claude_md hash=sha256:8e43c5f8328d2791fe9be270c35e5a6c113954459bdb5398922de6d2fb8b2326 -->
 ## Agent Sync Overview
 
 What Agent Sync is, the product shape it must keep, its CLI commands, and how drift detection works. Read this first when orienting in this repository.
@@ -26,11 +26,13 @@ agent files that slowly diverge. Repository: https://github.com/nova-globen/agen
 ## Status
 
 - **Alpha / developer preview.** The core workflow works end to end; the surface may still
-  change. Current release line: `v0.2.0-alpha.4` (imports, CRUD, `agent ui` and the
-  localhost web UI; the repo now runs Agent Sync on itself, ships GitHub Actions / Azure
-  Pipelines CI examples, and includes marker round-trip and `sync --force` fixes). Target
-  framework: **.NET 10** (`net10.0`). The full release history and current-state notes live
-  under `.agent/CURRENT_STATE.md` and `.agent/NEXT_STEPS.md`.
+  change. Current release line: `v0.2.0-alpha.5` (adds `agent sessions` — back up / restore
+  an agent's session history across WSL / Windows / Linux with path translation — and
+  canonical sub-agents: `agent subagent` CRUD + `import subagent`, projected to
+  `.claude/agents/`; builds on imports, CRUD, `agent ui` and the localhost web UI, and the
+  repo running Agent Sync on itself). Target framework: **.NET 10** (`net10.0`). The full
+  release history and current-state notes live under `.agent/CURRENT_STATE.md` and
+  `.agent/NEXT_STEPS.md`.
 
 ## Core product invariant
 
@@ -62,10 +64,24 @@ agent doctor          # diagnose Git repo, PATH, hooks, config
 agent install-hooks   # set core.hooksPath=.githooks and make hooks executable
 agent import skill    # import a SKILL.md / skill folder into .agent/skills
 agent import agent    # import an existing instruction file/folder into canonical skills
+agent import subagent # import existing .claude/agents/*.md sub-agents into .agent/agents
 agent skill ...       # add | edit | delete | list | show  (alias: agent skills)
 agent target ...      # add | edit | delete | list | show  (alias: agent targets)
+agent subagent ...    # add | edit | delete | list | show  (alias: agent subagents)
+agent sessions ...    # backup | restore | list | providers — agent session history
 agent ui              # launch the optional local web UI (agent-sync-ui); auto-installs it on first run
 ```
+
+`agent subagent` manages canonical sub-agents under `.agent/agents/<id>/` (`agent.yaml` +
+`AGENT.md`); `agent sync` projects each one into a Claude Code sub-agent file
+(`.claude/agents/<id>.md`) and reports its drift like any other projection.
+
+`agent sessions backup <provider>` zips an agent's session history for the current project
+(Claude Code, Codex, Copilot, Gemini, Cursor) with a restore manifest; `agent sessions
+restore <archive>` replays it into the current environment, relocating the store and
+translating embedded paths across WSL / Windows / Linux (e.g. `/mnt/c/...` ⇄ `C:\...`) and a
+changed project path. Use `--project` to override the project directory and `--dry-run` to
+preview.
 
 Every command also works as `git agent <command>` (for example `git agent status`).
 
@@ -75,12 +91,17 @@ Every command also works as `git agent <command>` (for example `git agent status
 .agent/
   agent.yaml          # enabled targets and their paths
   lock.json           # recorded hash for each projection
+  agents.lock.json    # recorded hash for each sub-agent projection
   skills/
     <skill-id>/
       skill.yaml      # id, name, description, version, per-target enable flags
       SKILL.md        # the instruction body (no leading "# Name" heading)
       assets/
       scripts/
+  agents/
+    <subagent-id>/
+      agent.yaml      # id, name, description, optional model + tools allow-list
+      AGENT.md        # the sub-agent system prompt body
 ```
 
 Projection targets (each path is configurable in `agent.yaml`):
@@ -93,6 +114,7 @@ CLAUDE.md
 .gemini/GEMINI.md
 .chatgpt/skills/<skill-id>/SKILL.md
 .claude/skills/<skill-id>/SKILL.md
+.claude/agents/<subagent-id>.md     # from .agent/agents/ (sub-agents)
 ```
 
 ## Drift detection
@@ -117,7 +139,7 @@ managed in full and detect manual edits via the lockfile hash instead of markers
 marker syntax is documented in `.agent/PRODUCT_SPEC.md`.
 <!-- agent-sync:end -->
 
-<!-- agent-sync:start id=agent-sync-maintainer target=claude_md hash=sha256:b39b661dccba48d0d1af20f1718747e94e16cf34dbbac8525a28bec00ab46650 -->
+<!-- agent-sync:start id=agent-sync-maintainer target=claude_md hash=sha256:62410fca064e629185f6351135e41a64da1ff2d3ad7ec37e5991a4f35c3853b5 -->
 ## Agent Sync Maintainer
 
 How to work on the Agent Sync codebase — invariants you must not break, build/test commands, project layout, key design points, and the release process. Use when implementing features or fixes, updating adapters, adjusting drift detection, or preparing a release.
@@ -162,10 +184,15 @@ scripts/release-smoke.sh   # publishes both binaries; checks git-agent delegatio
 ## Projects
 
 - `src/AgentSync.Core` — all domain logic (config, skills, projections, adapters, drift,
-  services). Includes `Import/` (skill + agent import), `Authoring/` (skill + target CRUD
-  writers), `UiLauncher` (discovers/launches the external `agent-sync-ui`; no UI reference),
-  `UiInstaller` (installs the UI on demand via the `AgentSync.Ui` .NET tool or a
-  release-archive download), and `UiSession` (free port + session token).
+  services). Includes `Import/` (skill + agent + sub-agent import), `Authoring/` (skill +
+  target + sub-agent CRUD writers), `Subagents/` (canonical sub-agents under `.agent/agents/`
+  projected to `.claude/agents/<id>.md` via `SubagentProjector`, with their own
+  `agents.lock.json`), `Sessions/` (agent session backup/restore: `SessionProviderRegistry`
+  + per-agent providers, `PathConversion`/`PathRewriter` for WSL/Windows/Linux path
+  translation, `SessionBackupService`/`SessionRestoreService`), `UiLauncher`
+  (discovers/launches the external `agent-sync-ui`; no UI reference), `UiInstaller` (installs
+  the UI on demand via the `AgentSync.Ui` .NET tool or a release-archive download), and
+  `UiSession` (free port + session token).
 - `src/AgentSync.Cli` — the `agent` binary (`AssemblyName=agent`); logic lives in the
   public `CliRunner` so tests drive it without spawning a process.
 - `src/AgentSync.GitAgent` — the `git-agent` binary (`AssemblyName=git-agent`); its

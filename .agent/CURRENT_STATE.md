@@ -5,27 +5,28 @@ Compact handoff for AI sessions. Pair with `.agent/NEXT_STEPS.md` and
 
 ## Release
 
-- **Latest tagged release:** `v0.2.0-alpha.3` — made the web UI usable: (a) the host pins its
-  content root to `AppContext.BaseDirectory` (the executable's own directory) so
-  `MapStaticAssets` finds `wwwroot`/the static-web-assets manifest even though `agent ui`
-  launches the host inside the user's repo (the default CWD content root served empty `200`s);
-  (b) `App.razor` links the FluentUI CSS-isolation bundle and `MainLayout.razor` adds a custom
-  app shell (`wwwroot/app.css`), so the previously unstyled UI renders styled; (c) it removes
-  `<FluentDesignTheme>`, whose JS interop crashed the Interactive Server circuit and left every
-  button dead. It also made `agent init` scaffold the `using-agent-sync` skill. The earlier
-  `v0.2.0-alpha.2` made `agent ui` self-installing and switched to `MapStaticAssets` (cleared
-  the asset `404`s but not the empty bodies); `v0.2.0-alpha.1` first shipped import + CRUD,
-  `agent ui`, the localhost Blazor UI, and the separate UI release artifacts;
-  `v0.1.0-alpha.1…alpha.4` were CLI-focused.
-- **Next intended release:** `v0.2.0-alpha.4` — the repository now **runs Agent Sync on
+- **Latest tagged release:** `v0.2.0-alpha.4` — the repository now **runs Agent Sync on
   itself** (AGENTS.md, CLAUDE.md, the Copilot/Gemini files, and the `.claude/skills/` folders
   are generated from canonical skills under `.agent/skills/`, gated by the Git hooks and a CI
   drift check); the former `.ai-agent/` planning docs moved under `.agent/`. It adds
   **GitHub Actions and Azure Pipelines CI examples** (`examples/`), a **`releasing-agent-sync`**
   skill, and a README demo GIF. Fixes: marker bodies that document the marker syntax now
   round-trip without false drift, and `sync --force` no longer reports a spurious skip / exits
-  non-zero after overwriting a hand-edited section; the web-host smoke test is async (clears
-  the `xUnit1031` warnings). Push tag `v0.2.0-alpha.4` to cut it.
+  non-zero after overwriting a hand-edited section; the web-host smoke test is async. The
+  earlier `v0.2.0-alpha.3` made the web UI usable (content root pinned to
+  `AppContext.BaseDirectory`, FluentUI CSS-isolation bundle linked, `<FluentDesignTheme>`
+  removed); `v0.2.0-alpha.2` made `agent ui` self-installing; `v0.2.0-alpha.1` first shipped
+  import + CRUD, `agent ui`, and the localhost Blazor UI; `v0.1.0-alpha.1…alpha.4` were
+  CLI-focused.
+- **Next intended release:** `v0.2.0-alpha.5` — adds **`agent sessions`** (back up / restore
+  an AI agent's per-project session history for Claude Code, Codex, Copilot, Gemini, and
+  Cursor; manifest-driven zip archives; cross-environment restore that relocates the store and
+  translates absolute paths across WSL / Windows / Linux — `/mnt/c/...` ⇄ `C:\...` — and a
+  changed project path, keeping JSON valid; zip-slip-safe, never overwrites without `--force`)
+  and **canonical sub-agents** (`agent subagent add/edit/delete/list/show`, `agent import
+  subagent`; projected by `agent sync` into `.claude/agents/<id>.md` with drift in
+  `.agent/agents.lock.json`). Copilot/Gemini/Cursor session support is experimental. Push tag
+  `v0.2.0-alpha.5` to cut it.
 - **Release type:** public alpha / developer preview
 - **Repository:** https://github.com/nova-globen/agent (default branch `master`)
 
@@ -35,9 +36,17 @@ Compact handoff for AI sessions. Pair with `.agent/NEXT_STEPS.md` and
 - **Entry points:** `agent` (`src/AgentSync.Cli`) and `git-agent`
   (`src/AgentSync.GitAgent`, delegates to `AgentSync.Cli.CliRunner`).
 - **Commands implemented:** `init`, `sync`, `status`, `diff`, `validate`, `doctor`,
-  `install-hooks`, `import skill`, `import agent`, `skill add/edit/delete/list/show`,
-  `target add/edit/delete/list/show`, and `ui` — all available via both `agent` and
-  `git agent`.
+  `install-hooks`, `import skill`, `import agent`, `import subagent`,
+  `skill add/edit/delete/list/show`, `target add/edit/delete/list/show`,
+  `subagent add/edit/delete/list/show`, `sessions backup/restore/list/providers`, and `ui` —
+  all available via both `agent` and `git agent`.
+- **Sub-agents:** canonical sub-agents under `.agent/agents/<id>/` (`agent.yaml` + `AGENT.md`)
+  projected by `agent sync` into `.claude/agents/<id>.md`; drift tracked in
+  `.agent/agents.lock.json` (`AgentSync.Core/Subagents/`).
+- **Session backup/restore:** `AgentSync.Core/Sessions/` — provider registry (Claude, Codex,
+  Copilot, Gemini, Cursor), `PathConversion`/`PathRewriter` translate absolute paths across
+  WSL/Windows/Linux on restore, manifest-driven archives, zip-slip-safe extraction confined to
+  the agent's home directory.
 - **Local web UI (optional, separate):** `AgentSync.Ui.Web` (executable `agent-sync-ui`)
   is a localhost Blazor host (Interactive Server) using Microsoft FluentUI Blazor
   components, driving Agent Sync through `AgentSync.Ui.Abstractions` (`AgentSyncApp`).

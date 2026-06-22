@@ -128,7 +128,7 @@ optional product** and is **not** part of the CLI release described above:
 1. Ensure `main`/`master` is green (build + test CI passing).
 2. Update the version if needed in `Directory.Build.props` (`<Version>`).
 3. Create and push the tag. Replace `<tag>` with the release tag (example:
-   `v0.2.0-alpha.4`):
+   `v0.2.0-alpha.5`):
 
    ```bash
    git tag <tag>
@@ -169,8 +169,8 @@ optional product** and is **not** part of the CLI release described above:
 
 9. Verify the NuGet tool packages published and install cleanly (allow a few minutes
    for indexing). NuGet versions have no leading `v`, so tag `<tag>` maps to package
-   version `<version>` — for example, tag `v0.2.0-alpha.4` corresponds to package version
-   `0.2.0-alpha.4`:
+   version `<version>` — for example, tag `v0.2.0-alpha.5` corresponds to package version
+   `0.2.0-alpha.5`:
 
    ```bash
    dotnet tool install --global AgentSync --version <version>

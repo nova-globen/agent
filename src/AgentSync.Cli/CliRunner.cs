@@ -6,6 +6,8 @@ using AgentSync.Core.Configuration;
 using AgentSync.Core.Drift;
 using AgentSync.Core.Import;
 using AgentSync.Core.Projections;
+using AgentSync.Core.Sessions;
+using AgentSync.Core.Subagents;
 
 namespace AgentSync.Cli;
 
@@ -84,6 +86,9 @@ public sealed class CliRunner
             "skills" => RunSkillList(rest),
             "target" => RunTarget(rest),
             "targets" => RunTargetList(rest),
+            "subagent" => RunSubagent(rest),
+            "subagents" => RunSubagentList(rest),
+            "sessions" or "session" => RunSessions(rest),
             "ui" => RunUi(rest),
             "install-hooks" => RunInstallHooks(rest),
             "doctor" => RunDoctor(rest),
@@ -187,19 +192,43 @@ public sealed class CliRunner
 
         var root = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
         var report = new StatusService(root).Run();
+        var subDrift = new SubagentProjector(root).Detect();
 
         if (json)
         {
-            WriteStatusJson(root, report);
+            WriteStatusJson(root, report, subDrift);
         }
         else
         {
             WriteStatusHuman(root, report, ci);
+            WriteSubagentStatusHuman(subDrift);
         }
 
-        return failOnDrift && report.HasProblems
+        return failOnDrift && (report.HasProblems || subDrift.Count > 0)
             ? ExitCodes.DriftOrValidationFailed
             : ExitCodes.Success;
+    }
+
+    private void WriteSubagentStatusHuman(IReadOnlyList<SubagentDrift> drift)
+    {
+        if (drift.Count == 0)
+        {
+            return;
+        }
+
+        _out.WriteLine();
+        _out.WriteLine("Sub-agents:");
+        foreach (var d in drift)
+        {
+            var message = d.Kind switch
+            {
+                SubagentDriftKind.Missing => $"Missing projection {d.Path} (subagent {d.Id}). Run 'agent sync'.",
+                SubagentDriftKind.Outdated => $"Outdated projection {d.Path} (subagent {d.Id}). Run 'agent sync'.",
+                SubagentDriftKind.ManualEdit => $"Manually edited projection {d.Path} (subagent {d.Id}). Run 'agent sync --force'.",
+                _ => $"Lockfile references a sub-agent no longer defined: {d.Id} ({d.Path}).",
+            };
+            _out.WriteLine($"  [ERROR] {message}");
+        }
     }
 
     private void WriteStatusHuman(string root, StatusReport report, bool ci)
@@ -235,19 +264,25 @@ public sealed class CliRunner
         }
     }
 
-    private void WriteStatusJson(string root, StatusReport report)
+    private void WriteStatusJson(string root, StatusReport report, IReadOnlyList<SubagentDrift> subDrift)
     {
         var payload = new
         {
             repository = root,
             initialized = report.Initialized,
             skills = report.SkillCount,
-            hasProblems = report.HasProblems,
+            hasProblems = report.HasProblems || subDrift.Count > 0,
             issues = report.Issues.Select(i => new
             {
                 code = i.Code,
                 severity = i.Severity.ToString().ToLowerInvariant(),
                 message = i.Message,
+            }),
+            subagentDrift = subDrift.Select(d => new
+            {
+                id = d.Id,
+                path = d.Path,
+                kind = d.Kind.ToString(),
             }),
         };
         _out.WriteLine(JsonSerializer.Serialize(payload, JsonOptions));
@@ -342,6 +377,402 @@ public sealed class CliRunner
         return report.AllOk ? ExitCodes.Success : ExitCodes.EnvironmentProblem;
     }
 
+    // --- sessions -------------------------------------------------------------
+
+    private int RunSessions(string[] args)
+    {
+        if (args.Length == 0)
+        {
+            _err.WriteLine("error: 'sessions' requires a subcommand: backup | restore | list | providers.");
+            _err.WriteLine("Run 'agent --help' for usage.");
+            return ExitCodes.InvalidUsage;
+        }
+
+        var sub = args[0];
+        var rest = args.Skip(1).ToArray();
+        return sub switch
+        {
+            "backup" => RunSessionsBackup(rest),
+            "restore" => RunSessionsRestore(rest),
+            "list" or "ls" => RunSessionsList(rest),
+            "providers" => RunSessionsProviders(rest),
+            _ => UnknownSubcommand("sessions", sub),
+        };
+    }
+
+    private int RunSessionsBackup(string[] args)
+    {
+        string? provider = null;
+        string? project = null;
+        string? output = null;
+        var json = false;
+
+        for (var i = 0; i < args.Length; i++)
+        {
+            var arg = args[i];
+            switch (arg)
+            {
+                case "--project":
+                    if (!TryValue(args, ref i, "--project", out project)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--output":
+                case "-o":
+                    if (!TryValue(args, ref i, "--output", out output)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--json":
+                    json = true;
+                    break;
+                default:
+                    if (arg.StartsWith('-')) return UnknownOption("sessions backup", arg);
+                    if (provider is not null) { _err.WriteLine($"error: unexpected argument '{arg}'."); return ExitCodes.InvalidUsage; }
+                    provider = arg;
+                    break;
+            }
+        }
+
+        if (provider is null)
+        {
+            _err.WriteLine("error: 'sessions backup' requires a <provider>. Run 'agent sessions providers' to list them.");
+            return ExitCodes.InvalidUsage;
+        }
+
+        var resolved = SessionProviderRegistry.Default.Resolve(provider);
+        if (resolved is null)
+        {
+            return UnknownProvider(provider);
+        }
+
+        var env = SessionEnvironment.Current();
+        var projectPath = ResolveProjectPath(project);
+        var now = DateTimeOffset.Now;
+        var outputPath = Path.GetFullPath(output ?? SessionBackupService.DefaultOutputName(resolved.Id, now), _workingDirectory);
+
+        SessionBackupReport report;
+        try
+        {
+            report = new SessionBackupService().Run(resolved, env, projectPath, outputPath, GetVersion(), now);
+        }
+        catch (Exception ex)
+        {
+            _err.WriteLine($"error: {ex.Message}");
+            return ExitCodes.UnexpectedError;
+        }
+
+        if (json)
+        {
+            _out.WriteLine(JsonSerializer.Serialize(new
+            {
+                provider = report.Provider,
+                projectPath = report.ProjectPath,
+                output = report.OutputPath,
+                fileCount = report.FileCount,
+                totalBytes = report.TotalBytes,
+                experimental = report.Experimental,
+                files = report.Files,
+            }, JsonOptions));
+        }
+        else if (report.IsEmpty)
+        {
+            _out.WriteLine($"No {resolved.DisplayName} sessions found for {projectPath}.");
+            if (resolved.Experimental)
+            {
+                _out.WriteLine($"note: {resolved.DisplayName} support is experimental; its on-disk layout may differ.");
+            }
+        }
+        else
+        {
+            _out.WriteLine($"Backed up {report.FileCount} {resolved.DisplayName} session file(s) ({FormatBytes(report.TotalBytes)})");
+            _out.WriteLine($"  project: {projectPath}");
+            _out.WriteLine($"  archive: {report.OutputPath}");
+            if (resolved.Experimental)
+            {
+                _out.WriteLine($"  note: {resolved.DisplayName} support is experimental; verify the archive contents.");
+            }
+        }
+
+        return ExitCodes.Success;
+    }
+
+    private int RunSessionsRestore(string[] args)
+    {
+        string? archive = null;
+        string? project = null;
+        string? provider = null;
+        var dryRun = false;
+        var force = false;
+        var json = false;
+
+        for (var i = 0; i < args.Length; i++)
+        {
+            var arg = args[i];
+            switch (arg)
+            {
+                case "--project":
+                    if (!TryValue(args, ref i, "--project", out project)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--provider":
+                    if (!TryValue(args, ref i, "--provider", out provider)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--dry-run":
+                    dryRun = true;
+                    break;
+                case "--force":
+                    force = true;
+                    break;
+                case "--json":
+                    json = true;
+                    break;
+                default:
+                    if (arg.StartsWith('-')) return UnknownOption("sessions restore", arg);
+                    if (archive is not null) { _err.WriteLine($"error: unexpected argument '{arg}'."); return ExitCodes.InvalidUsage; }
+                    archive = arg;
+                    break;
+            }
+        }
+
+        if (archive is null)
+        {
+            _err.WriteLine("error: 'sessions restore' requires an <archive>.");
+            return ExitCodes.InvalidUsage;
+        }
+
+        if (provider is not null && SessionProviderRegistry.Default.Resolve(provider) is null)
+        {
+            return UnknownProvider(provider);
+        }
+
+        var env = SessionEnvironment.Current();
+        var projectPath = ResolveProjectPath(project);
+        var archivePath = Path.GetFullPath(archive, _workingDirectory);
+
+        SessionRestoreReport report;
+        try
+        {
+            report = new SessionRestoreService().Run(archivePath, env, projectPath, force, dryRun, provider);
+        }
+        catch (SessionException ex)
+        {
+            _err.WriteLine($"error: {ex.Message}");
+            return ExitCodes.InvalidUsage;
+        }
+        catch (Exception ex)
+        {
+            _err.WriteLine($"error: {ex.Message}");
+            return ExitCodes.UnexpectedError;
+        }
+
+        if (json)
+        {
+            _out.WriteLine(JsonSerializer.Serialize(new
+            {
+                provider = report.Provider,
+                destProjectPath = report.DestProjectPath,
+                dryRun = report.DryRun,
+                pathsTranslated = report.PathsTranslated,
+                written = report.Written,
+                skipped = report.Skipped,
+                source = new
+                {
+                    platform = report.Source.Platform,
+                    pathStyle = report.Source.PathStyle,
+                    projectPath = report.Source.ProjectPath,
+                    homeDirectory = report.Source.HomeDirectory,
+                },
+                items = report.Items.Select(it => new
+                {
+                    path = it.ArchivePath,
+                    dest = it.DestPath,
+                    action = it.Action.ToString(),
+                    rewritten = it.Rewritten,
+                }),
+            }, JsonOptions));
+            return ExitCodes.Success;
+        }
+
+        _out.WriteLine(report.DryRun ? "Agent Sync sessions restore (dry-run)" : "Agent Sync sessions restore");
+        _out.WriteLine();
+        _out.WriteLine($"  provider: {report.Provider}");
+        _out.WriteLine($"  from:     {report.Source.ProjectPath} ({report.Source.Platform}/{report.Source.PathStyle})");
+        _out.WriteLine($"  to:       {report.DestProjectPath}");
+        if (report.PathsTranslated)
+        {
+            _out.WriteLine("  paths:    embedded paths translated for this environment");
+        }
+
+        _out.WriteLine();
+        foreach (var item in report.Items)
+        {
+            var verb = item.Action switch
+            {
+                RestoreAction.Written => report.DryRun ? "would write" : "written",
+                RestoreAction.Overwritten => report.DryRun ? "would overwrite" : "overwritten",
+                RestoreAction.SkippedExists => "skipped (exists)",
+                RestoreAction.SkippedUnsafe => "skipped (unsafe)",
+                _ => "skipped",
+            };
+            var tag = item.Rewritten ? " [rewritten]" : string.Empty;
+            _out.WriteLine($"  {verb,-18} {item.ArchivePath}{tag}");
+        }
+
+        _out.WriteLine();
+        _out.WriteLine($"{report.Written} written, {report.Skipped} skipped.");
+        if (report.AnyBlocked && !force)
+        {
+            _out.WriteLine("Some files already existed and were left untouched. Re-run with --force to overwrite.");
+        }
+
+        return ExitCodes.Success;
+    }
+
+    private int RunSessionsList(string[] args)
+    {
+        string? only = null;
+        string? project = null;
+        var json = false;
+
+        for (var i = 0; i < args.Length; i++)
+        {
+            var arg = args[i];
+            switch (arg)
+            {
+                case "--project":
+                    if (!TryValue(args, ref i, "--project", out project)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--json":
+                    json = true;
+                    break;
+                default:
+                    if (arg.StartsWith('-')) return UnknownOption("sessions list", arg);
+                    if (only is not null) { _err.WriteLine($"error: unexpected argument '{arg}'."); return ExitCodes.InvalidUsage; }
+                    only = arg;
+                    break;
+            }
+        }
+
+        if (only is not null && SessionProviderRegistry.Default.Resolve(only) is null)
+        {
+            return UnknownProvider(only);
+        }
+
+        var env = SessionEnvironment.Current();
+        var projectPath = ResolveProjectPath(project);
+        var providers = only is null
+            ? SessionProviderRegistry.Default.Providers
+            : new[] { SessionProviderRegistry.Default.Resolve(only)! };
+
+        var rows = providers.Select(p =>
+        {
+            var count = SafeCount(p, env, projectPath);
+            return (p, count);
+        }).ToList();
+
+        if (json)
+        {
+            _out.WriteLine(JsonSerializer.Serialize(rows.Select(r => new
+            {
+                id = r.p.Id,
+                name = r.p.DisplayName,
+                experimental = r.p.Experimental,
+                sessions = r.count,
+            }), JsonOptions));
+            return ExitCodes.Success;
+        }
+
+        _out.WriteLine("Agent Sync sessions");
+        _out.WriteLine();
+        _out.WriteLine($"Project: {projectPath}");
+        _out.WriteLine();
+        foreach (var (p, count) in rows)
+        {
+            var flag = p.Experimental ? " (experimental)" : string.Empty;
+            var summary = count < 0 ? "n/a" : $"{count} file(s)";
+            _out.WriteLine($"  {p.Id,-10} {summary,-14} {p.DisplayName}{flag}");
+        }
+
+        return ExitCodes.Success;
+    }
+
+    private int RunSessionsProviders(string[] args)
+    {
+        var json = false;
+        foreach (var arg in args)
+        {
+            if (arg == "--json") json = true;
+            else return UnknownOption("sessions providers", arg);
+        }
+
+        var providers = SessionProviderRegistry.Default.Providers;
+        if (json)
+        {
+            _out.WriteLine(JsonSerializer.Serialize(providers.Select(p => new
+            {
+                id = p.Id,
+                name = p.DisplayName,
+                aliases = p.Aliases,
+                experimental = p.Experimental,
+            }), JsonOptions));
+            return ExitCodes.Success;
+        }
+
+        _out.WriteLine("Supported session providers");
+        _out.WriteLine();
+        foreach (var p in providers)
+        {
+            var flag = p.Experimental ? " (experimental)" : string.Empty;
+            _out.WriteLine($"  {p.Id,-10} {p.DisplayName}{flag}");
+        }
+
+        return ExitCodes.Success;
+    }
+
+    private static int SafeCount(ISessionProvider provider, SessionEnvironment env, string projectPath)
+    {
+        try
+        {
+            return provider.Collect(env, projectPath).Entries.Count;
+        }
+        catch
+        {
+            return -1;
+        }
+    }
+
+    private string ResolveProjectPath(string? project)
+    {
+        if (!string.IsNullOrEmpty(project))
+        {
+            // An explicit project may be a foreign-OS absolute path (e.g. a Windows C:\... path
+            // supplied while restoring on WSL); use it verbatim rather than resolving it against
+            // the working directory. Only genuinely relative paths are made absolute.
+            return LocationPath.Parse(project) is not null
+                ? project
+                : Path.GetFullPath(project, _workingDirectory);
+        }
+
+        return GitRepository.Discover(_workingDirectory) ?? Path.GetFullPath(_workingDirectory);
+    }
+
+    private int UnknownProvider(string provider)
+    {
+        var known = string.Join(", ", SessionProviderRegistry.Default.Providers.Select(p => p.Id));
+        _err.WriteLine($"error: unknown session provider '{provider}'. Known providers: {known}.");
+        return ExitCodes.InvalidUsage;
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] units = { "B", "KB", "MB", "GB" };
+        double size = bytes;
+        var unit = 0;
+        while (size >= 1024 && unit < units.Length - 1)
+        {
+            size /= 1024;
+            unit++;
+        }
+
+        return unit == 0 ? $"{bytes} {units[unit]}" : $"{size:0.0} {units[unit]}";
+    }
+
     // --- sync -----------------------------------------------------------------
 
     private int RunSync(string[] args)
@@ -372,14 +803,16 @@ public sealed class CliRunner
 
         var root = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
         var report = new SyncService(root).Run(force, dryRun: check);
+        var subReport = new SubagentProjector(root).Sync(force, dryRun: check);
 
         if (json)
         {
-            WriteSyncJson(report);
+            WriteSyncJson(report, subReport);
         }
         else
         {
             WriteSyncHuman(report, check);
+            WriteSubagentSyncHuman(subReport, check);
         }
 
         if (!report.ConfigValid)
@@ -388,19 +821,46 @@ public sealed class CliRunner
         }
 
         // In check mode, pending changes or manual edits are a non-zero (drift) result.
-        if (check && (report.AnyChanges || report.AnyManualEdits))
+        if (check && (report.AnyChanges || report.AnyManualEdits || subReport.AnyChanges || subReport.AnySkippedManualEdits))
         {
             return ExitCodes.DriftOrValidationFailed;
         }
 
         // In write mode, manual edits we refused to overwrite are a problem. Edits that
         // --force rewrote are not — the projection is back in sync.
-        if (!check && report.AnySkippedManualEdits)
+        if (!check && (report.AnySkippedManualEdits || subReport.AnySkippedManualEdits))
         {
             return ExitCodes.DriftOrValidationFailed;
         }
 
         return ExitCodes.Success;
+    }
+
+    private void WriteSubagentSyncHuman(SubagentSyncReport report, bool check)
+    {
+        if (report.Outcomes.Count == 0)
+        {
+            return;
+        }
+
+        _out.WriteLine();
+        _out.WriteLine("Sub-agents:");
+        foreach (var o in report.Outcomes)
+        {
+            var verb = o.Change switch
+            {
+                SubagentChange.Created => check ? "would create" : "created",
+                SubagentChange.Updated => check ? "would update" : "updated",
+                SubagentChange.SkippedManualEdit => "manual edit (skipped)",
+                _ => "up to date",
+            };
+            _out.WriteLine($"  {verb,-22} {o.Path}");
+        }
+
+        if (report.AnySkippedManualEdits)
+        {
+            _out.WriteLine("  Some sub-agent files were manually edited and left untouched. Use --force to overwrite.");
+        }
     }
 
     private void WriteSyncHuman(SyncReport report, bool check)
@@ -444,20 +904,27 @@ public sealed class CliRunner
         }
     }
 
-    private void WriteSyncJson(SyncReport report)
+    private void WriteSyncJson(SyncReport report, SubagentSyncReport subReport)
     {
         var payload = new
         {
             configValid = report.ConfigValid,
             dryRun = report.DryRun,
-            anyChanges = report.AnyChanges,
+            anyChanges = report.AnyChanges || subReport.AnyChanges,
             anyManualEdits = report.AnyManualEdits,
-            anySkippedManualEdits = report.AnySkippedManualEdits,
+            anySkippedManualEdits = report.AnySkippedManualEdits || subReport.AnySkippedManualEdits,
             outcomes = report.Outcomes.Select(o => new
             {
                 skill = o.Projection.SkillId,
                 target = o.Projection.TargetId,
                 path = o.Projection.RelativePath,
+                change = o.Change.ToString(),
+                manualEdit = o.ManualEditDetected,
+            }),
+            subagents = subReport.Outcomes.Select(o => new
+            {
+                id = o.Id,
+                path = o.Path,
                 change = o.Change.ToString(),
                 manualEdit = o.ManualEditDetected,
             }),
@@ -601,7 +1068,7 @@ public sealed class CliRunner
     {
         if (args.Length == 0)
         {
-            _err.WriteLine("error: 'import' requires a subcommand: skill | agent.");
+            _err.WriteLine("error: 'import' requires a subcommand: skill | agent | subagent.");
             _err.WriteLine("Run 'agent --help' for usage.");
             return ExitCodes.InvalidUsage;
         }
@@ -612,6 +1079,7 @@ public sealed class CliRunner
         {
             "skill" => RunImportSkill(rest),
             "agent" => RunImportAgent(rest),
+            "subagent" => RunImportSubagent(rest),
             _ => UnknownSubcommand("import", sub),
         };
     }
@@ -1438,6 +1906,304 @@ public sealed class CliRunner
         return ExitCodes.Success;
     }
 
+    // --- subagent CRUD --------------------------------------------------------
+
+    private int RunSubagent(string[] args)
+    {
+        if (args.Length == 0)
+        {
+            _err.WriteLine("error: 'subagent' requires a subcommand: add | edit | delete | list | show.");
+            return ExitCodes.InvalidUsage;
+        }
+
+        var sub = args[0];
+        var rest = args.Skip(1).ToArray();
+        return sub switch
+        {
+            "add" => RunSubagentAdd(rest),
+            "edit" => RunSubagentEdit(rest),
+            "delete" => RunSubagentDelete(rest),
+            "list" => RunSubagentList(rest),
+            "show" => RunSubagentShow(rest),
+            _ => UnknownSubcommand("subagent", sub),
+        };
+    }
+
+    private int RunSubagentAdd(string[] args)
+    {
+        string? id = null;
+        string? name = null;
+        string? description = null;
+        string? model = null;
+        var tools = new List<string>();
+
+        for (var i = 0; i < args.Length; i++)
+        {
+            var arg = args[i];
+            switch (arg)
+            {
+                case "--name":
+                    if (!TryValue(args, ref i, "--name", out name)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--description":
+                    if (!TryValue(args, ref i, "--description", out description)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--model":
+                    if (!TryValue(args, ref i, "--model", out model)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--tool":
+                    if (!TryValue(args, ref i, "--tool", out var t)) return ExitCodes.InvalidUsage;
+                    tools.Add(t!);
+                    break;
+                case "--tools":
+                    if (!TryValue(args, ref i, "--tools", out var ts)) return ExitCodes.InvalidUsage;
+                    tools.AddRange(ts!.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+                    break;
+                default:
+                    if (arg.StartsWith('-')) return UnknownOption("subagent add", arg);
+                    if (id is not null) { _err.WriteLine($"error: unexpected argument '{arg}'."); return ExitCodes.InvalidUsage; }
+                    id = arg;
+                    break;
+            }
+        }
+
+        if (id is null)
+        {
+            _err.WriteLine("error: 'subagent add' requires an <id>.");
+            return ExitCodes.InvalidUsage;
+        }
+
+        var root = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
+        var result = new SubagentWriter(root).Add(id, name, description, model, tools.Count > 0 ? tools : null);
+        return RenderAuthoring($"subagent add {id}", result);
+    }
+
+    private int RunSubagentEdit(string[] args)
+    {
+        string? id = null;
+        string? name = null;
+        string? description = null;
+        string? model = null;
+        string? bodyFile = null;
+        List<string>? tools = null;
+
+        for (var i = 0; i < args.Length; i++)
+        {
+            var arg = args[i];
+            switch (arg)
+            {
+                case "--name":
+                    if (!TryValue(args, ref i, "--name", out name)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--description":
+                    if (!TryValue(args, ref i, "--description", out description)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--model":
+                    if (!TryValue(args, ref i, "--model", out model)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--body-file":
+                    if (!TryValue(args, ref i, "--body-file", out bodyFile)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--tool":
+                    if (!TryValue(args, ref i, "--tool", out var t)) return ExitCodes.InvalidUsage;
+                    (tools ??= new List<string>()).Add(t!);
+                    break;
+                case "--tools":
+                    if (!TryValue(args, ref i, "--tools", out var ts)) return ExitCodes.InvalidUsage;
+                    (tools ??= new List<string>()).AddRange(ts!.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+                    break;
+                default:
+                    if (arg.StartsWith('-')) return UnknownOption("subagent edit", arg);
+                    if (id is not null) { _err.WriteLine($"error: unexpected argument '{arg}'."); return ExitCodes.InvalidUsage; }
+                    id = arg;
+                    break;
+            }
+        }
+
+        if (id is null)
+        {
+            _err.WriteLine("error: 'subagent edit' requires an <id>.");
+            return ExitCodes.InvalidUsage;
+        }
+
+        var root = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
+        var result = new SubagentWriter(root).Edit(id, name, description, model, bodyFile, tools);
+        return RenderAuthoring($"subagent edit {id}", result);
+    }
+
+    private int RunSubagentDelete(string[] args)
+    {
+        string? id = null;
+        var force = false;
+        var dryRun = false;
+
+        for (var i = 0; i < args.Length; i++)
+        {
+            var arg = args[i];
+            switch (arg)
+            {
+                case "--force":
+                    force = true;
+                    break;
+                case "--dry-run":
+                    dryRun = true;
+                    break;
+                default:
+                    if (arg.StartsWith('-')) return UnknownOption("subagent delete", arg);
+                    if (id is not null) { _err.WriteLine($"error: unexpected argument '{arg}'."); return ExitCodes.InvalidUsage; }
+                    id = arg;
+                    break;
+            }
+        }
+
+        if (id is null)
+        {
+            _err.WriteLine("error: 'subagent delete' requires an <id>.");
+            return ExitCodes.InvalidUsage;
+        }
+
+        var root = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
+        return RenderAuthoring($"subagent delete {id}", new SubagentWriter(root).Delete(id, force, dryRun));
+    }
+
+    private int RunSubagentList(string[] args)
+    {
+        var json = false;
+        foreach (var arg in args)
+        {
+            if (arg == "--json") json = true;
+            else return UnknownOption("subagent list", arg);
+        }
+
+        var root = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
+        var agents = SubagentFiles.LoadAll(new RepoLayout(root));
+
+        if (json)
+        {
+            _out.WriteLine(JsonSerializer.Serialize(agents.Select(a => new
+            {
+                id = a.Id,
+                name = a.DisplayName,
+                description = a.Manifest.Description,
+                model = a.Manifest.Model,
+                tools = a.Manifest.Tools,
+            }), JsonOptions));
+            return ExitCodes.Success;
+        }
+
+        _out.WriteLine("Agent Sync sub-agents");
+        _out.WriteLine();
+        if (agents.Count == 0)
+        {
+            _out.WriteLine("No sub-agents defined. Add one with 'agent subagent add <id> --description ...'.");
+        }
+        else
+        {
+            foreach (var a in agents)
+            {
+                var tools = a.Manifest.Tools.Count == 0 ? "all tools" : $"{a.Manifest.Tools.Count} tool(s)";
+                _out.WriteLine($"  {a.Id,-24} {a.DisplayName}  ({tools})");
+            }
+        }
+
+        return ExitCodes.Success;
+    }
+
+    private int RunSubagentShow(string[] args)
+    {
+        string? id = null;
+        var json = false;
+        foreach (var arg in args)
+        {
+            if (arg == "--json") json = true;
+            else if (arg.StartsWith('-')) return UnknownOption("subagent show", arg);
+            else if (id is null) id = arg;
+            else { _err.WriteLine($"error: unexpected argument '{arg}'."); return ExitCodes.InvalidUsage; }
+        }
+
+        if (id is null)
+        {
+            _err.WriteLine("error: 'subagent show' requires an <id>.");
+            return ExitCodes.InvalidUsage;
+        }
+
+        var root = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
+        var agent = SubagentFiles.LoadAll(new RepoLayout(root)).FirstOrDefault(a => string.Equals(a.Id, id, StringComparison.Ordinal));
+        if (agent is null)
+        {
+            _err.WriteLine($"error: sub-agent '{id}' not found.");
+            return ExitCodes.DriftOrValidationFailed;
+        }
+
+        if (json)
+        {
+            _out.WriteLine(JsonSerializer.Serialize(new
+            {
+                id = agent.Id,
+                name = agent.DisplayName,
+                description = agent.Manifest.Description,
+                model = agent.Manifest.Model,
+                tools = agent.Manifest.Tools,
+                body = agent.Body,
+            }, JsonOptions));
+        }
+        else
+        {
+            _out.WriteLine($"Sub-agent: {agent.Id}");
+            _out.WriteLine($"  name:        {agent.DisplayName}");
+            _out.WriteLine($"  description: {agent.Manifest.Description}");
+            _out.WriteLine($"  model:       {agent.Manifest.Model ?? "(inherit)"}");
+            _out.WriteLine($"  tools:       {(agent.Manifest.Tools.Count == 0 ? "(all)" : string.Join(", ", agent.Manifest.Tools))}");
+            _out.WriteLine($"  body:        {agent.Body.Length} chars");
+        }
+
+        return ExitCodes.Success;
+    }
+
+    private int RunImportSubagent(string[] args)
+    {
+        string? path = null;
+        string? id = null;
+        var force = false;
+        var dryRun = false;
+        var json = false;
+
+        for (var i = 0; i < args.Length; i++)
+        {
+            var arg = args[i];
+            switch (arg)
+            {
+                case "--id":
+                    if (!TryValue(args, ref i, "--id", out id)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--force":
+                    force = true;
+                    break;
+                case "--dry-run":
+                    dryRun = true;
+                    break;
+                case "--json":
+                    json = true;
+                    break;
+                default:
+                    if (arg.StartsWith('-')) return UnknownOption("import subagent", arg);
+                    if (path is not null) { _err.WriteLine($"error: unexpected argument '{arg}'."); return ExitCodes.InvalidUsage; }
+                    path = arg;
+                    break;
+            }
+        }
+
+        if (path is null)
+        {
+            _err.WriteLine("error: 'import subagent' requires a <path>.");
+            return ExitCodes.InvalidUsage;
+        }
+
+        var root = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
+        var report = new SubagentImporter(root).Import(path, new SubagentImportOptions(id, force, dryRun));
+        return RenderImport(report, json);
+    }
+
     private bool TryParseBool(string value, out bool result)
     {
         switch (value.ToLowerInvariant())
@@ -1500,8 +2266,11 @@ public sealed class CliRunner
         _out.WriteLine("  validate            Validate config and skills (--json).");
         _out.WriteLine("  import skill        Import a SKILL.md/skill folder into .agent/skills (--id, --name, --target, --dry-run, --force, --json).");
         _out.WriteLine("  import agent        Import an existing instruction file/folder (AGENTS.md, CLAUDE.md, Cursor, ...) (--type, --split, --id, --dry-run, --force, --json).");
+        _out.WriteLine("  import subagent     Import existing sub-agent files (.claude/agents/*.md) into .agent/agents (--id, --dry-run, --force, --json).");
         _out.WriteLine("  skill               Manage canonical skills: add | edit | delete | list | show.");
         _out.WriteLine("  target              Manage projection targets: add | edit | delete | list | show.");
+        _out.WriteLine("  subagent            Manage canonical sub-agents: add | edit | delete | list | show.");
+        _out.WriteLine("  sessions            Back up / restore agent session history: backup | restore | list | providers.");
         _out.WriteLine("  ui                  Launch the optional local web UI (separate install; CLI stays GUI-free) (--no-open).");
         _out.WriteLine("  install-hooks       Configure core.hooksPath and make hooks executable.");
         _out.WriteLine("  doctor              Diagnose Git repo, PATH, hooks, and config (--json).");
