@@ -18,6 +18,12 @@ public sealed class SubagentManifest
     /// <summary>Optional model hint (e.g. <c>sonnet</c>, <c>opus</c>, <c>haiku</c>, <c>inherit</c>).</summary>
     public string? Model { get; set; }
 
+    /// <summary>
+    /// Optional display color for the agent list (e.g. <c>green</c>, <c>cyan</c>); a Claude Code
+    /// sub-agent frontmatter key that is captured on import and re-emitted on projection.
+    /// </summary>
+    public string? Color { get; set; }
+
     /// <summary>Optional allow-list of tools the sub-agent may use; empty means "inherit all".</summary>
     public List<string> Tools { get; set; } = new();
 

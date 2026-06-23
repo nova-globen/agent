@@ -20,7 +20,7 @@ public sealed class SubagentWriter
 
     public SubagentWriter(string repoRoot) => _layout = new RepoLayout(repoRoot);
 
-    public AuthoringResult Add(string id, string? name, string? description, string? model, IReadOnlyList<string>? tools)
+    public AuthoringResult Add(string id, string? name, string? description, string? model, string? color, IReadOnlyList<string>? tools)
     {
         if (!IdInference.IsValid(id))
         {
@@ -44,6 +44,7 @@ public sealed class SubagentWriter
             string.IsNullOrWhiteSpace(name) ? id : name!.Trim(),
             description!.Trim(),
             model?.Trim(),
+            string.IsNullOrWhiteSpace(color) ? null : color!.Trim(),
             tools ?? Array.Empty<string>());
         SubagentFiles.Write(_layout, id, yaml, DefaultBody);
 
@@ -59,6 +60,7 @@ public sealed class SubagentWriter
         string? name,
         string? description,
         string? model,
+        string? color,
         string? bodyFile,
         IReadOnlyList<string>? tools)
     {
@@ -86,6 +88,7 @@ public sealed class SubagentWriter
         if (name is not null) { manifest.Name = name.Trim(); changes.Add($"name = \"{manifest.Name}\""); }
         if (description is not null) { manifest.Description = description.Trim(); changes.Add($"description = \"{manifest.Description}\""); }
         if (model is not null) { manifest.Model = model.Trim().Length == 0 ? null : model.Trim(); changes.Add($"model = {manifest.Model ?? "(none)"}"); }
+        if (color is not null) { manifest.Color = color.Trim().Length == 0 ? null : color.Trim(); changes.Add($"color = {manifest.Color ?? "(none)"}"); }
         if (tools is not null) { manifest.Tools = tools.Select(t => t.Trim()).Where(t => t.Length > 0).ToList(); changes.Add($"tools = {string.Join(", ", manifest.Tools)}"); }
 
         if (bodyFile is not null)
@@ -103,7 +106,7 @@ public sealed class SubagentWriter
         if (changes.Count == 0)
         {
             return AuthoringResult.Fail(AuthoringStatus.InvalidUsage,
-                "Nothing to edit. Pass --name, --description, --model, --tool, or --body-file.");
+                "Nothing to edit. Pass --name, --description, --model, --color, --tool, or --body-file.");
         }
 
         var yaml = SubagentFiles.RenderManifestYaml(
@@ -111,6 +114,7 @@ public sealed class SubagentWriter
             string.IsNullOrWhiteSpace(manifest.Name) ? id : manifest.Name!,
             manifest.Description ?? string.Empty,
             manifest.Model,
+            manifest.Color,
             manifest.Tools);
         SubagentFiles.Write(_layout, id, yaml, body);
 

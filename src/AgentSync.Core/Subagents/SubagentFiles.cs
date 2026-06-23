@@ -23,6 +23,7 @@ public static class SubagentFiles
         string name,
         string description,
         string? model,
+        string? color,
         IEnumerable<string> tools)
     {
         var sb = new StringBuilder();
@@ -32,6 +33,11 @@ public static class SubagentFiles
         if (!string.IsNullOrWhiteSpace(model))
         {
             sb.Append("model: ").Append(Yaml.Scalar(model)).Append('\n');
+        }
+
+        if (!string.IsNullOrWhiteSpace(color))
+        {
+            sb.Append("color: ").Append(Yaml.Scalar(color)).Append('\n');
         }
 
         var toolList = tools.Select(t => t.Trim()).Where(t => t.Length > 0).ToList();
@@ -76,6 +82,11 @@ public static class SubagentFiles
         if (!string.IsNullOrWhiteSpace(agent.Manifest.Model))
         {
             sb.Append("model: ").Append(Yaml.Scalar(agent.Manifest.Model!)).Append('\n');
+        }
+
+        if (!string.IsNullOrWhiteSpace(agent.Manifest.Color))
+        {
+            sb.Append("color: ").Append(Yaml.Scalar(agent.Manifest.Color!)).Append('\n');
         }
 
         sb.Append("---\n\n");

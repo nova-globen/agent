@@ -1989,6 +1989,7 @@ public sealed class CliRunner
         string? name = null;
         string? description = null;
         string? model = null;
+        string? color = null;
         var tools = new List<string>();
 
         for (var i = 0; i < args.Length; i++)
@@ -2004,6 +2005,9 @@ public sealed class CliRunner
                     break;
                 case "--model":
                     if (!TryValue(args, ref i, "--model", out model)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--color":
+                    if (!TryValue(args, ref i, "--color", out color)) return ExitCodes.InvalidUsage;
                     break;
                 case "--tool":
                     if (!TryValue(args, ref i, "--tool", out var t)) return ExitCodes.InvalidUsage;
@@ -2028,7 +2032,7 @@ public sealed class CliRunner
         }
 
         var root = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
-        var result = new SubagentWriter(root).Add(id, name, description, model, tools.Count > 0 ? tools : null);
+        var result = new SubagentWriter(root).Add(id, name, description, model, color, tools.Count > 0 ? tools : null);
         return RenderAuthoring($"subagent add {id}", result);
     }
 
@@ -2040,6 +2044,7 @@ public sealed class CliRunner
         string? name = null;
         string? description = null;
         string? model = null;
+        string? color = null;
         string? bodyFile = null;
         List<string>? tools = null;
 
@@ -2056,6 +2061,9 @@ public sealed class CliRunner
                     break;
                 case "--model":
                     if (!TryValue(args, ref i, "--model", out model)) return ExitCodes.InvalidUsage;
+                    break;
+                case "--color":
+                    if (!TryValue(args, ref i, "--color", out color)) return ExitCodes.InvalidUsage;
                     break;
                 case "--body-file":
                     if (!TryValue(args, ref i, "--body-file", out bodyFile)) return ExitCodes.InvalidUsage;
@@ -2083,7 +2091,7 @@ public sealed class CliRunner
         }
 
         var root = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
-        var result = new SubagentWriter(root).Edit(id, name, description, model, bodyFile, tools);
+        var result = new SubagentWriter(root).Edit(id, name, description, model, color, bodyFile, tools);
         return RenderAuthoring($"subagent edit {id}", result);
     }
 
@@ -2146,6 +2154,7 @@ public sealed class CliRunner
                 name = a.DisplayName,
                 description = a.Manifest.Description,
                 model = a.Manifest.Model,
+                color = a.Manifest.Color,
                 tools = a.Manifest.Tools,
             }), JsonOptions));
             return ExitCodes.Success;
@@ -2205,6 +2214,7 @@ public sealed class CliRunner
                 name = agent.DisplayName,
                 description = agent.Manifest.Description,
                 model = agent.Manifest.Model,
+                color = agent.Manifest.Color,
                 tools = agent.Manifest.Tools,
                 body = agent.Body,
             }, JsonOptions));
@@ -2215,6 +2225,7 @@ public sealed class CliRunner
             _out.WriteLine($"  name:        {agent.DisplayName}");
             _out.WriteLine($"  description: {agent.Manifest.Description}");
             _out.WriteLine($"  model:       {agent.Manifest.Model ?? "(inherit)"}");
+            _out.WriteLine($"  color:       {agent.Manifest.Color ?? "(none)"}");
             _out.WriteLine($"  tools:       {(agent.Manifest.Tools.Count == 0 ? "(all)" : string.Join(", ", agent.Manifest.Tools))}");
             _out.WriteLine($"  body:        {agent.Body.Length} chars");
         }
@@ -2257,14 +2268,33 @@ public sealed class CliRunner
             }
         }
 
+        var root = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
+
         if (path is null)
         {
-            _err.WriteLine("error: 'import subagent' requires a <path>.");
-            return ExitCodes.InvalidUsage;
+            // No <path>: default to discovering the conventional .claude/agents/ directory.
+            var defaultDir = Path.Combine(root, RepoLayout.ClaudeAgentsDir);
+            if (!Directory.Exists(defaultDir))
+            {
+                _err.WriteLine($"error: no <path> given and '{RepoLayout.ClaudeAgentsDir}' does not exist. Pass a file or folder to import.");
+                return ExitCodes.InvalidUsage;
+            }
+
+            path = defaultDir;
         }
 
-        var root = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
         var report = new SubagentImporter(root).Import(path, new SubagentImportOptions(id, force, dryRun));
+
+        // Reconcile projections for sub-agents we just adopted from their existing .claude/agents/
+        // files so `agent status` does not immediately flag them as manually edited.
+        if (!dryRun && report.AnyWritten)
+        {
+            var importedIds = report.Items
+                .Where(i => i.Action is ImportAction.Create or ImportAction.Overwrite)
+                .Select(i => i.Id);
+            new SubagentProjector(root).ReconcileImported(importedIds);
+        }
+
         return RenderImport(report, json);
     }
 
@@ -2376,8 +2406,9 @@ public sealed class CliRunner
         },
         ["import subagent"] = new[]
         {
-            "Usage: agent import subagent <path> [options]",
-            "  Import existing sub-agent files (.claude/agents/*.md) into .agent/agents (pass a folder for all).",
+            "Usage: agent import subagent [path] [options]",
+            "  Import existing sub-agent files (.claude/agents/*.md) into .agent/agents (pass a folder",
+            "  for all). With no path, discovers and imports everything under .claude/agents/.",
             "",
             "Options:",
             "  --id <id>          Override the inferred sub-agent id.",
@@ -2485,6 +2516,7 @@ public sealed class CliRunner
             "  --name <name>        Display name (defaults to the id).",
             "  --description <d>    Description (required).",
             "  --model <model>      Model the sub-agent should use (optional).",
+            "  --color <color>      Display color for the agent list, e.g. green, cyan (optional).",
             "  --tool <tool>        Allow a tool (repeatable).",
             "  --tools <a,b,c>      Allow a comma-separated list of tools.",
         },
@@ -2497,6 +2529,7 @@ public sealed class CliRunner
             "  --name <name>        Set the display name.",
             "  --description <d>    Set the description.",
             "  --model <model>      Set the model (empty value clears it).",
+            "  --color <color>      Set the display color (empty value clears it).",
             "  --body-file <path>   Replace AGENT.md body from a file (absolute or relative paths allowed).",
             "  --tool <tool>        Set the allowed tools (repeatable; replaces the list).",
             "  --tools <a,b,c>      Set the allowed tools from a comma-separated list.",

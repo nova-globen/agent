@@ -124,6 +124,47 @@ public sealed class SubagentProjector
         return new SubagentSyncReport(outcomes);
     }
 
+    /// <summary>
+    /// Reconciles the projections for the given just-imported sub-agents so that importing one's
+    /// own existing <c>.claude/agents/&lt;id&gt;.md</c> does not immediately register as drift.
+    /// For each id whose projection file already exists, the file is rewritten in canonical form
+    /// and its hash recorded in the lockfile (the user explicitly adopted it). Ids with no
+    /// existing projection are left untouched for a normal <c>agent sync</c>.
+    /// </summary>
+    /// <returns>The ids whose projection was reconciled.</returns>
+    public IReadOnlyList<string> ReconcileImported(IEnumerable<string> ids)
+    {
+        var wanted = new HashSet<string>(ids, StringComparer.Ordinal);
+        var reconciled = new List<string>();
+        if (wanted.Count == 0)
+        {
+            return reconciled;
+        }
+
+        var lockfile = Lockfile.Load(_layout.AgentsLockFile);
+        foreach (var agent in SubagentFiles.LoadAll(_layout).Where(a => wanted.Contains(a.Id)))
+        {
+            var relPath = $"{RepoLayout.ClaudeAgentsDir}/{agent.Id}.md";
+            var absPath = RepoPath.Resolve(_layout.RepoRoot, relPath);
+            if (!File.Exists(absPath))
+            {
+                continue; // not adopting an existing projection; leave for `agent sync`.
+            }
+
+            var content = SubagentFiles.RenderProjection(agent);
+            File.WriteAllText(absPath, content);
+            lockfile.Record(agent.Id, Target, relPath, ContentHasher.Hash(content));
+            reconciled.Add(agent.Id);
+        }
+
+        if (reconciled.Count > 0)
+        {
+            lockfile.Save(_layout.AgentsLockFile);
+        }
+
+        return reconciled;
+    }
+
     public IReadOnlyList<SubagentDrift> Detect()
     {
         var drift = new List<SubagentDrift>();

@@ -192,4 +192,90 @@ public sealed class SubagentCommandTests
         Assert.Equal(ExitCodes.Success, result.ExitCode);
         Assert.Contains("--body-file", result.StdOut);
     }
+
+    [Fact]
+    public void Add_WithColor_PersistsAndProjects()
+    {
+        using var h = new CliTestHarness();
+        h.MakeGitRepo();
+        h.Invoke("init");
+        h.Invoke("subagent", "add", "reviewer", "--description", "Reviews.", "--color", "cyan");
+
+        var yaml = File.ReadAllText(Path.Combine(AgentDir(h, "reviewer"), "agent.yaml"));
+        Assert.Contains("color: cyan", yaml);
+
+        h.Invoke("sync");
+        Assert.Contains("color: cyan", File.ReadAllText(Projection(h, "reviewer")));
+    }
+
+    [Fact]
+    public void ImportSubagent_PreservesColor_RoundTrip()
+    {
+        using var h = new CliTestHarness();
+        h.MakeGitRepo();
+        h.Invoke("init");
+
+        var src = Path.Combine(h.WorkingDirectory, ".claude", "agents", "verifier.md");
+        Directory.CreateDirectory(Path.GetDirectoryName(src)!);
+        File.WriteAllText(src, "---\nname: verifier\ndescription: Verifies.\ncolor: green\n---\n\nYou verify.\n");
+
+        var import = h.Invoke("import", "subagent", src);
+        Assert.Equal(ExitCodes.Success, import.ExitCode);
+
+        // color survives import into the canonical manifest...
+        Assert.Contains("color: green", File.ReadAllText(Path.Combine(AgentDir(h, "verifier"), "agent.yaml")));
+
+        // ...and re-projection back into .claude/agents/<id>.md.
+        h.Invoke("sync");
+        Assert.Contains("color: green", File.ReadAllText(Projection(h, "verifier")));
+    }
+
+    [Fact]
+    public void ImportSubagent_OfExistingProjection_StatusIsClean()
+    {
+        using var h = new CliTestHarness();
+        h.MakeGitRepo();
+        h.Invoke("init");
+        h.Invoke("sync"); // clean baseline (scaffolded skills projected)
+
+        var proj = Path.Combine(h.WorkingDirectory, ".claude", "agents", "verifier.md");
+        Directory.CreateDirectory(Path.GetDirectoryName(proj)!);
+        File.WriteAllText(proj, "---\nname: verifier\ndescription: Verifies.\ncolor: green\n---\n\nYou verify.\n");
+
+        // Importing one's own existing projection used to flag it as a manual edit; the import
+        // now reconciles the projection + lockfile so status stays clean without sync --force.
+        Assert.Equal(ExitCodes.Success, h.Invoke("import", "subagent", proj).ExitCode);
+        Assert.Equal(ExitCodes.Success, h.Invoke("status", "--fail-on-drift").ExitCode);
+    }
+
+    [Fact]
+    public void ImportSubagent_NoPath_DiscoversClaudeAgents()
+    {
+        using var h = new CliTestHarness();
+        h.MakeGitRepo();
+        h.Invoke("init");
+
+        var dir = Path.Combine(h.WorkingDirectory, ".claude", "agents");
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, "one.md"), "---\nname: one\ndescription: One.\n---\n\nBody one.\n");
+        File.WriteAllText(Path.Combine(dir, "two.md"), "---\nname: two\ndescription: Two.\n---\n\nBody two.\n");
+
+        var result = h.Invoke("import", "subagent");
+
+        Assert.Equal(ExitCodes.Success, result.ExitCode);
+        Assert.True(Directory.Exists(AgentDir(h, "one")));
+        Assert.True(Directory.Exists(AgentDir(h, "two")));
+    }
+
+    [Fact]
+    public void ImportSubagent_NoPath_NoClaudeAgents_IsUsageError()
+    {
+        using var h = new CliTestHarness();
+        h.MakeGitRepo();
+        h.Invoke("init");
+
+        var result = h.Invoke("import", "subagent");
+
+        Assert.Equal(ExitCodes.InvalidUsage, result.ExitCode);
+    }
 }

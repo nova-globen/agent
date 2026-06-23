@@ -9,7 +9,7 @@ public sealed class SubagentProjectorTests
 
     private static void AddAgent(RepoLayout layout, string id, string description, string? model = null, params string[] tools)
     {
-        var yaml = SubagentFiles.RenderManifestYaml(id, id, description, model, tools);
+        var yaml = SubagentFiles.RenderManifestYaml(id, id, description, model, color: null, tools);
         SubagentFiles.Write(layout, id, yaml, "## Role\n\nDo the thing.\n");
     }
 

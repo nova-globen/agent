@@ -86,6 +86,7 @@ public sealed class SubagentImporter
 
         var description = fields.GetValueOrDefault("description") ?? string.Empty;
         var model = fields.GetValueOrDefault("model");
+        var color = fields.GetValueOrDefault("color");
         var tools = ParseTools(fields.GetValueOrDefault("tools"), split.Frontmatter);
         var name = fields.GetValueOrDefault("name") ?? id;
 
@@ -110,7 +111,7 @@ public sealed class SubagentImporter
 
         if (!dryRun)
         {
-            var yaml = SubagentFiles.RenderManifestYaml(id, name, description, model, tools);
+            var yaml = SubagentFiles.RenderManifestYaml(id, name, description, model, color, tools);
             SubagentFiles.Write(_layout, id, yaml, split.Body);
         }
 
