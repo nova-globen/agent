@@ -5,28 +5,30 @@ Compact handoff for AI sessions. Pair with `.agent/NEXT_STEPS.md` and
 
 ## Release
 
-- **Latest tagged release:** `v0.2.0-alpha.4` — the repository now **runs Agent Sync on
-  itself** (AGENTS.md, CLAUDE.md, the Copilot/Gemini files, and the `.claude/skills/` folders
-  are generated from canonical skills under `.agent/skills/`, gated by the Git hooks and a CI
-  drift check); the former `.ai-agent/` planning docs moved under `.agent/`. It adds
-  **GitHub Actions and Azure Pipelines CI examples** (`examples/`), a **`releasing-agent-sync`**
-  skill, and a README demo GIF. Fixes: marker bodies that document the marker syntax now
-  round-trip without false drift, and `sync --force` no longer reports a spurious skip / exits
-  non-zero after overwriting a hand-edited section; the web-host smoke test is async. The
-  earlier `v0.2.0-alpha.3` made the web UI usable (content root pinned to
-  `AppContext.BaseDirectory`, FluentUI CSS-isolation bundle linked, `<FluentDesignTheme>`
-  removed); `v0.2.0-alpha.2` made `agent ui` self-installing; `v0.2.0-alpha.1` first shipped
-  import + CRUD, `agent ui`, and the localhost Blazor UI; `v0.1.0-alpha.1…alpha.4` were
-  CLI-focused.
-- **Next intended release:** `v0.2.0-alpha.5` — adds **`agent sessions`** (back up / restore
+- **Latest tagged release:** `v0.2.0-alpha.5` — adds **`agent sessions`** (back up / restore
   an AI agent's per-project session history for Claude Code, Codex, Copilot, Gemini, and
   Cursor; manifest-driven zip archives; cross-environment restore that relocates the store and
   translates absolute paths across WSL / Windows / Linux — `/mnt/c/...` ⇄ `C:\...` — and a
   changed project path, keeping JSON valid; zip-slip-safe, never overwrites without `--force`)
   and **canonical sub-agents** (`agent subagent add/edit/delete/list/show`, `agent import
   subagent`; projected by `agent sync` into `.claude/agents/<id>.md` with drift in
-  `.agent/agents.lock.json`). Copilot/Gemini/Cursor session support is experimental. Push tag
-  `v0.2.0-alpha.5` to cut it.
+  `.agent/agents.lock.json`). Copilot/Gemini/Cursor session support is experimental. The
+  earlier `v0.2.0-alpha.4` made the repository **run Agent Sync on itself** and added the
+  GitHub Actions / Azure Pipelines CI examples and the `releasing-agent-sync` skill;
+  `v0.2.0-alpha.3` made the web UI usable; `v0.2.0-alpha.2` made `agent ui` self-installing;
+  `v0.2.0-alpha.1` first shipped import + CRUD, `agent ui`, and the localhost Blazor UI;
+  `v0.1.0-alpha.1…alpha.4` were CLI-focused.
+- **Next intended release:** `v0.2.0-alpha.6` — **sub-agent and authoring polish** driven by
+  dogfooding feedback. Adds **per-subcommand `--help`** across the `skill`/`target`/`subagent`/
+  `import` subcommands; **`skill`/`subagent edit --body-file` now accepts absolute (and
+  repo-external) paths** instead of rejecting them as unsafe (a body file is read-only input;
+  the `RepoPath` guard on projection writes is unchanged); **`target list` surfaces the
+  sub-agent destination** (`claude_agent -> .claude/agents/<id>.md`); **sub-agent `--color`**
+  is captured on `import`, stored in `agent.yaml`, and re-emitted on projection (settable via
+  `subagent add/edit --color`); and **`import subagent` with no path discovers `.claude/agents/`**
+  and reconciles the sub-agent lockfile so importing one's own existing projection no longer
+  registers as a manual edit. The `using-agent-sync` scaffolded guidance now documents
+  sub-agents. Push tag `v0.2.0-alpha.6` to cut it.
 - **Release type:** public alpha / developer preview
 - **Repository:** https://github.com/nova-globen/agent (default branch `master`)
 

@@ -17,12 +17,15 @@ agent files that slowly diverge. Repository: https://github.com/nova-globen/agen
 ## Status
 
 - **Alpha / developer preview.** The core workflow works end to end; the surface may still
-  change. Current release line: `v0.2.0-alpha.5` (adds `agent sessions` — back up / restore
-  an agent's session history across WSL / Windows / Linux with path translation — and
-  canonical sub-agents: `agent subagent` CRUD + `import subagent`, projected to
-  `.claude/agents/`; builds on imports, CRUD, `agent ui` and the localhost web UI, and the
-  repo running Agent Sync on itself). Target framework: **.NET 10** (`net10.0`). The full
-  release history and current-state notes live under `.agent/CURRENT_STATE.md` and
+  change. Current release line: `v0.2.0-alpha.6` (sub-agent and authoring polish from
+  dogfooding feedback: per-subcommand `--help`, `skill`/`subagent edit --body-file` now
+  accepts absolute paths, `target list` surfaces the sub-agent destination, sub-agent
+  `--color` round-trips through `import`/`sync`, and `import subagent` with no path discovers
+  `.claude/agents/` and reconciles the lockfile so a just-imported projection is not flagged
+  as drift). Builds on `agent sessions`, canonical sub-agents (`agent subagent` CRUD +
+  `import subagent`), imports, CRUD, `agent ui` and the localhost web UI, and the repo
+  running Agent Sync on itself. Target framework: **.NET 10** (`net10.0`). The full release
+  history and current-state notes live under `.agent/CURRENT_STATE.md` and
   `.agent/NEXT_STEPS.md`.
 
 ## Core product invariant
