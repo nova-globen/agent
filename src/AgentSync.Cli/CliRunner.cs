@@ -1066,6 +1066,8 @@ public sealed class CliRunner
 
     private int RunImport(string[] args)
     {
+        if (args.Length > 0 && args[0] is "--help" or "-h") return SubUsage("import");
+
         if (args.Length == 0)
         {
             _err.WriteLine("error: 'import' requires a subcommand: skill | agent | subagent.");
@@ -1086,6 +1088,8 @@ public sealed class CliRunner
 
     private int RunImportSkill(string[] args)
     {
+        if (WantsHelp(args)) return SubUsage("import skill");
+
         string? path = null;
         string? id = null;
         string? name = null;
@@ -1150,6 +1154,8 @@ public sealed class CliRunner
 
     private int RunImportAgent(string[] args)
     {
+        if (WantsHelp(args)) return SubUsage("import agent");
+
         string? path = null;
         string? type = null;
         string? id = null;
@@ -1305,6 +1311,8 @@ public sealed class CliRunner
 
     private int RunSkill(string[] args)
     {
+        if (args.Length > 0 && args[0] is "--help" or "-h") return SubUsage("skill");
+
         if (args.Length == 0)
         {
             _err.WriteLine("error: 'skill' requires a subcommand: add | edit | delete | list | show.");
@@ -1326,6 +1334,8 @@ public sealed class CliRunner
 
     private int RunSkillAdd(string[] args)
     {
+        if (WantsHelp(args)) return SubUsage("skill add");
+
         string? id = null;
         string? name = null;
         string? description = null;
@@ -1371,6 +1381,8 @@ public sealed class CliRunner
 
     private int RunSkillEdit(string[] args)
     {
+        if (WantsHelp(args)) return SubUsage("skill edit");
+
         string? id = null;
         string? name = null;
         string? description = null;
@@ -1426,6 +1438,8 @@ public sealed class CliRunner
 
     private int RunSkillDelete(string[] args)
     {
+        if (WantsHelp(args)) return SubUsage("skill delete");
+
         string? id = null;
         var force = false;
         var dryRun = false;
@@ -1462,6 +1476,8 @@ public sealed class CliRunner
 
     private int RunSkillList(string[] args)
     {
+        if (WantsHelp(args)) return SubUsage("skill list");
+
         var json = false;
         foreach (var arg in args)
         {
@@ -1507,6 +1523,8 @@ public sealed class CliRunner
 
     private int RunSkillShow(string[] args)
     {
+        if (WantsHelp(args)) return SubUsage("skill show");
+
         string? id = null;
         var json = false;
         foreach (var arg in args)
@@ -1685,6 +1703,8 @@ public sealed class CliRunner
 
     private int RunTarget(string[] args)
     {
+        if (args.Length > 0 && args[0] is "--help" or "-h") return SubUsage("target");
+
         if (args.Length == 0)
         {
             _err.WriteLine("error: 'target' requires a subcommand: add | edit | delete | list | show.");
@@ -1706,6 +1726,8 @@ public sealed class CliRunner
 
     private int RunTargetAdd(string[] args)
     {
+        if (WantsHelp(args)) return SubUsage("target add");
+
         string? id = null;
         string? path = null;
         var enabled = true;
@@ -1742,6 +1764,8 @@ public sealed class CliRunner
 
     private int RunTargetEdit(string[] args)
     {
+        if (WantsHelp(args)) return SubUsage("target edit");
+
         string? id = null;
         string? path = null;
         bool? enabled = null;
@@ -1779,6 +1803,8 @@ public sealed class CliRunner
 
     private int RunTargetDelete(string[] args)
     {
+        if (WantsHelp(args)) return SubUsage("target delete");
+
         string? id = null;
         var force = false;
         var dryRun = false;
@@ -1812,8 +1838,18 @@ public sealed class CliRunner
         return RenderAuthoring($"target delete {id}", new TargetWriter(root).Delete(id, force, dryRun));
     }
 
+    // The sub-agent projection target. Unlike the entries in TargetIds.Ordered it is not
+    // configured per-target in agent.yaml; `sync` always projects sub-agents to this path.
+    private const string SubagentTargetId = "claude_agent";
+    private const string SubagentTargetPath = ".claude/agents/<id>.md";
+
+    private static bool SubagentsExist(string root)
+        => SubagentFiles.LoadAll(new RepoLayout(root)).Count > 0;
+
     private int RunTargetList(string[] args)
     {
+        if (WantsHelp(args)) return SubUsage("target list");
+
         var json = false;
         foreach (var arg in args)
         {
@@ -1837,6 +1873,16 @@ public sealed class CliRunner
                     enabled = setting?.Enabled ?? false,
                     path = setting?.Path,
                 };
+            }).ToList();
+
+            // Sub-agents are projected by `sync` to .claude/agents/<id>.md but are managed via
+            // `agent subagent`, not the per-target config — surface them so the list is complete.
+            payload.Add(new
+            {
+                id = SubagentTargetId,
+                configured = SubagentsExist(root),
+                enabled = true,
+                path = (string?)SubagentTargetPath,
             });
             _out.WriteLine(JsonSerializer.Serialize(payload, JsonOptions));
         }
@@ -1852,6 +1898,8 @@ public sealed class CliRunner
                     : "disabled";
                 _out.WriteLine($"  {id,-14} {state}");
             }
+
+            _out.WriteLine($"  {SubagentTargetId,-14} sub-agents -> {SubagentTargetPath} (managed via 'agent subagent')");
         }
 
         return ExitCodes.Success;
@@ -1859,6 +1907,8 @@ public sealed class CliRunner
 
     private int RunTargetShow(string[] args)
     {
+        if (WantsHelp(args)) return SubUsage("target show");
+
         string? id = null;
         var json = false;
         foreach (var arg in args)
@@ -1910,6 +1960,8 @@ public sealed class CliRunner
 
     private int RunSubagent(string[] args)
     {
+        if (args.Length > 0 && args[0] is "--help" or "-h") return SubUsage("subagent");
+
         if (args.Length == 0)
         {
             _err.WriteLine("error: 'subagent' requires a subcommand: add | edit | delete | list | show.");
@@ -1931,6 +1983,8 @@ public sealed class CliRunner
 
     private int RunSubagentAdd(string[] args)
     {
+        if (WantsHelp(args)) return SubUsage("subagent add");
+
         string? id = null;
         string? name = null;
         string? description = null;
@@ -1980,6 +2034,8 @@ public sealed class CliRunner
 
     private int RunSubagentEdit(string[] args)
     {
+        if (WantsHelp(args)) return SubUsage("subagent edit");
+
         string? id = null;
         string? name = null;
         string? description = null;
@@ -2033,6 +2089,8 @@ public sealed class CliRunner
 
     private int RunSubagentDelete(string[] args)
     {
+        if (WantsHelp(args)) return SubUsage("subagent delete");
+
         string? id = null;
         var force = false;
         var dryRun = false;
@@ -2068,6 +2126,8 @@ public sealed class CliRunner
 
     private int RunSubagentList(string[] args)
     {
+        if (WantsHelp(args)) return SubUsage("subagent list");
+
         var json = false;
         foreach (var arg in args)
         {
@@ -2111,6 +2171,8 @@ public sealed class CliRunner
 
     private int RunSubagentShow(string[] args)
     {
+        if (WantsHelp(args)) return SubUsage("subagent show");
+
         string? id = null;
         var json = false;
         foreach (var arg in args)
@@ -2162,6 +2224,8 @@ public sealed class CliRunner
 
     private int RunImportSubagent(string[] args)
     {
+        if (WantsHelp(args)) return SubUsage("import subagent");
+
         string? path = null;
         string? id = null;
         var force = false;
@@ -2249,6 +2313,212 @@ public sealed class CliRunner
         _err.WriteLine("Run 'agent --help' for usage.");
         return ExitCodes.InvalidUsage;
     }
+
+    private static bool WantsHelp(string[] args)
+    {
+        foreach (var arg in args)
+        {
+            if (arg is "--help" or "-h") return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>Prints per-subcommand usage (options list) to stdout and returns success.</summary>
+    private int SubUsage(string command)
+    {
+        if (SubcommandUsage.TryGetValue(command, out var lines))
+        {
+            foreach (var line in lines) _out.WriteLine(line);
+        }
+        else
+        {
+            _out.WriteLine($"agent {command}");
+            _out.WriteLine("Run 'agent --help' for usage.");
+        }
+
+        return ExitCodes.Success;
+    }
+
+    private static readonly IReadOnlyDictionary<string, string[]> SubcommandUsage = new Dictionary<string, string[]>(StringComparer.Ordinal)
+    {
+        ["import"] = new[]
+        {
+            "Usage: agent import <skill|agent|subagent> <path> [options]",
+            "  Adopt existing files into canonical .agent/ sources. Run 'agent import <sub> --help' for options.",
+        },
+        ["import skill"] = new[]
+        {
+            "Usage: agent import skill <path> [options]",
+            "  Import a SKILL.md or skill folder into .agent/skills (pass a folder to import every *.md inside).",
+            "",
+            "Options:",
+            "  --id <id>          Override the inferred skill id.",
+            "  --name <name>      Override the inferred display name.",
+            "  --target <id>      Enable only this target (repeatable); default enables all.",
+            "  --force            Overwrite an existing canonical skill.",
+            "  --dry-run          Preview without writing.",
+            "  --json             Emit JSON.",
+        },
+        ["import agent"] = new[]
+        {
+            "Usage: agent import agent <path> [options]",
+            "  Import an existing instruction file/folder (AGENTS.md, CLAUDE.md, Cursor, ...) into .agent/skills.",
+            "",
+            "Options:",
+            "  --type <type>      Source type override (auto-detected by default).",
+            "  --split <mode>     How to split the source into skills: file | heading.",
+            "  --id <id>          Override the inferred skill id.",
+            "  --include-generated  Import content inside agent-sync markers too.",
+            "  --force            Overwrite an existing canonical skill.",
+            "  --dry-run          Preview without writing.",
+            "  --json             Emit JSON.",
+        },
+        ["import subagent"] = new[]
+        {
+            "Usage: agent import subagent <path> [options]",
+            "  Import existing sub-agent files (.claude/agents/*.md) into .agent/agents (pass a folder for all).",
+            "",
+            "Options:",
+            "  --id <id>          Override the inferred sub-agent id.",
+            "  --force            Overwrite an existing canonical sub-agent.",
+            "  --dry-run          Preview without writing.",
+            "  --json             Emit JSON.",
+        },
+        ["skill"] = new[]
+        {
+            "Usage: agent skill <add|edit|delete|list|show> [options]",
+            "  Manage canonical skills under .agent/skills. Run 'agent skill <sub> --help' for options.",
+        },
+        ["skill add"] = new[]
+        {
+            "Usage: agent skill add <id> [options]",
+            "  Scaffold a new canonical skill under .agent/skills/<id>.",
+            "",
+            "Options:",
+            "  --name <name>        Display name (required).",
+            "  --description <d>    Trigger description shown to agents (required).",
+            "  --version <v>        Skill version (default 0.1.0).",
+            "  --target <id>        Enable only this target (repeatable); default enables all targets.",
+        },
+        ["skill edit"] = new[]
+        {
+            "Usage: agent skill edit <id> [options]",
+            "  Change an existing canonical skill. At least one option is required.",
+            "",
+            "Options:",
+            "  --name <name>        Set the display name.",
+            "  --description <d>    Set the trigger description.",
+            "  --version <v>        Set the version.",
+            "  --body-file <path>   Replace SKILL.md body from a file (absolute or relative paths allowed).",
+            "  --enable <id>        Enable a target (repeatable).",
+            "  --disable <id>       Disable a target (repeatable).",
+        },
+        ["skill delete"] = new[]
+        {
+            "Usage: agent skill delete <id> [options]",
+            "",
+            "Options:",
+            "  --force              Delete even when projections exist; prunes lockfile entries.",
+            "  --dry-run            Preview without writing.",
+        },
+        ["skill list"] = new[]
+        {
+            "Usage: agent skill list [--json]",
+            "  List canonical skills.",
+        },
+        ["skill show"] = new[]
+        {
+            "Usage: agent skill show <id> [--json]",
+            "  Show a canonical skill's metadata and target flags.",
+        },
+        ["target"] = new[]
+        {
+            "Usage: agent target <add|edit|delete|list|show> [options]",
+            "  Manage projection targets in agent.yaml. Run 'agent target <sub> --help' for options.",
+        },
+        ["target add"] = new[]
+        {
+            "Usage: agent target add <target-id> [options]",
+            "",
+            "Options:",
+            "  --path <path>        Projection destination path.",
+            "  --enabled <bool>     Whether the target is enabled (default true).",
+        },
+        ["target edit"] = new[]
+        {
+            "Usage: agent target edit <target-id> [options]",
+            "  Change a target. At least one option is required.",
+            "",
+            "Options:",
+            "  --path <path>        Set the projection destination path.",
+            "  --enabled <bool>     Enable or disable the target.",
+        },
+        ["target delete"] = new[]
+        {
+            "Usage: agent target delete <target-id> [options]",
+            "",
+            "Options:",
+            "  --force              Delete even when projections exist.",
+            "  --dry-run            Preview without writing.",
+        },
+        ["target list"] = new[]
+        {
+            "Usage: agent target list [--json]",
+            "  List projection targets, including the sub-agent destination (.claude/agents/<id>.md).",
+        },
+        ["target show"] = new[]
+        {
+            "Usage: agent target show <target-id> [--json]",
+        },
+        ["subagent"] = new[]
+        {
+            "Usage: agent subagent <add|edit|delete|list|show> [options]",
+            "  Manage canonical sub-agents under .agent/agents. Run 'agent subagent <sub> --help' for options.",
+        },
+        ["subagent add"] = new[]
+        {
+            "Usage: agent subagent add <id> [options]",
+            "  Scaffold a new canonical sub-agent under .agent/agents/<id>.",
+            "",
+            "Options:",
+            "  --name <name>        Display name (defaults to the id).",
+            "  --description <d>    Description (required).",
+            "  --model <model>      Model the sub-agent should use (optional).",
+            "  --tool <tool>        Allow a tool (repeatable).",
+            "  --tools <a,b,c>      Allow a comma-separated list of tools.",
+        },
+        ["subagent edit"] = new[]
+        {
+            "Usage: agent subagent edit <id> [options]",
+            "  Change an existing canonical sub-agent. At least one option is required.",
+            "",
+            "Options:",
+            "  --name <name>        Set the display name.",
+            "  --description <d>    Set the description.",
+            "  --model <model>      Set the model (empty value clears it).",
+            "  --body-file <path>   Replace AGENT.md body from a file (absolute or relative paths allowed).",
+            "  --tool <tool>        Set the allowed tools (repeatable; replaces the list).",
+            "  --tools <a,b,c>      Set the allowed tools from a comma-separated list.",
+        },
+        ["subagent delete"] = new[]
+        {
+            "Usage: agent subagent delete <id> [options]",
+            "",
+            "Options:",
+            "  --force              Delete even when a projection exists; prunes lockfile entries.",
+            "  --dry-run            Preview without writing.",
+        },
+        ["subagent list"] = new[]
+        {
+            "Usage: agent subagent list [--json]",
+            "  List canonical sub-agents.",
+        },
+        ["subagent show"] = new[]
+        {
+            "Usage: agent subagent show <id> [--json]",
+        },
+    };
 
     private void PrintHelp()
     {

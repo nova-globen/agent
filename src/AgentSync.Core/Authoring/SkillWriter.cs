@@ -114,16 +114,7 @@ public sealed class SkillWriter
 
         if (bodyFile is not null)
         {
-            string absolute;
-            try
-            {
-                absolute = RepoPath.Resolve(_layout.RepoRoot, bodyFile);
-            }
-            catch (RepoPathException ex)
-            {
-                return AuthoringResult.Fail(AuthoringStatus.UnsafePath, ex.Message);
-            }
-
+            var absolute = BodyFile.Resolve(_layout.RepoRoot, bodyFile);
             if (!File.Exists(absolute))
             {
                 return AuthoringResult.Fail(AuthoringStatus.InvalidUsage, $"Body file '{bodyFile}' does not exist.");

@@ -92,6 +92,37 @@ public sealed class SkillCrudCommandTests
     }
 
     [Fact]
+    public void SkillEdit_AbsoluteBodyFile_Works()
+    {
+        using var h = new CliTestHarness();
+        h.MakeGitRepo();
+        h.Invoke("init");
+        var bodyPath = Path.Combine(h.WorkingDirectory, "fresh-body.md");
+        File.WriteAllText(bodyPath, "## Fresh\n\nAbsolute path body.\n");
+
+        // Absolute --body-file paths used to be rejected as unsafe; they now resolve.
+        var result = h.Invoke("skill", "edit", "code-review", "--body-file", bodyPath);
+
+        Assert.Equal(ExitCodes.Success, result.ExitCode);
+        var body = File.ReadAllText(Path.Combine(SkillDir(h, "code-review"), "SKILL.md"));
+        Assert.Contains("Absolute path body.", body);
+    }
+
+    [Fact]
+    public void SkillAdd_Help_PrintsUsageAndExitsZero()
+    {
+        using var h = new CliTestHarness();
+        h.MakeGitRepo();
+
+        var result = h.Invoke("skill", "add", "--help");
+
+        Assert.Equal(ExitCodes.Success, result.ExitCode);
+        Assert.Contains("Usage: agent skill add", result.StdOut);
+        Assert.Contains("--description", result.StdOut);
+        Assert.Contains("--target", result.StdOut);
+    }
+
+    [Fact]
     public void SkillEdit_Missing_NotFound()
     {
         using var h = new CliTestHarness();

@@ -143,4 +143,53 @@ public sealed class SubagentCommandTests
         h.Invoke("init");
         Assert.Equal(ExitCodes.DriftOrValidationFailed, h.Invoke("subagent", "show", "nope").ExitCode);
     }
+
+    [Fact]
+    public void Edit_AbsoluteBodyFile_AppliesAllFlags()
+    {
+        using var h = new CliTestHarness();
+        h.MakeGitRepo();
+        h.Invoke("init");
+        h.Invoke("subagent", "add", "planner", "--description", "Plans work.");
+
+        var bodyPath = Path.Combine(h.WorkingDirectory, "agent-body.md");
+        File.WriteAllText(bodyPath, "## Role\n\nPlan the work carefully.\n");
+
+        // An absolute --body-file used to fail ("path '…' is absolute.") and apply none of the
+        // other flags; it should now succeed and apply model, tool, and body together.
+        var result = h.Invoke("subagent", "edit", "planner",
+            "--model", "opus", "--tool", "Read", "--body-file", bodyPath);
+
+        Assert.Equal(ExitCodes.Success, result.ExitCode);
+        var yaml = File.ReadAllText(Path.Combine(AgentDir(h, "planner"), "agent.yaml"));
+        Assert.Contains("opus", yaml);
+        Assert.Contains("Read", yaml);
+        var body = File.ReadAllText(Path.Combine(AgentDir(h, "planner"), "AGENT.md"));
+        Assert.Contains("Plan the work carefully.", body);
+    }
+
+    [Fact]
+    public void Add_Help_PrintsUsageAndExitsZero()
+    {
+        using var h = new CliTestHarness();
+        h.MakeGitRepo();
+
+        var result = h.Invoke("subagent", "add", "--help");
+
+        Assert.Equal(ExitCodes.Success, result.ExitCode);
+        Assert.Contains("Usage: agent subagent add", result.StdOut);
+        Assert.Contains("--description", result.StdOut);
+    }
+
+    [Fact]
+    public void Edit_Help_PrintsUsageAndExitsZero()
+    {
+        using var h = new CliTestHarness();
+        h.MakeGitRepo();
+
+        var result = h.Invoke("subagent", "edit", "--help");
+
+        Assert.Equal(ExitCodes.Success, result.ExitCode);
+        Assert.Contains("--body-file", result.StdOut);
+    }
 }

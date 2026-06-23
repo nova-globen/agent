@@ -59,7 +59,7 @@
       "skill": "using-agent-sync",
       "target": "claude_skill",
       "path": ".claude/skills/using-agent-sync/SKILL.md",
-      "hash": "sha256:eda43e502a500022c74cb09ca39aeaad81923bb6b2347a88e7ecc1ca5c68057f"
+      "hash": "sha256:2089a22b4bfe79b0566483d6e9590f2d09890b8a08edf332475ca58a34e1e2b3"
     },
     "agent-sync-maintainer/claude_skill": {
       "skill": "agent-sync-maintainer",

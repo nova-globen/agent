@@ -194,8 +194,26 @@ public sealed class TargetCrudCommandTests
         var result = h.Invoke("target", "list", "--json");
 
         using var doc = JsonDocument.Parse(result.StdOut);
-        Assert.Equal(7, doc.RootElement.GetArrayLength());
+        // 7 canonical projection targets plus the sub-agent destination (claude_agent).
+        Assert.Equal(8, doc.RootElement.GetArrayLength());
         Assert.Equal("agents_md", doc.RootElement[0].GetProperty("id").GetString());
+        var last = doc.RootElement[doc.RootElement.GetArrayLength() - 1];
+        Assert.Equal("claude_agent", last.GetProperty("id").GetString());
+        Assert.Equal(".claude/agents/<id>.md", last.GetProperty("path").GetString());
+    }
+
+    [Fact]
+    public void TargetList_Human_SurfacesSubagentTarget()
+    {
+        using var h = new CliTestHarness();
+        h.MakeGitRepo();
+        h.Invoke("init");
+
+        var result = h.Invoke("target", "list");
+
+        Assert.Equal(ExitCodes.Success, result.ExitCode);
+        Assert.Contains("claude_agent", result.StdOut);
+        Assert.Contains(".claude/agents/<id>.md", result.StdOut);
     }
 
     [Fact]

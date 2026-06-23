@@ -45,9 +45,23 @@ folders. **Never edit a generated projection by hand** — `lock.json` plus the 
   edit <id> | delete <id>`.
 - `agent import skill <path>` / `agent import agent <path>` — adopt an existing skill
   file/folder or instruction file into `.agent/skills/`.
+- `agent subagent add <id> --description "<desc>"` — scaffold a canonical sub-agent. Also
+  `agent subagent list | show <id> | edit <id> | delete <id>`, and `agent import subagent
+  <path>` to adopt existing `.claude/agents/*.md` files (pass a folder to import all of them).
 - `agent sync` (writes by default; `--check` previews, `--force` overwrites a hand-edited
   section), `agent status [--fail-on-drift --ci]`, `agent diff`, `agent validate`,
   `agent doctor`.
 - `agent target list | show <id>` — inspect the projection destinations in `agent.yaml`.
+
+## Sub-agents
+
+Sub-agents are a second canonical artifact alongside skills. Each lives in
+`.agent/agents/<id>/` with `agent.yaml` (id, name, description, and an optional model and
+tools allow-list) and `AGENT.md` (the system-prompt body). `agent sync` projects each one to
+a Claude Code sub-agent file at `.claude/agents/<id>.md` and records it in
+`.agent/agents.lock.json` — the same canonical → projection → drift flow as skills, with its
+own lockfile. Manage them with `agent subagent add | edit | delete | list | show`, and adopt
+existing ones with `agent import subagent <path>`. As with skills, never hand-edit the
+generated `.claude/agents/<id>.md`; edit `AGENT.md` / `agent.yaml` and re-run `agent sync`.
 
 Every command also works as `git agent <command>` (for example `git agent sync`).
