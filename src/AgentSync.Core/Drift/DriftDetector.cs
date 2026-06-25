@@ -124,22 +124,33 @@ public sealed class DriftDetector
                 return new DriftItem(projection.SkillId, projection.TargetId, projection.RelativePath, DriftKind.Missing, lockMismatch);
             }
 
-            // For whole-file targets with assets, include the target references directory in the
-            // current hash so that a changed (or missing) reference file shows as drift.
+            // For whole-file targets, use the combined hash (body + any assets) to detect
+            // InSync. For Outdated vs ManualEdit classification, compare the *body only*
+            // against the lockfile hash (which now stores just the body hash). This means
+            // a deleted or changed references/ file is Outdated (auto-restorable) rather
+            // than ManualEdit (needs --force), because assets are managed projections, not
+            // user-authored content.
             var targetRefsDir = projection.AssetSourceDir is not null
                 ? Path.Combine(Path.GetDirectoryName(absolutePath)!, "references")
                 : null;
             currentBody = File.ReadAllText(absolutePath);
+            var currentBodyHash = ContentHasher.Hash(currentBody);
             var currentHashWithAssets = ContentHasher.HashWithAssets(currentBody, targetRefsDir);
-            declaredHash = lockEntry?.Hash;
+            var declaredBodyHash = lockEntry?.Hash;  // body-only hash stored by ProjectionApplier
+
+            // lockMismatch: the body hash we stored no longer matches what we'd write today.
+            var desiredBodyHash = ContentHasher.Hash(projection.Body);
+            var wholeLockMismatch = lockEntry is null || lockEntry.Hash != desiredBodyHash;
 
             var kindWhole =
                 currentHashWithAssets == desiredHash ? DriftKind.InSync
-                : declaredHash is null ? DriftKind.ManualEdit
-                : currentHashWithAssets != declaredHash ? DriftKind.ManualEdit
-                : DriftKind.Outdated;
+                // Body unchanged since we wrote it → assets or canonical drifted (Outdated).
+                : string.Equals(currentBodyHash, declaredBodyHash, StringComparison.Ordinal) ? DriftKind.Outdated
+                : declaredBodyHash is null ? DriftKind.ManualEdit
+                : DriftKind.ManualEdit;
+
             return new DriftItem(projection.SkillId, projection.TargetId, projection.RelativePath, kindWhole,
-                lockMismatch && kindWhole == DriftKind.InSync);
+                wholeLockMismatch && kindWhole == DriftKind.InSync);
         }
 
         var currentHash = ContentHasher.Hash(currentBody);

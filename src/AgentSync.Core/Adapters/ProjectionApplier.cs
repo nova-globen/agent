@@ -58,7 +58,12 @@ public sealed class ProjectionApplier
 
     private UpsertResult ApplyWholeFile(string absolutePath, Projection projection, Lockfile lockfile, bool force, bool dryRun)
     {
-        var newHash = ContentHasher.HashWithAssets(projection.Body, projection.AssetSourceDir);
+        // Store and compare body-only hashes for manual-edit detection. The combined hash
+        // (body + assets) is used only for InSync detection so that a deleted or changed
+        // references/ file is detected as drift — but it must not block the restore via the
+        // manual-edit gate, since assets are managed projections, not user-authored content.
+        var newBodyHash = ContentHasher.Hash(projection.Body);
+        var newCombinedHash = ContentHasher.HashWithAssets(projection.Body, projection.AssetSourceDir);
         var targetRefsDir = projection.AssetSourceDir is not null
             ? Path.Combine(Path.GetDirectoryName(absolutePath)!, "references")
             : null;
@@ -71,22 +76,40 @@ public sealed class ProjectionApplier
                 SyncAssets(projection.AssetSourceDir, targetRefsDir);
             }
 
-            return new UpsertResult(ProjectionChange.Created, newHash, ManualEditDetected: false);
+            return new UpsertResult(ProjectionChange.Created, newBodyHash, ManualEditDetected: false);
         }
 
         var existing = File.ReadAllText(absolutePath);
-        var currentHash = ContentHasher.HashWithAssets(existing, targetRefsDir);
+        var existingBodyHash = ContentHasher.Hash(existing);
+        var currentCombinedHash = ContentHasher.HashWithAssets(existing, targetRefsDir);
         var lockEntry = lockfile.Get(projection.SkillId, projection.TargetId);
-        var manuallyEdited = lockEntry is null || !string.Equals(currentHash, lockEntry.Hash, StringComparison.Ordinal);
 
-        if (currentHash == newHash)
+        // Manual edit = the body content was changed since we last wrote it.
+        // We do NOT include assets in this check: a deleted/changed references/ file is always
+        // silently restored (see the body-correct case below).
+        var manuallyEdited = lockEntry is null
+            || !string.Equals(existingBodyHash, lockEntry.Hash, StringComparison.Ordinal);
+
+        if (currentCombinedHash == newCombinedHash)
         {
-            return new UpsertResult(ProjectionChange.Unchanged, newHash, ManualEditDetected: false);
+            return new UpsertResult(ProjectionChange.Unchanged, newBodyHash, ManualEditDetected: false);
+        }
+
+        if (string.Equals(existingBodyHash, newBodyHash, StringComparison.Ordinal))
+        {
+            // Body is already canonical. Only assets differ (e.g. references/ was deleted or
+            // changed). Always restore silently — no --force needed for managed assets.
+            if (!dryRun)
+            {
+                SyncAssets(projection.AssetSourceDir, targetRefsDir);
+            }
+
+            return new UpsertResult(ProjectionChange.Updated, newBodyHash, ManualEditDetected: false);
         }
 
         if (manuallyEdited && !force)
         {
-            return new UpsertResult(ProjectionChange.SkippedManualEdit, currentHash, ManualEditDetected: true);
+            return new UpsertResult(ProjectionChange.SkippedManualEdit, existingBodyHash, ManualEditDetected: true);
         }
 
         if (!dryRun)
@@ -95,7 +118,7 @@ public sealed class ProjectionApplier
             SyncAssets(projection.AssetSourceDir, targetRefsDir);
         }
 
-        return new UpsertResult(ProjectionChange.Updated, newHash, ManualEditDetected: manuallyEdited);
+        return new UpsertResult(ProjectionChange.Updated, newBodyHash, ManualEditDetected: manuallyEdited);
     }
 
     /// <summary>

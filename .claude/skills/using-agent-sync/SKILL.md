@@ -56,17 +56,34 @@ folders. **Never edit a generated projection by hand** — `lock.json` plus the 
 - `agent sync` (writes by default; `--check` previews, `--force` overwrites a hand-edited
   section), `agent status [--fail-on-drift --ci]`, `agent diff`, `agent validate`,
   `agent doctor`.
-- `agent target list | show <id>` — inspect the projection destinations in `agent.yaml`.
+- `agent target list | show <id>` — inspect projection destinations (skill targets +
+  sub-agent targets) in `agent.yaml`.
 
 ## Sub-agents
 
 Sub-agents are a second canonical artifact alongside skills. Each lives in
-`.agent/agents/<id>/` with `agent.yaml` (id, name, description, and an optional model and
-tools allow-list) and `AGENT.md` (the system-prompt body). `agent sync` projects each one to
-a Claude Code sub-agent file at `.claude/agents/<id>.md` and records it in
-`.agent/agents.lock.json` — the same canonical → projection → drift flow as skills, with its
-own lockfile. Manage them with `agent subagent add | edit | delete | list | show`, and adopt
-existing ones with `agent import subagent <path>`. As with skills, never hand-edit the
-generated `.claude/agents/<id>.md`; edit `AGENT.md` / `agent.yaml` and re-run `agent sync`.
+`.agent/agents/<id>/` with `agent.yaml` (id, name, description, and an optional `model`,
+`color`, and `tools` allow-list) and `AGENT.md` (the system-prompt body). `agent sync`
+projects each one to a Claude Code sub-agent file at `.claude/agents/<id>.md` and records it
+in `.agent/agents.lock.json` — the same canonical → projection → drift flow as skills.
+Manage them with `agent subagent add | edit | delete | list | show`, and adopt existing
+`.claude/agents/` files with `agent import subagent` (pass a path or omit it to
+auto-discover `.claude/agents/`).
+
+### Second-tool sub-agent projection (toml_agent)
+
+By default `agent sync` projects sub-agents only to `.claude/agents/<id>.md`. To also
+project them as TOML files for another agent tool, add the `toml_agent` target:
+
+```bash
+agent target add toml_agent --path .codex/agents   # configures the output directory
+agent sync                                          # emits <id>.toml alongside <id>.md
+```
+
+The emitted TOML has `name`, `description`, `model` (if set), `tools` (if set), and
+`system_prompt`. Toggle the target off with `agent target edit toml_agent --enabled false`.
+
+As with skills, never hand-edit the generated files; edit `AGENT.md` / `agent.yaml` and
+re-run `agent sync`.
 
 Every command also works as `git agent <command>` (for example `git agent sync`).

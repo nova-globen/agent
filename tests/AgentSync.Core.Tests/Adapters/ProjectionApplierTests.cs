@@ -156,4 +156,39 @@ public sealed class ProjectionApplierTests
         var report = new DriftDetector(temp.Path).Detect();
         Assert.Contains(report.Items, i => i.TargetId == TargetIds.ClaudeSkill && i.Kind == DriftKind.Outdated);
     }
+
+    [Fact]
+    public void Apply_WholeFile_DeletedTargetReferences_RestoredBySyncWithoutForce()
+    {
+        using var temp = new TempDir();
+        new InitService(temp.Path).Run();
+
+        var refsDir = Path.Combine(temp.Path, ".agent", "skills", "code-review", "references");
+        Directory.CreateDirectory(refsDir);
+        File.WriteAllText(Path.Combine(refsDir, "guide.md"), "Guidance\n");
+
+        var ws = WorkspaceLoader.Load(temp.Path);
+        var plan = new ProjectionPlanner().Plan(ws);
+        var lockfile = new Lockfile();
+        var applier = new ProjectionApplier(temp.Path);
+        applier.ApplyAll(plan, lockfile);
+        lockfile.Save(Path.Combine(temp.Path, ".agent", "lock.json"));
+
+        // Simulate a user deleting the projected references/ directory.
+        var projectedRefs = Path.Combine(temp.Path, ".claude", "skills", "code-review", "references");
+        Directory.Delete(projectedRefs, recursive: true);
+        Assert.False(Directory.Exists(projectedRefs));
+
+        // status should report Outdated (not ManualEdit) — a deleted asset is never manual-edit.
+        var drift = new DriftDetector(temp.Path).Detect();
+        Assert.Contains(drift.Items, i => i.TargetId == TargetIds.ClaudeSkill && i.Kind == DriftKind.Outdated);
+
+        // Plain sync (no --force) must restore the references/ directory.
+        var lockfile2 = Lockfile.Load(Path.Combine(temp.Path, ".agent", "lock.json"));
+        var plan2 = new ProjectionPlanner().Plan(WorkspaceLoader.Load(temp.Path));
+        var outcomes = new ProjectionApplier(temp.Path).ApplyAll(plan2, lockfile2);
+        Assert.All(outcomes.Where(o => o.Projection.TargetId == TargetIds.ClaudeSkill),
+            o => Assert.NotEqual(ProjectionChange.SkippedManualEdit, o.Change));
+        Assert.True(File.Exists(Path.Combine(projectedRefs, "guide.md")), "references/guide.md must be restored");
+    }
 }
