@@ -126,7 +126,7 @@ scripts/release-smoke.sh   # publishes both binaries; checks git-agent delegatio
 - Run build + tests before and after changes; add tests for behavior changes.
 - Prefer small, focused commits. Do not add AI/Claude trailers to commit messages.
 - Keep public docs clean: no private conversation URLs and no local machine paths.
-- Keep alpha positioning honest in any public-facing wording.
+- Keep release positioning accurate in any public-facing wording.
 
 ## This repository runs Agent Sync on itself
 

@@ -5,25 +5,25 @@
       "skill": "agent-sync-maintainer",
       "target": "agents_md",
       "path": "AGENTS.md",
-      "hash": "sha256:62410fca064e629185f6351135e41a64da1ff2d3ad7ec37e5991a4f35c3853b5"
+      "hash": "sha256:e5b985f249ad72fcf878a4e62fd60ffff2e1027abb30372b3316429197126b86"
     },
     "agent-sync-maintainer/claude_md": {
       "skill": "agent-sync-maintainer",
       "target": "claude_md",
       "path": "CLAUDE.md",
-      "hash": "sha256:62410fca064e629185f6351135e41a64da1ff2d3ad7ec37e5991a4f35c3853b5"
+      "hash": "sha256:e5b985f249ad72fcf878a4e62fd60ffff2e1027abb30372b3316429197126b86"
     },
     "agent-sync-maintainer/copilot": {
       "skill": "agent-sync-maintainer",
       "target": "copilot",
       "path": ".github/copilot-instructions.md",
-      "hash": "sha256:62410fca064e629185f6351135e41a64da1ff2d3ad7ec37e5991a4f35c3853b5"
+      "hash": "sha256:e5b985f249ad72fcf878a4e62fd60ffff2e1027abb30372b3316429197126b86"
     },
     "agent-sync-maintainer/gemini": {
       "skill": "agent-sync-maintainer",
       "target": "gemini",
       "path": ".gemini/GEMINI.md",
-      "hash": "sha256:62410fca064e629185f6351135e41a64da1ff2d3ad7ec37e5991a4f35c3853b5"
+      "hash": "sha256:e5b985f249ad72fcf878a4e62fd60ffff2e1027abb30372b3316429197126b86"
     },
     "agent-sync-overview/agents_md": {
       "skill": "agent-sync-overview",
@@ -65,13 +65,13 @@
       "skill": "agent-sync-maintainer",
       "target": "claude_skill",
       "path": ".claude/skills/agent-sync-maintainer/SKILL.md",
-      "hash": "sha256:67995e4d03043a7a45d3b2cef0ea7ca83f7577177c5bc23792231932f1318452"
+      "hash": "sha256:a1848ebfdec56c94d04aff345984eec7ab2cba1c0af92152219c8c185eece9f9"
     },
     "releasing-agent-sync/claude_skill": {
       "skill": "releasing-agent-sync",
       "target": "claude_skill",
       "path": ".claude/skills/releasing-agent-sync/SKILL.md",
-      "hash": "sha256:21090eae1f1a10c99d5d3a145f5e781ac762a7ba13fba8ee9d0a8bb9c9380cfd"
+      "hash": "sha256:fc68175988e996ffe61f37ba779b74626119256d470280f66c0b1cb1bad094f3"
     }
   }
 }

@@ -1,7 +1,7 @@
 # Next Steps
 
-Future work, organized by horizon. Keep alpha positioning honest; preserve the core
-invariants (see `CLAUDE.md` → "Do not accidentally break").
+Future work, organized by horizon. Preserve the core invariants
+(see `CLAUDE.md` → "Do not accidentally break").
 
 ## Feature wave (import + CRUD + UI shipped)
 
@@ -37,18 +37,15 @@ compatible and the GUI optional (the headless CLI must not depend on the UI).
 
 Milestone breakdown and acceptance criteria: `features/ROADMAP.md`.
 
-## Before wider promotion
+## Before the next release
 
-- Final README / public-announcement review (clarity, accuracy, alpha framing).
 - Verify the Quick Demo in `README.md` works on a clean machine.
-- Verify the alpha limitations list is current.
 - Verify the GitHub issue templates render and route correctly.
 - Verify install docs (`install.sh` / `install.ps1` commands, manual install).
 - Verify GitHub release assets (CLI + UI archives + the `AgentSync.Ui` tool) exist and
-  checksums validate for `v0.2.0`.
-- After tagging `v0.2.0`, manually confirm the installed UI (the `AgentSync.Ui`
-  tool **and** a release archive) loads CSS/JS in a real browser when launched via
-  `agent ui` from inside a repo — the alpha.2 build still came up blank (content-root bug).
+  checksums validate.
+- Manually confirm the installed UI loads CSS/JS in a real browser when launched via
+  `agent ui` from inside a repo.
 
 ## Near-term product work
 

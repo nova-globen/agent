@@ -178,4 +178,4 @@ hooks/CI/`dotnet tool`/containers free of any UI dependency.
 - The headless stack — CLI, `git-agent`, hooks, CI, `dotnet tool` packages, and
   container images — builds/tests/runs/ships with no UI (web host / FluentUI) dependency.
 - Docs (`README.md`, `AGENTS.md`, `CLAUDE.md`, `.agent/*`) updated as each milestone
-  lands; alpha positioning kept honest.
+  lands; release positioning kept accurate.

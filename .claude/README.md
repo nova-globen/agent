@@ -33,7 +33,7 @@ For the verified behavior, see `.agent/VALIDATION_LOG.md`.
 
 - Do **not** add AI/Claude trailers to commit messages.
 - Keep public docs clean: no private conversation URLs and no local machine paths.
-- Keep alpha positioning honest in any public-facing wording.
+- Keep release positioning accurate in any public-facing wording.
 - Do not change `agent sync` write-by-default behavior, retarget off `net10.0`, remove
   `git-agent`, weaken `RepoPath` traversal protection, or overwrite manually edited
   generated sections without `--force` — unless a maintainer explicitly asks.

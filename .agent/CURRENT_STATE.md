@@ -98,18 +98,14 @@ Covered: install, `agent --version` / `git agent --version`, `init`, `sync`,
 running Agent Sync, manual-edit drift detection in `AGENTS.md`, and a commit being
 blocked on drift. Details in `.agent/VALIDATION_LOG.md`.
 
-## Known limitations
+## Known gaps
 
-- Alpha release, not a stable v1.
-- Needs more real-world testing on Linux and macOS.
+- Needs more real-world testing on Linux and macOS (Windows is the primary validated platform).
 - Symlink escape hardening is not yet implemented.
-- Package-manager install is not yet available.
-- Adapters are MVP-level and may evolve.
-- Canonical skill schema may change before v1.
+- Package-manager install (Homebrew, winget) is not yet available.
 - Install scripts need broader environment testing.
-- Generated output conventions may evolve based on user feedback.
 
 ## Next recommended work
 
 See `.agent/NEXT_STEPS.md`. Highest-leverage now: real-world Linux/macOS validation,
-symlink escape hardening, and broader install-script testing before wider promotion.
+symlink escape hardening, and broader install-script testing.

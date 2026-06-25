@@ -54,7 +54,7 @@ source, never by hand.
    - `examples/azure-pipelines/azure-pipelines.yml` and its `README.md`
    - They pin `install.sh … | bash -s -- v<version>`; bump the tag.
 5. Write the release narrative **honestly** — describe what actually changed since the last
-   tag (read the commit log); keep the alpha positioning accurate. Move older, now-historical
+   tag (read the commit log); keep the release narrative accurate. Move older, now-historical
    detail into `.agent/CURRENT_STATE.md` rather than bloating the always-loaded files.
 6. Find anything missed: `grep -rIn "<previous-version>" --exclude-dir=.git .` (and the
    tag form). Every remaining hit is either intentional history or a spot to update.

@@ -1,7 +1,7 @@
-# Promotion copy — Agent Sync (alpha)
+# Promotion copy — Agent Sync (v0.2.0)
 
-Reusable copy for announcing the Agent Sync **alpha / developer preview**. Adjust tone
-per channel. Repo: https://github.com/nova-globen/agent
+Reusable copy for announcing Agent Sync. Adjust tone per channel.
+Repo: https://github.com/nova-globen/agent
 
 ## Tagline
 
@@ -27,15 +27,14 @@ per channel. Repo: https://github.com/nova-globen/agent
 > Tired of `AGENTS.md`, `CLAUDE.md`, Cursor rules, and Copilot instructions slowly
 > drifting apart?
 >
-> Agent Sync (alpha) lets you write AI-agent instructions once and mirror them into
-> every format — then uses Git hooks + CI to catch drift before it ships.
+> Agent Sync lets you write AI-agent instructions once and mirror them into every
+> format — then uses Git hooks + CI to catch drift before it ships.
 >
-> Open source (AGPL-3.0). Feedback wanted from real repos 👇
-> https://github.com/nova-globen/agent
+> Open source (AGPL-3.0). Try it: https://github.com/nova-globen/agent
 
 ## Longer post (GitHub Discussions / Reddit / Hacker News)
 
-> **Agent Sync (alpha): keep your AI-agent instruction files in sync, Git-native**
+> **Agent Sync: keep your AI-agent instruction files in sync, Git-native**
 >
 > If you use more than one AI coding agent in a repo, you've probably got the same
 > guidance copy-pasted across `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/*`,
@@ -52,10 +51,9 @@ per channel. Repo: https://github.com/nova-globen/agent
 > `agent` plus a `git agent` extension, with self-contained binaries for Linux, macOS,
 > and Windows.
 >
-> This is an **alpha / developer preview** — the core flow works and has been used end
-> to end, but adapters and the skill schema may still change before v1. I'd love
-> feedback from real repositories: which agents you use, which targets you enabled, and
-> what broke or felt confusing.
+> The core flow is solid and has been used end to end on real repositories. Feedback
+> is welcome: which agents you use, which targets you enabled, and what broke or felt
+> confusing.
 >
 > Repo + quick demo: https://github.com/nova-globen/agent
 > License: AGPL-3.0-or-later.

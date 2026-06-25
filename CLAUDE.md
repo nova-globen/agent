@@ -138,7 +138,7 @@ managed in full and detect manual edits via the lockfile hash instead of markers
 marker syntax is documented in `.agent/PRODUCT_SPEC.md`.
 <!-- agent-sync:end -->
 
-<!-- agent-sync:start id=agent-sync-maintainer target=claude_md hash=sha256:62410fca064e629185f6351135e41a64da1ff2d3ad7ec37e5991a4f35c3853b5 -->
+<!-- agent-sync:start id=agent-sync-maintainer target=claude_md hash=sha256:e5b985f249ad72fcf878a4e62fd60ffff2e1027abb30372b3316429197126b86 -->
 ## Agent Sync Maintainer
 
 How to work on the Agent Sync codebase — invariants you must not break, build/test commands, project layout, key design points, and the release process. Use when implementing features or fixes, updating adapters, adjusting drift detection, or preparing a release.
@@ -271,7 +271,7 @@ scripts/release-smoke.sh   # publishes both binaries; checks git-agent delegatio
 - Run build + tests before and after changes; add tests for behavior changes.
 - Prefer small, focused commits. Do not add AI/Claude trailers to commit messages.
 - Keep public docs clean: no private conversation URLs and no local machine paths.
-- Keep alpha positioning honest in any public-facing wording.
+- Keep release positioning accurate in any public-facing wording.
 
 ## This repository runs Agent Sync on itself
 

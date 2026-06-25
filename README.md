@@ -1,7 +1,7 @@
 # Agent Sync
 
 [![CI](https://github.com/nova-globen/agent/actions/workflows/agent-sync-check.yml/badge.svg?branch=master)](https://github.com/nova-globen/agent/actions/workflows/agent-sync-check.yml)
-[![Latest release](https://img.shields.io/github/v/release/nova-globen/agent?include_prereleases&sort=semver)](https://github.com/nova-globen/agent/releases)
+[![Latest release](https://img.shields.io/github/v/release/nova-globen/agent?sort=semver)](https://github.com/nova-globen/agent/releases)
 [![License: AGPL-3.0-or-later](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue.svg)](LICENSE)
 
 Agent Sync is a Git-native consistency manager for AI-agent skills, instructions,
@@ -21,26 +21,21 @@ engine for those who prefer a screen:
 
 <p align="center"><em>The optional local web UI — bound to <code>127.0.0.1</code>, driving the same canonical-skill engine as the CLI.</em></p>
 
-## Status: alpha (developer preview)
+## Status: stable (v0.2.0)
 
-Agent Sync is an **alpha / developer preview**. The core workflow — author canonical
-skills, project them to every target, and catch drift via Git hooks and CI — works
-today and has been used end to end. The fundamentals are solid; the surface is still
-settling, so expect some sharp edges and a few breaking changes before a stable v1.
+The core workflow — author canonical skills, project them to every target, and catch
+drift via Git hooks and CI — is solid end to end and has been tested across real
+repositories. `v0.2.0` is the first stable release.
 
-Current limitations:
+Known gaps (not blockers):
 
-- Adapters are MVP-level and may evolve.
-- The canonical skill schema may change before stable v1.
-- Manually validated on Windows; needs more real-world testing on Linux and macOS.
-- Install scripts are new and should be tested across more environments.
+- Needs more real-world testing on Linux and macOS (Windows is the primary validated platform).
 - Symlink escape hardening is not yet implemented.
-- Published as a .NET tool on NuGet (`AgentSync` / `AgentSync.Git`); other
-  package managers (Homebrew, winget, etc.) are not available yet.
-- Generated output conventions may change based on feedback.
+- Package managers (Homebrew, winget, etc.) are not yet available; install via the
+  shell script or as a .NET tool on NuGet (`AgentSync` / `AgentSync.Git`).
 
-Feedback from real repositories is the most useful thing right now — see
-[Contributing](#contributing) and the issue templates.
+Feedback and real-world bug reports are welcome — see [Contributing](#contributing)
+and the issue templates.
 
 ## Who this is for
 
