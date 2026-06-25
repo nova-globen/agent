@@ -1,0 +1,36 @@
+# Auto Pilot
+Implement a new command: "agent autopilot claude"
+
+- The "agent init" command must have an extra step asking if the user want to install some predefined sample skills and sub-agents.
+- If the usere confirms, it must install the skills, agents and other ai-agents-related files.
+- Create the files above from this repository: C:\Users\desma\Data\Repositories\NovaGloben\DidaBit
+- Review how everything is working in that solution and use the same structure for the init command including the git hools, etc.
+- the most important skills: adr-author, agentsync, autopilot, commit-governor, dotnet-inspect, memory-curator, next-step, operating-guide, plan-governor
+- autopilot is the one which we will be focusing on the most. readit with all its details.
+
+# How "agent autopilot claude" works
+- it must utilize claude code cli headless mode: https://code.claude.com/docs/en/headless
+- if other ai-agents support the same, it must implement for them too. such as codex and copilot clis.
+- the command for the headless invocation must be "continue autopilot"
+- it will trigger the skill and it will continue until its plan is implemented or the context gets too big. then it will write a new prompt for another session and will stop. or also, it might fail for any reason. prompt execution might fails for any reason or for example the network might gets disconnected or the usage limit gets hit, etc.
+- anyway, either failure or success, the "agent autopilot claude" command must call claude cli in headless mode again with the response from the previous invocation to get a json:
+```
+{
+  failed: boolean;
+  message: string; // md format
+  retry?: {
+	    after: number; // seconds to wait for retry
+	  }; // if retry provided, it means it must retry previous invocation after the given number of seconds. for example, if it has hit the usage limit, it must return number of seconds until the limit will be reset.
+  
+}
+```
+- any other edge cases must be covered.
+- it must retry in case it is applicable.
+- it must forward claude's cli output to the console.
+- it must continue until there is nothing more to do and everything is done.
+- the loop must go on and on and there should be a few secods of wait between each invocation.
+- it must invoice claude cli using the "--dangerously-skip-permissions" switch.
+
+If you have any questions, ask them one after another. otherwise write a plan to fully implement this to ./.agent/plans folder.
+
+

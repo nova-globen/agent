@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using AgentSync.Core;
 using AgentSync.Core.Authoring;
+using AgentSync.Core.Autopilot;
 using AgentSync.Core.Configuration;
 using AgentSync.Core.Drift;
 using AgentSync.Core.Import;
@@ -19,6 +20,7 @@ public sealed class CliRunner
 {
     private readonly TextWriter _out;
     private readonly TextWriter _err;
+    private readonly TextReader _in;
     private readonly string _workingDirectory;
     private readonly IUiLauncher _uiLauncher;
     private readonly IBrowserLauncher _browserLauncher;
@@ -37,10 +39,12 @@ public sealed class CliRunner
         IUiLauncher? uiLauncher = null,
         IBrowserLauncher? browserLauncher = null,
         IUiReadinessProbe? readinessProbe = null,
-        IUiInstaller? uiInstaller = null)
+        IUiInstaller? uiInstaller = null,
+        TextReader? input = null)
     {
         _out = output ?? Console.Out;
         _err = error ?? Console.Error;
+        _in = input ?? Console.In;
         _workingDirectory = workingDirectory ?? Directory.GetCurrentDirectory();
         _uiLauncher = uiLauncher ?? new UiLauncher();
         _browserLauncher = browserLauncher ?? new BrowserLauncher();
@@ -89,6 +93,7 @@ public sealed class CliRunner
             "subagent" => RunSubagent(rest),
             "subagents" => RunSubagentList(rest),
             "sessions" or "session" => RunSessions(rest),
+            "autopilot" => RunAutopilot(rest),
             "ui" => RunUi(rest),
             "install-hooks" => RunInstallHooks(rest),
             "doctor" => RunDoctor(rest),
@@ -121,12 +126,19 @@ public sealed class CliRunner
     {
         if (WantsHelp(args)) return SubUsage("init");
         var force = false;
+        bool? installSamplesFlag = null;
         foreach (var arg in args)
         {
             switch (arg)
             {
                 case "--force":
                     force = true;
+                    break;
+                case "--with-samples":
+                    installSamplesFlag = true;
+                    break;
+                case "--no-samples":
+                    installSamplesFlag = false;
                     break;
                 default:
                     return UnknownOption("init", arg);
@@ -142,7 +154,8 @@ public sealed class CliRunner
             _out.WriteLine("note: not inside a Git repository; scaffolding in the current directory.");
         }
 
-        var result = new InitService(root).Run(force);
+        var installSamples = installSamplesFlag ?? PromptForSamples();
+        var result = new InitService(root).Run(force, installSamples);
 
         foreach (var file in result.Files)
         {
@@ -164,6 +177,21 @@ public sealed class CliRunner
         _out.WriteLine();
         _out.WriteLine("Agent Sync initialized. Next: run 'agent install-hooks', then 'agent status'.");
         return ExitCodes.Success;
+    }
+
+    private bool PromptForSamples()
+    {
+        _out.Write("Install sample skills (autopilot, commit-governor, plan-governor, ...)? [y/N] ");
+        try
+        {
+            // Null from a non-interactive or redirected reader means "no".
+            var line = _in.ReadLine();
+            return line is not null && line.Trim().Equals("y", StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     // --- status ---------------------------------------------------------------
@@ -2398,6 +2426,63 @@ public sealed class CliRunner
         return false;
     }
 
+    // --- autopilot -----------------------------------------------------------
+
+    private int RunAutopilot(string[] args)
+    {
+        if (WantsHelp(args)) return SubUsage("autopilot");
+        if (args.Length == 0)
+        {
+            _err.WriteLine("error: 'autopilot' requires a provider: claude.");
+            _err.WriteLine("Run 'agent autopilot --help' for usage.");
+            return ExitCodes.InvalidUsage;
+        }
+
+        var sub = args[0];
+        var rest = args.Skip(1).ToArray();
+        return sub switch
+        {
+            "claude" => RunAutopilotClaude(rest),
+            _ => UnknownSubcommand("autopilot", sub),
+        };
+    }
+
+    private int RunAutopilotClaude(string[] args)
+    {
+        if (WantsHelp(args)) return SubUsage("autopilot");
+        var delaySeconds = 5;
+        for (var i = 0; i < args.Length; i++)
+        {
+            switch (args[i])
+            {
+                case "--delay":
+                    if (!TryValue(args, ref i, "--delay", out var delayStr)) return ExitCodes.InvalidUsage;
+                    if (!int.TryParse(delayStr, out delaySeconds) || delaySeconds < 0)
+                    {
+                        _err.WriteLine("error: --delay must be a non-negative integer (seconds).");
+                        return ExitCodes.InvalidUsage;
+                    }
+
+                    break;
+                default:
+                    return UnknownOption("autopilot claude", args[i]);
+            }
+        }
+
+        var options = new AutopilotOptions(DelaySeconds: delaySeconds);
+        var provider = new ClaudeAutopilotProvider();
+        var service = new AutopilotService();
+
+        using var cts = new CancellationTokenSource();
+        Console.CancelKeyPress += (_, e) =>
+        {
+            e.Cancel = true;
+            cts.Cancel();
+        };
+
+        return service.RunAsync(provider, options, _out, _err, cts.Token).GetAwaiter().GetResult();
+    }
+
     /// <summary>Prints per-subcommand usage (options list) to stdout and returns success.</summary>
     private int SubUsage(string command)
     {
@@ -2422,7 +2507,9 @@ public sealed class CliRunner
             "  Scaffold .agent/ (config + starter skills) and .githooks/ in the current repository.",
             "",
             "Options:",
-            "  --force    Overwrite existing files.",
+            "  --force           Overwrite existing files.",
+            "  --with-samples    Install sample skills (autopilot, commit-governor, plan-governor, etc.) without prompting.",
+            "  --no-samples      Skip sample installation without prompting.",
         },
         ["status"] = new[]
         {
@@ -2665,6 +2752,22 @@ public sealed class CliRunner
         {
             "Usage: agent subagent show <id> [--json]",
         },
+        ["autopilot"] = new[]
+        {
+            "Usage: agent autopilot <provider> [options]",
+            "",
+            "Providers:",
+            "  claude               Drive Claude Code CLI in a headless loop.",
+            "",
+            "Options (claude):",
+            "  --delay <seconds>    Seconds to wait between sessions (default: 5).",
+            "",
+            "The loop calls the provider with the prompt \"continue autopilot\" and",
+            "--dangerously-skip-permissions, then uses a second headless call to parse",
+            "the result as JSON. It retries automatically on transient failures (e.g.",
+            "usage-limit resets) and stops when the session signals completion or a",
+            "hard blocker. Press Ctrl+C to cancel cleanly.",
+        },
     };
 
     private void PrintHelp()
@@ -2688,6 +2791,7 @@ public sealed class CliRunner
         _out.WriteLine("  target              Manage projection targets: add | edit | delete | list | show.");
         _out.WriteLine("  subagent            Manage canonical sub-agents: add | edit | delete | list | show.");
         _out.WriteLine("  sessions            Back up / restore agent session history: backup | restore | list | providers.");
+        _out.WriteLine("  autopilot <prov>    Headless autopilot loop (providers: claude).");
         _out.WriteLine("  ui                  Launch the optional local web UI (separate install; CLI stays GUI-free) (--no-open).");
         _out.WriteLine("  install-hooks       Configure core.hooksPath and make hooks executable.");
         _out.WriteLine("  doctor              Diagnose Git repo, PATH, hooks, and config (--json).");

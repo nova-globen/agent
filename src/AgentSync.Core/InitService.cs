@@ -24,7 +24,7 @@ public sealed class InitService
 
     public InitService(string repoRoot) => _layout = new RepoLayout(repoRoot);
 
-    public InitResult Run(bool force = false)
+    public InitResult Run(bool force = false, bool installSamples = false)
     {
         Directory.CreateDirectory(_layout.AgentDir);
         Directory.CreateDirectory(_layout.SkillsDir);
@@ -51,7 +51,42 @@ public sealed class InitService
             WriteFile(_layout.PrePushHook, Templates.PrePushHook, force, executable: true),
         };
 
+        if (installSamples)
+        {
+            results.AddRange(InstallSamples(force));
+        }
+
         return new InitResult(results);
+    }
+
+    private IEnumerable<InitFileResult> InstallSamples(bool force)
+    {
+        Directory.CreateDirectory(_layout.AgentsDir);
+
+        foreach (var skill in SamplePack.GetSkills())
+        {
+            var dir = Path.Combine(_layout.SkillsDir, skill.Id);
+            Directory.CreateDirectory(dir);
+            yield return WriteFile(Path.Combine(dir, "skill.yaml"), skill.SkillYaml, force);
+            yield return WriteFile(Path.Combine(dir, "SKILL.md"), skill.SkillMd, force);
+        }
+
+        foreach (var agent in SamplePack.GetAgents())
+        {
+            var dir = Path.Combine(_layout.AgentsDir, agent.Id);
+            Directory.CreateDirectory(dir);
+            yield return WriteFile(Path.Combine(dir, "agent.yaml"), agent.AgentYaml, force);
+            yield return WriteFile(Path.Combine(dir, "AGENT.md"), agent.AgentMd, force);
+        }
+
+        foreach (var hook in SamplePack.GetHooks())
+        {
+            yield return WriteFile(
+                Path.Combine(_layout.HooksDir, hook.Name),
+                hook.Content,
+                force,
+                executable: hook.Executable);
+        }
     }
 
     private InitFileResult WriteFile(string absolutePath, string content, bool force, bool executable = false)

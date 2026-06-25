@@ -54,7 +54,7 @@ Milestone breakdown and acceptance criteria: `features/ROADMAP.md`.
 - Add symlink escape hardening (resolve real paths; reject symlinked escapes) on top of
   the existing `RepoPath` checks.
 - Improve `agent diff` UX (clearer per-target output, summary counts).
-- Add more realistic starter skills beyond the default `code-review`.
+- Expand the `--with-samples` starter pack with ecosystem-specific skill sets (Node.js, Python, etc.).
 - Add adapter-specific options (per-target formatting/config knobs).
 - Consider an `agent check` alias for `status --fail-on-drift --ci` if it reads better.
 - Add a GitLab CI example (`examples/github-actions` and `examples/azure-pipelines` ship;

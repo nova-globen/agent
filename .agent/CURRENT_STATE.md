@@ -5,15 +5,18 @@ Compact handoff for AI sessions. Pair with `.agent/NEXT_STEPS.md` and
 
 ## Release
 
-- **Latest tagged release:** `v0.2.0` — **first stable release**, promoting the alpha series.
-  Adds: `toml_agent` configurable TOML projection target for sub-agents; `references/`
-  directory projection alongside `SKILL.md` for skill-folder targets (drift-detected);
-  stale-marker-hash reconciliation (plain `agent sync` clears a lockfile mismatch when the
-  body already matches canonical); `--help` on every command (all top-level verbs now print
-  usage and exit 0); `agent sessions backup` defaults to `.agent/backups/`. The prior alpha
-  series built the full feature set: `v0.2.0-alpha.7` (feedback round 3), `alpha.6`
-  (sub-agent polish), `alpha.5` (`agent sessions`), `alpha.4` (dogfood repo), `alpha.1–3`
-  (UI, CRUD, imports); `v0.1.0-alpha.1–4` were CLI-focused.
+- **Latest tagged release:** `v0.3.0` — adds `agent autopilot claude` (headless Claude Code
+  CLI loop: runs `claude --dangerously-skip-permissions -p "continue autopilot"` repeatedly,
+  parses each session result via a second headless call, retries on transient failures such as
+  usage-limit resets, and stops when all work is complete or a hard blocker is hit) and
+  `agent init --with-samples` / `--no-samples` (installs a curated starter pack of 9 skills
+  — `autopilot`, `commit-governor`, `plan-governor`, `memory-curator`, `next-step`,
+  `operating-guide`, `adr-author`, `agentsync`, `dotnet-inspect` — 3 sub-agents (`planner`,
+  `verifier`, `git-ops-executor`), and 5 Git hooks; prompted interactively on a TTY or
+  set via flag for CI).
+- **Prior release:** `v0.2.0` — first stable release. Adds `toml_agent`, `references/`
+  directory projection, stale-marker-hash reconciliation, `--help` on every command, and
+  `.agent/backups/` default.
 - **Release type:** stable
 - **Repository:** https://github.com/nova-globen/agent (default branch `master`)
 
@@ -25,8 +28,8 @@ Compact handoff for AI sessions. Pair with `.agent/NEXT_STEPS.md` and
 - **Commands implemented:** `init`, `sync`, `status`, `diff`, `validate`, `doctor`,
   `install-hooks`, `import skill`, `import agent`, `import subagent`,
   `skill add/edit/delete/list/show`, `target add/edit/delete/list/show`,
-  `subagent add/edit/delete/list/show`, `sessions backup/restore/list/providers`, and `ui` —
-  all available via both `agent` and `git agent`.
+  `subagent add/edit/delete/list/show`, `sessions backup/restore/list/providers`, `ui`,
+  and `autopilot claude` — all available via both `agent` and `git agent`.
 - **Sub-agents:** canonical sub-agents under `.agent/agents/<id>/` (`agent.yaml` + `AGENT.md`)
   projected by `agent sync` into `.claude/agents/<id>.md`; drift tracked in
   `.agent/agents.lock.json` (`AgentSync.Core/Subagents/`).
@@ -64,7 +67,9 @@ Compact handoff for AI sessions. Pair with `.agent/NEXT_STEPS.md` and
   the UI from a foreign working directory — a **non-empty** static-asset body and a rendered
   page that **links the FluentUI CSS bundle**, guarding the content-root and styling fixes).
 - **`agent init` scaffolds two skills:** `code-review` (all targets) and `using-agent-sync`
-  (`claude_skill`-only). Templates in `src/AgentSync.Core/Templates.cs`.
+  (`claude_skill`-only). With `--with-samples` (or interactive "y"), also installs a curated
+  starter pack of 9 skills, 3 sub-agents, and 5 Git hooks via `SamplePack` embedded in Core.
+  Templates in `src/AgentSync.Core/Templates.cs`; sample content in `src/AgentSync.Core/SamplePack.cs`.
 - **Release automation:** `.github/workflows/release.yml` (tag `v*.*.*`) publishes
   self-contained CLI binaries for linux-x64/arm64, osx-x64/arm64, win-x64, plus
   `checksums.txt`; `scripts/install.sh` and `scripts/install.ps1` install from releases.

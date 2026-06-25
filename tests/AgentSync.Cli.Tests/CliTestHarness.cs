@@ -50,11 +50,19 @@ public sealed class CliTestHarness : IDisposable
         }
     }
 
-    public CliResult Invoke(params string[] args)
+    public CliResult Invoke(params string[] args) => Invoke(input: null, args);
+
+    /// <summary>
+    /// Invokes the CLI with a specific stdin reader. Pass a <see cref="StringReader"/> to
+    /// simulate interactive input (e.g. <c>new StringReader("y\n")</c> to answer "yes").
+    /// </summary>
+    public CliResult Invoke(TextReader? input, params string[] args)
     {
         var stdout = new StringWriter();
         var stderr = new StringWriter();
-        var runner = new CliRunner(stdout, stderr, WorkingDirectory);
+        // Default to a non-blocking empty reader so prompts (e.g. PromptForSamples) never block.
+        var stdin = input ?? new StringReader(string.Empty);
+        var runner = new CliRunner(stdout, stderr, WorkingDirectory, input: stdin);
         var code = runner.Run(args);
         return new CliResult(code, stdout.ToString(), stderr.ToString());
     }
@@ -92,7 +100,8 @@ public sealed class CliTestHarness : IDisposable
             browser ?? new FakeBrowserLauncher(),
             readiness ?? new FakeReadinessProbe(),
             // A no-op installer (returns null) by default so tests never touch the network.
-            installer ?? new FakeUiInstaller());
+            installer ?? new FakeUiInstaller(),
+            input: new StringReader(string.Empty));
         var code = runner.Run(args);
         return new CliResult(code, stdout.ToString(), stderr.ToString());
     }

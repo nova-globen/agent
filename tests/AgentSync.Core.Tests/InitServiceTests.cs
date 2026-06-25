@@ -79,4 +79,80 @@ public sealed class InitServiceTests
         var mode = File.GetUnixFileMode(Path.Combine(temp.Path, ".githooks", "pre-commit"));
         Assert.True(mode.HasFlag(UnixFileMode.UserExecute));
     }
+
+    [Fact]
+    public void Run_WithSamples_InstallsAllSampleSkills()
+    {
+        using var temp = new TempDir();
+
+        var result = new InitService(temp.Path).Run(installSamples: true);
+
+        // All expected sample skills are present.
+        foreach (var skill in SamplePack.GetSkills())
+        {
+            Assert.True(
+                File.Exists(Path.Combine(temp.Path, ".agent", "skills", skill.Id, "skill.yaml")),
+                $"skill '{skill.Id}' skill.yaml missing");
+            Assert.True(
+                File.Exists(Path.Combine(temp.Path, ".agent", "skills", skill.Id, "SKILL.md")),
+                $"skill '{skill.Id}' SKILL.md missing");
+        }
+    }
+
+    [Fact]
+    public void Run_WithSamples_InstallsAllSampleAgents()
+    {
+        using var temp = new TempDir();
+
+        new InitService(temp.Path).Run(installSamples: true);
+
+        foreach (var agent in SamplePack.GetAgents())
+        {
+            Assert.True(
+                File.Exists(Path.Combine(temp.Path, ".agent", "agents", agent.Id, "agent.yaml")),
+                $"agent '{agent.Id}' agent.yaml missing");
+            Assert.True(
+                File.Exists(Path.Combine(temp.Path, ".agent", "agents", agent.Id, "AGENT.md")),
+                $"agent '{agent.Id}' AGENT.md missing");
+        }
+    }
+
+    [Fact]
+    public void Run_WithSamples_InstallsAllSampleHooks()
+    {
+        using var temp = new TempDir();
+
+        new InitService(temp.Path).Run(installSamples: true);
+
+        foreach (var hook in SamplePack.GetHooks())
+        {
+            Assert.True(
+                File.Exists(Path.Combine(temp.Path, ".githooks", hook.Name)),
+                $"hook '{hook.Name}' missing");
+        }
+    }
+
+    [Fact]
+    public void Run_WithSamples_ReportsCreatedFiles()
+    {
+        using var temp = new TempDir();
+
+        var result = new InitService(temp.Path).Run(installSamples: true);
+
+        var paths = result.Files.Select(f => f.RelativePath).ToHashSet();
+        Assert.Contains(".agent/skills/autopilot/SKILL.md", paths);
+        Assert.Contains(".agent/agents/planner/AGENT.md", paths);
+        Assert.Contains(".githooks/commit-msg", paths);
+    }
+
+    [Fact]
+    public void Run_WithoutSamples_DoesNotInstallSampleSkills()
+    {
+        using var temp = new TempDir();
+
+        new InitService(temp.Path).Run(installSamples: false);
+
+        Assert.False(Directory.Exists(Path.Combine(temp.Path, ".agent", "skills", "autopilot")));
+        Assert.False(Directory.Exists(Path.Combine(temp.Path, ".agent", "agents")));
+    }
 }

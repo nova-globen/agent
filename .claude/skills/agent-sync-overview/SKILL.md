@@ -16,13 +16,14 @@ agent files that slowly diverge. Repository: https://github.com/nova-globen/agen
 
 ## Status
 
-- **Stable release.** The core workflow is solid end to end. Current release line: `v0.2.0`
-  — first stable release, promoting `v0.2.0-alpha.7`. Adds `toml_agent` (configurable TOML
-  projection for a second agent tool alongside Claude), `references/` directory projection
-  for skill folders, stale-marker-hash reconciliation, `.agent/backups/` as the default
-  sessions backup directory, and `--help` on every command. Target framework: **.NET 10**
-  (`net10.0`). The full release history and current-state notes live under
-  `.agent/CURRENT_STATE.md` and `.agent/NEXT_STEPS.md`.
+- **Stable release.** The core workflow is solid end to end. Current release line: `v0.3.0`
+  — adds `agent autopilot claude` (headless Claude Code CLI loop that runs continuously until
+  all planned work is done, parsing each session's result and retrying on transient failures)
+  and `agent init --with-samples` (installs a curated starter pack: 9 skills including
+  `autopilot`, `commit-governor`, `plan-governor`, `memory-curator`, `operating-guide`, and
+  more; 3 sub-agents — `planner`, `verifier`, `git-ops-executor`; and 5 Git hooks). Target
+  framework: **.NET 10** (`net10.0`). The full release history and current-state notes live
+  under `.agent/CURRENT_STATE.md` and `.agent/NEXT_STEPS.md`.
 
 ## Core product invariant
 
@@ -59,6 +60,7 @@ agent skill ...       # add | edit | delete | list | show  (alias: agent skills)
 agent target ...      # add | edit | delete | list | show  (alias: agent targets)
 agent subagent ...    # add | edit | delete | list | show  (alias: agent subagents)
 agent sessions ...    # backup | restore | list | providers — agent session history
+agent autopilot ...   # headless autopilot loop (agent autopilot claude)
 agent ui              # launch the optional local web UI (agent-sync-ui); auto-installs it on first run
 ```
 
