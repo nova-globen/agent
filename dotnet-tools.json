@@ -3,21 +3,21 @@
   "isRoot": true,
   "tools": {
     "agentsync": {
-      "version": "0.2.0-alpha.7",
+      "version": "0.2.0",
       "commands": [
         "agent"
       ],
       "rollForward": false
     },
     "agentsync.git": {
-      "version": "0.2.0-alpha.7",
+      "version": "0.2.0",
       "commands": [
         "git-agent"
       ],
       "rollForward": false
     },
     "agentsync.ui": {
-      "version": "0.2.0-alpha.7",
+      "version": "0.2.0",
       "commands": [
         "agent-sync-ui"
       ],

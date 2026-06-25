@@ -5,21 +5,16 @@ Compact handoff for AI sessions. Pair with `.agent/NEXT_STEPS.md` and
 
 ## Release
 
-- **Latest tagged release:** `v0.2.0-alpha.7` — **agent-author feedback round 3** from
-  dogfooding. Adds a configurable **`toml_agent` projection target** for sub-agents: `agent
-  target add toml_agent --path <dir>` enables TOML output (`<id>.toml`) alongside the
-  existing Claude `.md` projection, surfaced in `target list`, togglable via `target edit`,
-  and covered by drift detection in `agents.lock.json`. Skill **`references/` directories are
-  now projected alongside `SKILL.md`** for `claude_skill` / `openai_skill` targets and
-  included in drift detection via `ContentHasher.HashWithAssets` — no post-sync wrapper
-  script needed. The **drift gate no longer wedges** on a stale marker sha256 when the body
-  already matches canonical — `MarkedDocument.Upsert` reconciles it silently without
-  `--force`; plain `agent sync` clears the lockfile-mismatch status. **`agent sessions
-  backup` defaults to `.agent/backups/`** instead of the current working directory.
-  `v0.2.0-alpha.6` added sub-agent and authoring polish; `v0.2.0-alpha.5` added `agent
-  sessions`; `v0.2.0-alpha.4` made the repo dogfood Agent Sync; `v0.1.0-alpha.1…alpha.4`
-  were CLI-focused.
-- **Release type:** public alpha / developer preview
+- **Latest tagged release:** `v0.2.0` — **first stable release**, promoting the alpha series.
+  Adds: `toml_agent` configurable TOML projection target for sub-agents; `references/`
+  directory projection alongside `SKILL.md` for skill-folder targets (drift-detected);
+  stale-marker-hash reconciliation (plain `agent sync` clears a lockfile mismatch when the
+  body already matches canonical); `--help` on every command (all top-level verbs now print
+  usage and exit 0); `agent sessions backup` defaults to `.agent/backups/`. The prior alpha
+  series built the full feature set: `v0.2.0-alpha.7` (feedback round 3), `alpha.6`
+  (sub-agent polish), `alpha.5` (`agent sessions`), `alpha.4` (dogfood repo), `alpha.1–3`
+  (UI, CRUD, imports); `v0.1.0-alpha.1–4` were CLI-focused.
+- **Release type:** stable
 - **Repository:** https://github.com/nova-globen/agent (default branch `master`)
 
 ## Technical status

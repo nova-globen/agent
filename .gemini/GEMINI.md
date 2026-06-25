@@ -1,4 +1,4 @@
-<!-- agent-sync:start id=agent-sync-overview target=gemini hash=sha256:20001eb337ca67a56da528d990fbabc2400a285a2b966134be783b2b37c87ff7 -->
+<!-- agent-sync:start id=agent-sync-overview target=gemini hash=sha256:b5d5cb18410fea28e95a5b87d30ce1272dd370b8be1b63608517da70c46472c6 -->
 ## Agent Sync Overview
 
 What Agent Sync is, the product shape it must keep, its CLI commands, and how drift detection works. Read this first when orienting in this repository.
@@ -16,18 +16,13 @@ agent files that slowly diverge. Repository: https://github.com/nova-globen/agen
 
 ## Status
 
-- **Alpha / developer preview.** The core workflow works end to end; the surface may still
-  change. Current release line: `v0.2.0-alpha.7` (agent-author feedback round 3: a
-  configurable `toml_agent` projection target for sub-agents — `agent target add toml_agent
-  --path <dir>` emits `<id>.toml` alongside the existing Claude `.md` projection; skill
-  `references/` directories are now projected alongside `SKILL.md` for `claude_skill` /
-  `openai_skill` targets and covered by drift detection; the drift gate no longer wedges on a
-  stale marker hash when the body already matches canonical — plain `agent sync` reconciles
-  it; `agent sessions backup` defaults to `.agent/backups/`). Builds on `v0.2.0-alpha.6`
-  (sub-agent and authoring polish), `agent sessions`, canonical sub-agents, imports, CRUD,
-  `agent ui` and the localhost web UI, and the repo running Agent Sync on itself. Target
-  framework: **.NET 10** (`net10.0`). The full release history and current-state notes live
-  under `.agent/CURRENT_STATE.md` and `.agent/NEXT_STEPS.md`.
+- **Stable release.** The core workflow is solid end to end. Current release line: `v0.2.0`
+  — first stable release, promoting `v0.2.0-alpha.7`. Adds `toml_agent` (configurable TOML
+  projection for a second agent tool alongside Claude), `references/` directory projection
+  for skill folders, stale-marker-hash reconciliation, `.agent/backups/` as the default
+  sessions backup directory, and `--help` on every command. Target framework: **.NET 10**
+  (`net10.0`). The full release history and current-state notes live under
+  `.agent/CURRENT_STATE.md` and `.agent/NEXT_STEPS.md`.
 
 ## Core product invariant
 

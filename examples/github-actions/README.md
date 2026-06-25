@@ -61,7 +61,7 @@ jobs:
       - name: Install Agent Sync
         run: |
           curl -fsSL https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.sh \
-            | bash -s -- v0.2.0-alpha.7
+            | bash -s -- v0.2.0
           echo "$HOME/.agent-sync/bin" >> "$GITHUB_PATH"
 
       - name: Check for agent-instruction drift
@@ -80,7 +80,7 @@ self-contained install needs no .NET runtime on the runner.
 
 ### Pin to a released version
 
-The example pins `v0.2.0-alpha.7`. Use the tag you have validated; see the
+The example pins `v0.2.0`. Use the tag you have validated; see the
 [Releases page](https://github.com/nova-globen/agent/releases). Omitting the version
 installs the latest release.
 

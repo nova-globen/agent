@@ -119,6 +119,7 @@ public sealed class CliRunner
 
     private int RunInit(string[] args)
     {
+        if (WantsHelp(args)) return SubUsage("init");
         var force = false;
         foreach (var arg in args)
         {
@@ -169,6 +170,7 @@ public sealed class CliRunner
 
     private int RunStatus(string[] args)
     {
+        if (WantsHelp(args)) return SubUsage("status");
         var json = false;
         var failOnDrift = false;
         var ci = false;
@@ -292,6 +294,7 @@ public sealed class CliRunner
 
     private int RunInstallHooks(string[] args)
     {
+        if (WantsHelp(args)) return SubUsage("install-hooks");
         foreach (var arg in args)
         {
             return UnknownOption("install-hooks", arg);
@@ -333,6 +336,7 @@ public sealed class CliRunner
 
     private int RunDoctor(string[] args)
     {
+        if (WantsHelp(args)) return SubUsage("doctor");
         var json = false;
         foreach (var arg in args)
         {
@@ -381,10 +385,12 @@ public sealed class CliRunner
 
     private int RunSessions(string[] args)
     {
+        if (WantsHelp(args)) return SubUsage("sessions");
+
         if (args.Length == 0)
         {
             _err.WriteLine("error: 'sessions' requires a subcommand: backup | restore | list | providers.");
-            _err.WriteLine("Run 'agent --help' for usage.");
+            _err.WriteLine("Run 'agent sessions --help' for usage.");
             return ExitCodes.InvalidUsage;
         }
 
@@ -788,6 +794,7 @@ public sealed class CliRunner
 
     private int RunSync(string[] args)
     {
+        if (WantsHelp(args)) return SubUsage("sync");
         var force = false;
         var check = false;
         var json = false;
@@ -947,6 +954,7 @@ public sealed class CliRunner
 
     private int RunDiff(string[] args)
     {
+        if (WantsHelp(args)) return SubUsage("diff");
         var json = false;
         foreach (var arg in args)
         {
@@ -1010,6 +1018,7 @@ public sealed class CliRunner
 
     private int RunValidate(string[] args)
     {
+        if (WantsHelp(args)) return SubUsage("validate");
         var json = false;
         foreach (var arg in args)
         {
@@ -1631,6 +1640,7 @@ public sealed class CliRunner
 
     private int RunUi(string[] args)
     {
+        if (WantsHelp(args)) return SubUsage("ui");
         var noOpen = false;
         foreach (var arg in args)
         {
@@ -2406,6 +2416,76 @@ public sealed class CliRunner
 
     private static readonly IReadOnlyDictionary<string, string[]> SubcommandUsage = new Dictionary<string, string[]>(StringComparer.Ordinal)
     {
+        ["init"] = new[]
+        {
+            "Usage: agent init [options]",
+            "  Scaffold .agent/ (config + starter skills) and .githooks/ in the current repository.",
+            "",
+            "Options:",
+            "  --force    Overwrite existing files.",
+        },
+        ["status"] = new[]
+        {
+            "Usage: agent status [options]",
+            "  Report Agent Sync state and drift (missing/outdated/manually-edited projections).",
+            "",
+            "Options:",
+            "  --fail-on-drift    Exit non-zero if any drift or invalid state is detected.",
+            "  --ci               Print a summary line; combine with --fail-on-drift for CI gates.",
+            "  --json             Emit JSON instead of human-readable output.",
+        },
+        ["sync"] = new[]
+        {
+            "Usage: agent sync [options]",
+            "  Write missing or outdated projections and refresh lock.json (writes by default).",
+            "",
+            "Options:",
+            "  --check    Preview changes and exit non-zero if any are pending (dry run).",
+            "  --write    Alias for the default write mode (explicit override of --check).",
+            "  --force    Also overwrite manually-edited generated sections.",
+            "  --json     Emit JSON instead of human-readable output.",
+        },
+        ["diff"] = new[]
+        {
+            "Usage: agent diff [--json]",
+            "  Show canonical-to-projection differences.",
+        },
+        ["validate"] = new[]
+        {
+            "Usage: agent validate [--json]",
+            "  Validate .agent/agent.yaml config and all skill manifests.",
+        },
+        ["install-hooks"] = new[]
+        {
+            "Usage: agent install-hooks",
+            "  Set core.hooksPath=.githooks and make the hook scripts executable.",
+        },
+        ["doctor"] = new[]
+        {
+            "Usage: agent doctor [--json]",
+            "  Diagnose the Git repo, PATH, hooks, and config.",
+        },
+        ["ui"] = new[]
+        {
+            "Usage: agent ui [--no-open]",
+            "  Launch the optional local web UI (agent-sync-ui); auto-installs it on first run.",
+            "",
+            "Options:",
+            "  --no-open    Start the server but do not open the browser.",
+        },
+        ["sessions"] = new[]
+        {
+            "Usage: agent sessions <subcommand> [options]",
+            "  Back up and restore agent session history.",
+            "",
+            "Subcommands:",
+            "  backup <provider>    Archive session files for the current project.",
+            "  restore <archive>    Replay a backup archive into the current environment.",
+            "  list                 List available backup archives.",
+            "  providers            List supported session providers.",
+            "",
+            "Run 'agent sessions <subcommand> --help' for per-subcommand options.",
+        },
         ["import"] = new[]
         {
             "Usage: agent import <skill|agent|subagent> <path> [options]",
