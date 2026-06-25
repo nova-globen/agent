@@ -60,7 +60,7 @@ steps:
 
   - script: |
       curl -fsSL https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.sh \
-        | bash -s -- v0.2.0-alpha.6
+        | bash -s -- v0.2.0-alpha.7
       echo "##vso[task.prependpath]$HOME/.agent-sync/bin"
     displayName: Install Agent Sync
 
@@ -81,7 +81,7 @@ self-contained install needs no .NET runtime on the agent.
 
 ### Pin to a released version
 
-The example pins `v0.2.0-alpha.6`. Use the tag you have validated; see the
+The example pins `v0.2.0-alpha.7`. Use the tag you have validated; see the
 [Releases page](https://github.com/nova-globen/agent/releases). Omitting the version
 installs the latest release.
 

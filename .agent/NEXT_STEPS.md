@@ -45,8 +45,8 @@ Milestone breakdown and acceptance criteria: `features/ROADMAP.md`.
 - Verify the GitHub issue templates render and route correctly.
 - Verify install docs (`install.sh` / `install.ps1` commands, manual install).
 - Verify GitHub release assets (CLI + UI archives + the `AgentSync.Ui` tool) exist and
-  checksums validate for `v0.2.0-alpha.6`.
-- After tagging `v0.2.0-alpha.6`, manually confirm the installed UI (the `AgentSync.Ui`
+  checksums validate for `v0.2.0-alpha.7`.
+- After tagging `v0.2.0-alpha.7`, manually confirm the installed UI (the `AgentSync.Ui`
   tool **and** a release archive) loads CSS/JS in a real browser when launched via
   `agent ui` from inside a repo — the alpha.2 build still came up blank (content-root bug).
 

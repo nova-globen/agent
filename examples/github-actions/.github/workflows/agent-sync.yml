@@ -16,7 +16,7 @@ jobs:
         run: |
           # Pin to a released tag so CI is reproducible; bump it when you upgrade.
           curl -fsSL https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.sh \
-            | bash -s -- v0.2.0-alpha.6
+            | bash -s -- v0.2.0-alpha.7
           echo "$HOME/.agent-sync/bin" >> "$GITHUB_PATH"
 
       - name: Check for agent-instruction drift

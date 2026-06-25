@@ -12,16 +12,17 @@ agent files that slowly diverge. Repository: https://github.com/nova-globen/agen
 ## Status
 
 - **Alpha / developer preview.** The core workflow works end to end; the surface may still
-  change. Current release line: `v0.2.0-alpha.6` (sub-agent and authoring polish from
-  dogfooding feedback: per-subcommand `--help`, `skill`/`subagent edit --body-file` now
-  accepts absolute paths, `target list` surfaces the sub-agent destination, sub-agent
-  `--color` round-trips through `import`/`sync`, and `import subagent` with no path discovers
-  `.claude/agents/` and reconciles the lockfile so a just-imported projection is not flagged
-  as drift). Builds on `agent sessions`, canonical sub-agents (`agent subagent` CRUD +
-  `import subagent`), imports, CRUD, `agent ui` and the localhost web UI, and the repo
-  running Agent Sync on itself. Target framework: **.NET 10** (`net10.0`). The full release
-  history and current-state notes live under `.agent/CURRENT_STATE.md` and
-  `.agent/NEXT_STEPS.md`.
+  change. Current release line: `v0.2.0-alpha.7` (agent-author feedback round 3: a
+  configurable `toml_agent` projection target for sub-agents — `agent target add toml_agent
+  --path <dir>` emits `<id>.toml` alongside the existing Claude `.md` projection; skill
+  `references/` directories are now projected alongside `SKILL.md` for `claude_skill` /
+  `openai_skill` targets and covered by drift detection; the drift gate no longer wedges on a
+  stale marker hash when the body already matches canonical — plain `agent sync` reconciles
+  it; `agent sessions backup` defaults to `.agent/backups/`). Builds on `v0.2.0-alpha.6`
+  (sub-agent and authoring polish), `agent sessions`, canonical sub-agents, imports, CRUD,
+  `agent ui` and the localhost web UI, and the repo running Agent Sync on itself. Target
+  framework: **.NET 10** (`net10.0`). The full release history and current-state notes live
+  under `.agent/CURRENT_STATE.md` and `.agent/NEXT_STEPS.md`.
 
 ## Core product invariant
 

@@ -5,30 +5,20 @@ Compact handoff for AI sessions. Pair with `.agent/NEXT_STEPS.md` and
 
 ## Release
 
-- **Latest tagged release:** `v0.2.0-alpha.5` — adds **`agent sessions`** (back up / restore
-  an AI agent's per-project session history for Claude Code, Codex, Copilot, Gemini, and
-  Cursor; manifest-driven zip archives; cross-environment restore that relocates the store and
-  translates absolute paths across WSL / Windows / Linux — `/mnt/c/...` ⇄ `C:\...` — and a
-  changed project path, keeping JSON valid; zip-slip-safe, never overwrites without `--force`)
-  and **canonical sub-agents** (`agent subagent add/edit/delete/list/show`, `agent import
-  subagent`; projected by `agent sync` into `.claude/agents/<id>.md` with drift in
-  `.agent/agents.lock.json`). Copilot/Gemini/Cursor session support is experimental. The
-  earlier `v0.2.0-alpha.4` made the repository **run Agent Sync on itself** and added the
-  GitHub Actions / Azure Pipelines CI examples and the `releasing-agent-sync` skill;
-  `v0.2.0-alpha.3` made the web UI usable; `v0.2.0-alpha.2` made `agent ui` self-installing;
-  `v0.2.0-alpha.1` first shipped import + CRUD, `agent ui`, and the localhost Blazor UI;
-  `v0.1.0-alpha.1…alpha.4` were CLI-focused.
-- **Next intended release:** `v0.2.0-alpha.6` — **sub-agent and authoring polish** driven by
-  dogfooding feedback. Adds **per-subcommand `--help`** across the `skill`/`target`/`subagent`/
-  `import` subcommands; **`skill`/`subagent edit --body-file` now accepts absolute (and
-  repo-external) paths** instead of rejecting them as unsafe (a body file is read-only input;
-  the `RepoPath` guard on projection writes is unchanged); **`target list` surfaces the
-  sub-agent destination** (`claude_agent -> .claude/agents/<id>.md`); **sub-agent `--color`**
-  is captured on `import`, stored in `agent.yaml`, and re-emitted on projection (settable via
-  `subagent add/edit --color`); and **`import subagent` with no path discovers `.claude/agents/`**
-  and reconciles the sub-agent lockfile so importing one's own existing projection no longer
-  registers as a manual edit. The `using-agent-sync` scaffolded guidance now documents
-  sub-agents. Push tag `v0.2.0-alpha.6` to cut it.
+- **Latest tagged release:** `v0.2.0-alpha.7` — **agent-author feedback round 3** from
+  dogfooding. Adds a configurable **`toml_agent` projection target** for sub-agents: `agent
+  target add toml_agent --path <dir>` enables TOML output (`<id>.toml`) alongside the
+  existing Claude `.md` projection, surfaced in `target list`, togglable via `target edit`,
+  and covered by drift detection in `agents.lock.json`. Skill **`references/` directories are
+  now projected alongside `SKILL.md`** for `claude_skill` / `openai_skill` targets and
+  included in drift detection via `ContentHasher.HashWithAssets` — no post-sync wrapper
+  script needed. The **drift gate no longer wedges** on a stale marker sha256 when the body
+  already matches canonical — `MarkedDocument.Upsert` reconciles it silently without
+  `--force`; plain `agent sync` clears the lockfile-mismatch status. **`agent sessions
+  backup` defaults to `.agent/backups/`** instead of the current working directory.
+  `v0.2.0-alpha.6` added sub-agent and authoring polish; `v0.2.0-alpha.5` added `agent
+  sessions`; `v0.2.0-alpha.4` made the repo dogfood Agent Sync; `v0.1.0-alpha.1…alpha.4`
+  were CLI-focused.
 - **Release type:** public alpha / developer preview
 - **Repository:** https://github.com/nova-globen/agent (default branch `master`)
 
