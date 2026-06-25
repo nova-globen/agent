@@ -14,7 +14,14 @@ public static class TargetIds
     public const string OpenAiSkill = "openai_skill";
     public const string ClaudeSkill = "claude_skill";
 
-    /// <summary>All known targets in a stable, deterministic order.</summary>
+    /// <summary>
+    /// Configurable sub-agent projection target that emits TOML; opt-in via <c>agent.yaml</c>
+    /// <c>targets:</c> alongside skill targets. Not processed by <see cref="ProjectionPlanner"/>
+    /// (which only handles skill targets); <c>SubagentProjector</c> reads it instead.
+    /// </summary>
+    public const string TomlAgent = "toml_agent";
+
+    /// <summary>Skill targets in canonical order (used by ProjectionPlanner).</summary>
     public static readonly IReadOnlyList<string> Ordered = new[]
     {
         AgentsMd,
@@ -26,7 +33,10 @@ public static class TargetIds
         ClaudeSkill,
     };
 
-    public static readonly IReadOnlySet<string> All = new HashSet<string>(Ordered, StringComparer.Ordinal);
+    /// <summary>All known configurable targets (skill targets + agent targets).</summary>
+    public static readonly IReadOnlySet<string> All = new HashSet<string>(
+        Ordered.Concat(new[] { TomlAgent }),
+        StringComparer.Ordinal);
 
     public static bool IsKnown(string id) => All.Contains(id);
 }

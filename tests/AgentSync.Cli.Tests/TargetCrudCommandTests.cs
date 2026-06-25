@@ -194,12 +194,17 @@ public sealed class TargetCrudCommandTests
         var result = h.Invoke("target", "list", "--json");
 
         using var doc = JsonDocument.Parse(result.StdOut);
-        // 7 canonical projection targets plus the sub-agent destination (claude_agent).
-        Assert.Equal(8, doc.RootElement.GetArrayLength());
+        // 7 skill targets + claude_agent (fixed) + toml_agent (configurable).
+        Assert.Equal(9, doc.RootElement.GetArrayLength());
         Assert.Equal("agents_md", doc.RootElement[0].GetProperty("id").GetString());
-        var last = doc.RootElement[doc.RootElement.GetArrayLength() - 1];
-        Assert.Equal("claude_agent", last.GetProperty("id").GetString());
-        Assert.Equal(".claude/agents/<id>.md", last.GetProperty("path").GetString());
+        // claude_agent is always enabled with a fixed path.
+        var claudeAgent = doc.RootElement.EnumerateArray().First(e => e.GetProperty("id").GetString() == "claude_agent");
+        Assert.Equal(".claude/agents/<id>.md", claudeAgent.GetProperty("path").GetString());
+        Assert.True(claudeAgent.GetProperty("enabled").GetBoolean());
+        // toml_agent is present but not configured by default.
+        var tomlAgent = doc.RootElement.EnumerateArray().Last();
+        Assert.Equal("toml_agent", tomlAgent.GetProperty("id").GetString());
+        Assert.False(tomlAgent.GetProperty("configured").GetBoolean());
     }
 
     [Fact]

@@ -58,22 +58,26 @@ public sealed class ProjectionApplier
 
     private UpsertResult ApplyWholeFile(string absolutePath, Projection projection, Lockfile lockfile, bool force, bool dryRun)
     {
-        var newHash = ContentHasher.Hash(projection.Body);
+        var newHash = ContentHasher.HashWithAssets(projection.Body, projection.AssetSourceDir);
+        var targetRefsDir = projection.AssetSourceDir is not null
+            ? Path.Combine(Path.GetDirectoryName(absolutePath)!, "references")
+            : null;
 
         if (!File.Exists(absolutePath))
         {
             if (!dryRun)
             {
                 WriteFile(absolutePath, projection.Body);
+                SyncAssets(projection.AssetSourceDir, targetRefsDir);
             }
 
             return new UpsertResult(ProjectionChange.Created, newHash, ManualEditDetected: false);
         }
 
         var existing = File.ReadAllText(absolutePath);
-        var currentHash = ContentHasher.Hash(existing);
+        var currentHash = ContentHasher.HashWithAssets(existing, targetRefsDir);
         var lockEntry = lockfile.Get(projection.SkillId, projection.TargetId);
-        var manuallyEdited = lockEntry is null || !ContentHasher.Matches(existing, lockEntry.Hash);
+        var manuallyEdited = lockEntry is null || !string.Equals(currentHash, lockEntry.Hash, StringComparison.Ordinal);
 
         if (currentHash == newHash)
         {
@@ -88,9 +92,45 @@ public sealed class ProjectionApplier
         if (!dryRun)
         {
             WriteFile(absolutePath, projection.Body);
+            SyncAssets(projection.AssetSourceDir, targetRefsDir);
         }
 
         return new UpsertResult(ProjectionChange.Updated, newHash, ManualEditDetected: manuallyEdited);
+    }
+
+    /// <summary>
+    /// Copies all files from <paramref name="sourceDir"/> into <paramref name="targetDir"/>,
+    /// creating or updating files. If <paramref name="sourceDir"/> is null or absent, the
+    /// target directory is removed (orphan cleanup). No-ops when neither directory exists.
+    /// </summary>
+    private static void SyncAssets(string? sourceDir, string? targetDir)
+    {
+        if (targetDir is null)
+        {
+            return;
+        }
+
+        if (sourceDir is null || !Directory.Exists(sourceDir))
+        {
+            if (Directory.Exists(targetDir))
+            {
+                Directory.Delete(targetDir, recursive: true);
+            }
+            return;
+        }
+
+        Directory.CreateDirectory(targetDir);
+        foreach (var srcFile in Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories))
+        {
+            var rel = Path.GetRelativePath(sourceDir, srcFile);
+            var dstFile = Path.Combine(targetDir, rel);
+            var dstDir = Path.GetDirectoryName(dstFile)!;
+            if (!string.IsNullOrEmpty(dstDir))
+            {
+                Directory.CreateDirectory(dstDir);
+            }
+            File.Copy(srcFile, dstFile, overwrite: true);
+        }
     }
 
     private static void WriteFile(string absolutePath, string body, bool alreadyTerminated = false)

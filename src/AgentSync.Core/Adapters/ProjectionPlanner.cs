@@ -48,7 +48,8 @@ public sealed class ProjectionPlanner
 
                 var path = adapter.ResolvePath(targetSetting.Path!, skill);
                 var body = adapter.Render(skill);
-                projections.Add(new Projection(skill.Id, targetId, adapter.Mode, path, body));
+                var assetDir = adapter.Mode == ProjectionMode.WholeFile ? adapter.AssetSourceDir(skill) : null;
+                projections.Add(new Projection(skill.Id, targetId, adapter.Mode, path, body, assetDir));
             }
         }
 

@@ -93,7 +93,7 @@ public sealed class DriftDetector
     private DriftItem Classify(Projection projection, Lockfile lockfile)
     {
         var absolutePath = RepoPath.Resolve(_layout.RepoRoot, projection.RelativePath);
-        var desiredHash = ContentHasher.Hash(projection.Body);
+        var desiredHash = ContentHasher.HashWithAssets(projection.Body, projection.AssetSourceDir);
         var lockEntry = lockfile.Get(projection.SkillId, projection.TargetId);
         var lockMismatch = lockEntry is null || lockEntry.Hash != desiredHash;
 
@@ -124,8 +124,22 @@ public sealed class DriftDetector
                 return new DriftItem(projection.SkillId, projection.TargetId, projection.RelativePath, DriftKind.Missing, lockMismatch);
             }
 
+            // For whole-file targets with assets, include the target references directory in the
+            // current hash so that a changed (or missing) reference file shows as drift.
+            var targetRefsDir = projection.AssetSourceDir is not null
+                ? Path.Combine(Path.GetDirectoryName(absolutePath)!, "references")
+                : null;
             currentBody = File.ReadAllText(absolutePath);
+            var currentHashWithAssets = ContentHasher.HashWithAssets(currentBody, targetRefsDir);
             declaredHash = lockEntry?.Hash;
+
+            var kindWhole =
+                currentHashWithAssets == desiredHash ? DriftKind.InSync
+                : declaredHash is null ? DriftKind.ManualEdit
+                : currentHashWithAssets != declaredHash ? DriftKind.ManualEdit
+                : DriftKind.Outdated;
+            return new DriftItem(projection.SkillId, projection.TargetId, projection.RelativePath, kindWhole,
+                lockMismatch && kindWhole == DriftKind.InSync);
         }
 
         var currentHash = ContentHasher.Hash(currentBody);

@@ -128,8 +128,16 @@ public sealed class MarkedDocument
         var manuallyEdited = existing.IsManuallyEdited;
         var currentHash = ContentHasher.Hash(existing.Body);
 
-        if (currentHash == newHash && !manuallyEdited)
+        if (currentHash == newHash)
         {
+            // Body already matches canonical. If the marker's declared hash is stale (e.g., a
+            // coordinated migration changed both canonical and the generated section but did not
+            // update the embedded sha256), reconcile it silently without requiring --force.
+            if (existing.DeclaredHash != newHash)
+            {
+                existing.DeclaredHash = newHash;
+                return new UpsertResult(ProjectionChange.Updated, newHash, ManualEditDetected: false);
+            }
             return new UpsertResult(ProjectionChange.Unchanged, newHash, ManualEditDetected: false);
         }
 

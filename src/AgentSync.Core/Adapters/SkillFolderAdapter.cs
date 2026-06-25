@@ -18,6 +18,12 @@ public sealed class SkillFolderAdapter : ISkillAdapter
     public string ResolvePath(string configuredPath, Skill skill)
         => CursorAdapter.CombineRelative(configuredPath, $"{skill.Id}/SKILL.md");
 
+    public string? AssetSourceDir(Skill skill)
+    {
+        var refsDir = Path.Combine(skill.DirectoryPath, "references");
+        return Directory.Exists(refsDir) ? refsDir : null;
+    }
+
     public string Render(Skill skill)
     {
         var m = skill.Manifest;

@@ -445,7 +445,18 @@ public sealed class CliRunner
         var env = SessionEnvironment.Current();
         var projectPath = ResolveProjectPath(project);
         var now = DateTimeOffset.Now;
-        var outputPath = Path.GetFullPath(output ?? SessionBackupService.DefaultOutputName(resolved.Id, now), _workingDirectory);
+        string outputPath;
+        if (output is not null)
+        {
+            outputPath = Path.GetFullPath(output, _workingDirectory);
+        }
+        else
+        {
+            // Default: place the archive in <repo-root>/.agent/backups/ alongside the other
+            // agent-sync managed directories.
+            var backupsDir = Path.Combine(projectPath, ".agent", "backups");
+            outputPath = Path.Combine(backupsDir, SessionBackupService.DefaultOutputName(resolved.Id, now));
+        }
 
         SessionBackupReport report;
         try
@@ -1838,8 +1849,7 @@ public sealed class CliRunner
         return RenderAuthoring($"target delete {id}", new TargetWriter(root).Delete(id, force, dryRun));
     }
 
-    // The sub-agent projection target. Unlike the entries in TargetIds.Ordered it is not
-    // configured per-target in agent.yaml; `sync` always projects sub-agents to this path.
+    // The fixed (non-configurable) Claude Code sub-agent projection target.
     private const string SubagentTargetId = "claude_agent";
     private const string SubagentTargetPath = ".claude/agents/<id>.md";
 
@@ -1872,34 +1882,58 @@ public sealed class CliRunner
                     configured = setting is not null,
                     enabled = setting?.Enabled ?? false,
                     path = setting?.Path,
+                    kind = "skill",
                 };
             }).ToList();
 
-            // Sub-agents are projected by `sync` to .claude/agents/<id>.md but are managed via
-            // `agent subagent`, not the per-target config — surface them so the list is complete.
+            // claude_agent: always enabled, fixed path.
             payload.Add(new
             {
                 id = SubagentTargetId,
                 configured = SubagentsExist(root),
                 enabled = true,
                 path = (string?)SubagentTargetPath,
+                kind = "agent",
             });
+
+            // toml_agent: configurable via agent.yaml targets.
+            {
+                var tomlSetting = config is not null && config.Targets.TryGetValue(TargetIds.TomlAgent, out var ts) ? ts : null;
+                payload.Add(new
+                {
+                    id = TargetIds.TomlAgent,
+                    configured = tomlSetting is not null,
+                    enabled = tomlSetting?.Enabled ?? false,
+                    path = tomlSetting?.Path,
+                    kind = "agent",
+                });
+            }
+
             _out.WriteLine(JsonSerializer.Serialize(payload, JsonOptions));
         }
         else
         {
             _out.WriteLine("Agent Sync targets");
             _out.WriteLine();
+            _out.WriteLine("Skill targets:");
             foreach (var id in TargetIds.Ordered)
             {
                 var setting = config is not null && config.Targets.TryGetValue(id, out var found) ? found : null;
                 var state = setting is null ? "not configured"
                     : setting.Enabled ? $"enabled  -> {setting.Path}"
                     : "disabled";
-                _out.WriteLine($"  {id,-14} {state}");
+                _out.WriteLine($"  {id,-16} {state}");
             }
 
-            _out.WriteLine($"  {SubagentTargetId,-14} sub-agents -> {SubagentTargetPath} (managed via 'agent subagent')");
+            _out.WriteLine();
+            _out.WriteLine("Agent (sub-agent) targets:");
+            _out.WriteLine($"  {SubagentTargetId,-16} enabled  -> {SubagentTargetPath}  (managed via 'agent subagent'; always on)");
+
+            var tomlCfg = config is not null && config.Targets.TryGetValue(TargetIds.TomlAgent, out var tc) ? tc : null;
+            var tomlState = tomlCfg is null ? "not configured  (add with 'agent target add toml_agent --path <dir>')"
+                : tomlCfg.Enabled ? $"enabled  -> {tomlCfg.Path}/<id>.toml"
+                : "disabled";
+            _out.WriteLine($"  {TargetIds.TomlAgent,-16} {tomlState}");
         }
 
         return ExitCodes.Success;

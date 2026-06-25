@@ -18,7 +18,14 @@ public sealed record Projection(
     string TargetId,
     ProjectionMode Mode,
     string RelativePath,
-    string Body);
+    string Body,
+    /// <summary>
+    /// Optional: the canonical directory whose contents should be copied alongside the main
+    /// projection file (e.g. <c>.agent/skills/&lt;id&gt;/references/</c>). Null if the adapter
+    /// does not support asset directories. Only used by <see cref="ProjectionMode.WholeFile"/>
+    /// targets. Changes here are included in the drift-detection hash.
+    /// </summary>
+    string? AssetSourceDir = null);
 
 /// <summary>Converts a canonical skill into target-specific content and resolves its path.</summary>
 public interface ISkillAdapter
@@ -34,4 +41,12 @@ public interface ISkillAdapter
 
     /// <summary>Renders the deterministic content for the skill.</summary>
     string Render(Skill skill);
+
+    /// <summary>
+    /// Returns the canonical asset source directory for the skill (e.g. the
+    /// <c>references/</c> subdirectory of the skill folder), or <c>null</c> if the
+    /// adapter does not project assets. Only called for
+    /// <see cref="ProjectionMode.WholeFile"/> targets.
+    /// </summary>
+    string? AssetSourceDir(Skill skill) => null;
 }

@@ -1,5 +1,6 @@
 using AgentSync.Core.Adapters;
 using AgentSync.Core.Configuration;
+using AgentSync.Core.Drift;
 using AgentSync.Core.Projections;
 
 namespace AgentSync.Core.Tests.Adapters;
@@ -100,5 +101,59 @@ public sealed class ProjectionApplierTests
 
         Assert.Equal(ProjectionChange.SkippedManualEdit, outcome.Change);
         Assert.Contains("HAND EDITED skill", File.ReadAllText(agentsPath));
+    }
+
+    // --- references/ asset projection ---
+
+    [Fact]
+    public void Apply_WholeFile_WithReferences_CopiesAssets()
+    {
+        using var temp = new TempDir();
+        new InitService(temp.Path).Run();
+
+        // Add a references/ directory to the canonical claude_skill.
+        var refsDir = Path.Combine(temp.Path, ".agent", "skills", "code-review", "references");
+        Directory.CreateDirectory(refsDir);
+        File.WriteAllText(Path.Combine(refsDir, "checklist.md"), "## Checklist\n\n- Item one\n");
+
+        var ws = WorkspaceLoader.Load(temp.Path);
+        var plan = new ProjectionPlanner().Plan(ws);
+        var lockfile = new Lockfile();
+        var applier = new ProjectionApplier(temp.Path);
+
+        applier.ApplyAll(plan, lockfile);
+
+        var projectedRefs = Path.Combine(temp.Path, ".claude", "skills", "code-review", "references", "checklist.md");
+        Assert.True(File.Exists(projectedRefs), "references/checklist.md should be projected alongside SKILL.md");
+        Assert.Contains("Item one", File.ReadAllText(projectedRefs));
+    }
+
+    [Fact]
+    public void Apply_WholeFile_WithReferences_DriftDetectedOnReferenceChange()
+    {
+        using var temp = new TempDir();
+        new InitService(temp.Path).Run();
+
+        var refsDir = Path.Combine(temp.Path, ".agent", "skills", "code-review", "references");
+        Directory.CreateDirectory(refsDir);
+        File.WriteAllText(Path.Combine(refsDir, "guide.md"), "Old content\n");
+
+        var ws = WorkspaceLoader.Load(temp.Path);
+        var plan = new ProjectionPlanner().Plan(ws);
+        var lockfile = new Lockfile();
+        var applier = new ProjectionApplier(temp.Path);
+        applier.ApplyAll(plan, lockfile);
+        lockfile.Save(Path.Combine(temp.Path, ".agent", "lock.json"));
+
+        // Change the canonical reference file.
+        File.WriteAllText(Path.Combine(refsDir, "guide.md"), "Updated content\n");
+
+        var ws2 = WorkspaceLoader.Load(temp.Path);
+        var plan2 = new ProjectionPlanner().Plan(ws2);
+        var lockfile2 = Lockfile.Load(Path.Combine(temp.Path, ".agent", "lock.json"));
+
+        // The claude_skill projection should show as Outdated (reference changed, SKILL.md same).
+        var report = new DriftDetector(temp.Path).Detect();
+        Assert.Contains(report.Items, i => i.TargetId == TargetIds.ClaudeSkill && i.Kind == DriftKind.Outdated);
     }
 }

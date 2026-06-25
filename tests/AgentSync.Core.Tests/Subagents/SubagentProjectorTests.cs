@@ -1,4 +1,5 @@
 using AgentSync.Core;
+using AgentSync.Core.Configuration;
 using AgentSync.Core.Subagents;
 
 namespace AgentSync.Core.Tests.Subagents;
@@ -15,6 +16,14 @@ public sealed class SubagentProjectorTests
 
     private static string ProjectionPath(TempDir dir, string id)
         => Path.Combine(dir.Path, ".claude", "agents", $"{id}.md");
+
+    private static void WriteAgentYamlWithTomlTarget(TempDir dir, string tomlPath)
+    {
+        var agentDir = Path.Combine(dir.Path, ".agent");
+        Directory.CreateDirectory(agentDir);
+        File.WriteAllText(Path.Combine(agentDir, "agent.yaml"),
+            $"version: 1\ntargets:\n  toml_agent:\n    enabled: true\n    path: {tomlPath}\n");
+    }
 
     [Fact]
     public void Sync_CreatesProjectionWithFrontmatter()
@@ -130,5 +139,76 @@ public sealed class SubagentProjectorTests
         var report = new SubagentProjector(dir.Path).Sync(false, false);
         Assert.Empty(report.Outcomes);
         Assert.Empty(new SubagentProjector(dir.Path).Detect());
+    }
+
+    // --- toml_agent target ---
+
+    [Fact]
+    public void TomlAgent_Render_ProducesValidToml()
+    {
+        using var dir = new TempDir();
+        var layout = Layout(dir);
+        AddAgent(layout, "reviewer", "Reviews diffs.", "sonnet", "Read", "Grep");
+
+        var agent = SubagentFiles.LoadAll(layout)[0];
+        var toml = TomlAgentRenderer.Render(agent);
+
+        Assert.Contains("name = 'reviewer'", toml);
+        Assert.Contains("description = 'Reviews diffs.'", toml);
+        Assert.Contains("model = 'sonnet'", toml);
+        Assert.Contains("tools = ['Read', 'Grep']", toml);
+        Assert.Contains("system_prompt", toml);
+        Assert.Contains("Do the thing.", toml);
+    }
+
+    [Fact]
+    public void Sync_TomlTarget_CreatesTomlFile()
+    {
+        using var dir = new TempDir();
+        var layout = Layout(dir);
+        WriteAgentYamlWithTomlTarget(dir, "codex/agents");
+        AddAgent(layout, "helper", "Helps with tasks.");
+
+        var report = new SubagentProjector(dir.Path).Sync(force: false, dryRun: false);
+
+        // Two outcomes: claude_agent + toml_agent.
+        Assert.Equal(2, report.Outcomes.Count);
+        Assert.All(report.Outcomes, o => Assert.Equal(SubagentChange.Created, o.Change));
+
+        var tomlPath = Path.Combine(dir.Path, "codex", "agents", "helper.toml");
+        Assert.True(File.Exists(tomlPath));
+        var content = File.ReadAllText(tomlPath);
+        Assert.Contains("name = 'helper'", content);
+        Assert.Contains("system_prompt", content);
+    }
+
+    [Fact]
+    public void Sync_TomlTarget_Idempotent()
+    {
+        using var dir = new TempDir();
+        var layout = Layout(dir);
+        WriteAgentYamlWithTomlTarget(dir, "codex/agents");
+        AddAgent(layout, "helper", "Helps.");
+
+        var projector = new SubagentProjector(dir.Path);
+        projector.Sync(false, false);
+        var second = projector.Sync(false, false);
+
+        Assert.All(second.Outcomes, o => Assert.Equal(SubagentChange.UpToDate, o.Change));
+        Assert.Empty(projector.Detect());
+    }
+
+    [Fact]
+    public void Detect_TomlTarget_MissingProjection()
+    {
+        using var dir = new TempDir();
+        var layout = Layout(dir);
+        WriteAgentYamlWithTomlTarget(dir, "codex/agents");
+        AddAgent(layout, "helper", "Helps.");
+
+        var drift = new SubagentProjector(dir.Path).Detect();
+
+        Assert.Equal(2, drift.Count); // claude_agent + toml_agent both missing
+        Assert.All(drift, d => Assert.Equal(SubagentDriftKind.Missing, d.Kind));
     }
 }

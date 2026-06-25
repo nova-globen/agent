@@ -122,6 +122,60 @@ public sealed class MarkedDocumentTests
     }
 
     [Fact]
+    public void Upsert_BodyMatchesCanonical_StaleMarkerHashReconciled()
+    {
+        // Simulate a coordinated migration: both canonical and generated section were edited
+        // (e.g. via a repo-wide find/replace) but the marker's declared sha256 was not updated.
+        var doc = MarkedDocument.Parse(string.Empty);
+        doc.Upsert("s1", "agents_md", "Old body");
+        // The rendered file has the old hash in the marker.
+        var rendered = doc.Render();
+
+        // Re-parse and simulate: body was changed to match new canonical, but marker hash is stale.
+        // We tamper by replacing the body text while leaving the sha256 alone (old hash).
+        var oldHash = ContentHasher.Hash("Old body");
+        var tampered = rendered.Replace("Old body", "New body");  // body changed, marker hash stale
+        var reparsed = MarkedDocument.Parse(tampered);
+        var section = reparsed.Find("s1", "agents_md")!;
+
+        // The section is "manually edited" (body differs from declared hash).
+        Assert.True(section.IsManuallyEdited);
+
+        // Upserting with "New body" (which now matches the on-disk body) should reconcile
+        // the stale hash WITHOUT requiring --force.
+        var result = reparsed.Upsert("s1", "agents_md", "New body", force: false);
+
+        Assert.Equal(ProjectionChange.Updated, result.Change);
+        Assert.False(result.ManualEditDetected);
+
+        // The re-rendered document has the new hash in the marker.
+        var rerendered = reparsed.Render();
+        Assert.DoesNotContain(oldHash, rerendered);
+        Assert.Contains(ContentHasher.Hash("New body"), rerendered);
+        Assert.Contains("New body", rerendered);
+    }
+
+    [Fact]
+    public void Upsert_BodyMatchesCanonical_StaleMarkerHash_DoesNotRequireForce()
+    {
+        // Stale declared hash but body is already correct → plain sync reconciles it; no --force.
+        var doc = MarkedDocument.Parse(string.Empty);
+        doc.Upsert("s1", "claude_md", "The body");
+        // Swap the real hash for a fake-but-syntactically-valid hex string.
+        const string staleHash = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        var rendered = doc.Render().Replace(ContentHasher.Hash("The body"), staleHash);
+        var reparsed = MarkedDocument.Parse(rendered);
+
+        Assert.NotNull(reparsed.Find("s1", "claude_md"));
+        Assert.True(reparsed.Find("s1", "claude_md")!.IsManuallyEdited);
+        var result = reparsed.Upsert("s1", "claude_md", "The body");
+
+        // Reconciled without --force; marker hash is updated.
+        Assert.NotEqual(ProjectionChange.SkippedManualEdit, result.Change);
+        Assert.False(result.ManualEditDetected);
+    }
+
+    [Fact]
     public void BodyContainingLiteralEndMarker_RoundTripsWithoutDrift()
     {
         // A skill that documents the marker format embeds a literal agent-sync:end comment.
