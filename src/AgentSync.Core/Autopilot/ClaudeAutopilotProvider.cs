@@ -1,11 +1,10 @@
 using System.Diagnostics;
-using System.Text;
 
 namespace AgentSync.Core.Autopilot;
 
 /// <summary>
-/// Drives a headless <c>claude</c> CLI session and extracts a structured verdict using a
-/// second headless invocation to parse the previous session's output.
+/// Drives a headless <c>claude</c> CLI session and extracts a structured verdict by asking
+/// a second Claude invocation to inspect the repository state.
 /// </summary>
 public sealed class ClaudeAutopilotProvider : IAutopilotProvider
 {
@@ -13,17 +12,16 @@ public sealed class ClaudeAutopilotProvider : IAutopilotProvider
 
     public bool IsAvailable()
     {
-        // On Windows, cmd.exe is the host so we find claude regardless of whether it is a
-        // .exe, .cmd, or .ps1 wrapper (PATHEXT is respected by cmd.exe but not by CreateProcess).
         try
         {
-            var psi = BuildVersionCheckPsi();
+            var psi = StartWithShell("--version");
+            psi.UseShellExecute = false;
+            psi.RedirectStandardOutput = true;
+            psi.RedirectStandardError = true;
+            psi.RedirectStandardInput = true;
             using var p = Process.Start(psi);
-            if (p is null)
-            {
-                return false;
-            }
-
+            if (p is null) return false;
+            p.StandardInput.Close();
             p.WaitForExit(5000);
             return p.ExitCode == 0;
         }
@@ -34,89 +32,76 @@ public sealed class ClaudeAutopilotProvider : IAutopilotProvider
     }
 
     /// <summary>
-    /// Runs <c>claude --dangerously-skip-permissions -p "continue autopilot"</c>, streams each
-    /// output line to <paramref name="consoleOut"/>, and returns the full captured output.
+    /// Runs <c>claude --dangerously-skip-permissions -p "continue autopilot"</c>.
+    /// Stdout and stderr are NOT redirected — claude writes directly to the user's terminal
+    /// so the full session output is visible in real-time. Only stdin is redirected (and
+    /// immediately closed) to signal non-interactive mode without attaching a TTY.
+    /// Returns an empty string; the parse step inspects the repository state for the verdict.
     /// </summary>
     public async Task<string> RunSessionAsync(TextWriter consoleOut, CancellationToken ct)
     {
-        var psi = BuildPsi();
-        psi.ArgumentList.Add("-p");
-        psi.ArgumentList.Add("continue autopilot");
-
-        // stdin must be redirected (closed immediately after start) so claude detects a
-        // non-TTY environment and enters headless mode instead of launching its interactive UI.
+        var psi = StartWithShell("--dangerously-skip-permissions", "-p", "continue autopilot");
+        psi.UseShellExecute = false;
         psi.RedirectStandardInput = true;
-
-        return await RunAndStreamAsync(psi, consoleOut, ct, closeStdin: true);
-    }
-
-    /// <summary>
-    /// Passes <paramref name="sessionOutput"/> plus a JSON-extraction instruction to Claude
-    /// headlessly (via stdin) and returns a parsed <see cref="AutopilotResult"/>.
-    /// </summary>
-    public async Task<AutopilotResult> ParseResultAsync(string sessionOutput, CancellationToken ct)
-    {
-        var prompt = BuildParsePrompt(sessionOutput);
-
-        var psi = BuildPsi();
-        psi.RedirectStandardInput = true;
+        // Stdout/stderr intentionally NOT redirected: claude writes directly to the terminal.
 
         using var process = Process.Start(psi)
             ?? throw new InvalidOperationException("Failed to start 'claude'.");
 
-        // Write prompt to stdin and close the stream concurrently with reading stdout.
-        var writeTask = Task.Run(async () =>
+        // Closing stdin immediately signals EOF so claude enters headless mode rather than
+        // waiting for interactive input.
+        process.StandardInput.Close();
+
+        await using var reg = ct.Register(() =>
         {
-            await process.StandardInput.WriteAsync(prompt.AsMemory(), ct);
-            process.StandardInput.Close();
-        }, ct);
+            try { process.Kill(entireProcessTree: true); } catch { }
+        });
 
-        var readTask = process.StandardOutput.ReadToEndAsync(ct);
+        await process.WaitForExitAsync(ct);
+        return string.Empty;
+    }
 
-        await Task.WhenAll(writeTask, readTask);
+    /// <summary>
+    /// Asks Claude to inspect the repository state (recent commits and autopilot handoff
+    /// files) and return a structured <see cref="AutopilotResult"/> verdict.
+    /// The prompt is passed via <c>-p</c>; stdout is redirected to capture the JSON response.
+    /// </summary>
+    public async Task<AutopilotResult> ParseResultAsync(string sessionOutput, CancellationToken ct)
+    {
+        var prompt = BuildParsePrompt();
+
+        var psi = StartWithShell("--dangerously-skip-permissions", "-p", prompt);
+        psi.UseShellExecute = false;
+        psi.RedirectStandardInput = true;
+        psi.RedirectStandardOutput = true;
+        psi.RedirectStandardError = true;
+
+        using var process = Process.Start(psi)
+            ?? throw new InvalidOperationException("Failed to start 'claude'.");
+
+        process.StandardInput.Close();
+
+        // Read stderr concurrently to prevent pipe-full deadlock.
+        var stderrTask = process.StandardError.ReadToEndAsync(ct);
+        var raw = await process.StandardOutput.ReadToEndAsync(ct);
+        await stderrTask;
         await process.WaitForExitAsync(ct);
 
-        var raw = await readTask;
         return AutopilotResultParser.Parse(raw.Trim());
     }
 
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// Builds a PSI suitable for a claude version check (no stream redirection needed).
-    /// On Windows uses <c>cmd.exe /c</c> so PATHEXT is honoured (finds .exe, .cmd, .ps1 wrappers).
-    /// </summary>
-    private static ProcessStartInfo BuildVersionCheckPsi()
-    {
-        var psi = StartWithShell("--version");
-        psi.RedirectStandardOutput = true;
-        psi.RedirectStandardError = true;
-        psi.RedirectStandardInput = true;  // prevent TTY detection
-        return psi;
-    }
-
-    /// <summary>
-    /// Builds a PSI to invoke claude with <c>--dangerously-skip-permissions</c> and stream
-    /// redirection. Caller adds any extra arguments after construction.
-    /// </summary>
-    private static ProcessStartInfo BuildPsi()
-    {
-        var psi = StartWithShell("--dangerously-skip-permissions");
-        psi.RedirectStandardOutput = true;
-        psi.RedirectStandardError = true;
-        return psi;
-    }
-
-    /// <summary>
-    /// Creates a <see cref="ProcessStartInfo"/> that runs <c>claude [args]</c> in a way that
-    /// works on both Unix (direct exec) and Windows (via <c>cmd.exe /c</c> to honour PATHEXT).
+    /// Creates a <see cref="ProcessStartInfo"/> for <c>claude [args]</c>.
+    /// On Windows uses <c>cmd.exe /c</c> so PATHEXT is honoured (.exe, .cmd, .ps1 wrappers).
+    /// Callers set <see cref="ProcessStartInfo.UseShellExecute"/> and redirect flags themselves.
     /// </summary>
     private static ProcessStartInfo StartWithShell(params string[] claudeArgs)
     {
         if (OperatingSystem.IsWindows())
         {
-            // cmd.exe /c resolves claude through PATHEXT, finding .exe, .cmd, or .ps1 wrappers.
-            var psi = new ProcessStartInfo("cmd.exe") { UseShellExecute = false };
+            var psi = new ProcessStartInfo("cmd.exe");
             psi.ArgumentList.Add("/c");
             psi.ArgumentList.Add("claude");
             foreach (var a in claudeArgs)
@@ -128,7 +113,7 @@ public sealed class ClaudeAutopilotProvider : IAutopilotProvider
         }
         else
         {
-            var psi = new ProcessStartInfo("claude") { UseShellExecute = false };
+            var psi = new ProcessStartInfo("claude");
             foreach (var a in claudeArgs)
             {
                 psi.ArgumentList.Add(a);
@@ -138,78 +123,30 @@ public sealed class ClaudeAutopilotProvider : IAutopilotProvider
         }
     }
 
-    private static async Task<string> RunAndStreamAsync(
-        ProcessStartInfo psi,
-        TextWriter consoleOut,
-        CancellationToken ct,
-        bool closeStdin = false)
+    /// <summary>
+    /// Builds a compact prompt (passed via <c>-p</c>) that asks Claude to inspect the
+    /// repository state and return a JSON verdict. Does not reference captured session output
+    /// because the session runs with stdout un-redirected (output goes to the terminal).
+    /// </summary>
+    private static string BuildParsePrompt()
     {
-        using var process = Process.Start(psi)
-            ?? throw new InvalidOperationException("Failed to start 'claude'.");
-
-        // Close stdin immediately when not writing a prompt, so the child process sees EOF
-        // and cannot block waiting for user input (which would happen if stdin were a TTY).
-        if (closeStdin)
-        {
-            process.StandardInput.Close();
-        }
-
-        var capture = new StringBuilder();
-
-        // Register cancellation: kill the process if the token is cancelled.
-        await using var reg = ct.Register(() =>
-        {
-            try { process.Kill(entireProcessTree: true); } catch { }
-        });
-
-        // Read stdout and stderr concurrently so neither pipe fills and deadlocks.
-        var stderrTask = process.StandardError.ReadToEndAsync(ct);
-
-        string? line;
-        while ((line = await process.StandardOutput.ReadLineAsync(ct)) is not null)
-        {
-            consoleOut.WriteLine(line);
-            capture.AppendLine(line);
-        }
-
-        // Append stderr to the capture so the parse step can see error messages.
-        var stderr = await stderrTask;
-        if (!string.IsNullOrWhiteSpace(stderr))
-        {
-            capture.AppendLine(stderr);
-        }
-
-        await process.WaitForExitAsync(ct);
-        return capture.ToString();
-    }
-
-    private static string BuildParsePrompt(string sessionOutput)
-    {
-        // Build without raw-string-literal interpolation to avoid brace-escaping issues.
         return
-            "The following text is the full output of a headless AI-agent CLI session:\n\n" +
-            "---BEGIN SESSION OUTPUT---\n" +
-            sessionOutput + "\n" +
-            "---END SESSION OUTPUT---\n\n" +
-            "Analyze the output above and respond ONLY with a JSON object matching this schema:\n\n" +
+            "A headless autopilot session just completed in this repository. " +
+            "Determine the outcome by examining the current repo state:\n" +
+            "1. Run: git log --oneline -5\n" +
+            "2. List .agent/prompts/autopilot/ and read the newest prompt-*.txt file (if any).\n" +
+            "Then respond ONLY with a JSON object:\n" +
             "{\n" +
             "  \"failed\": <boolean>,\n" +
             "  \"done\": <boolean>,\n" +
-            "  \"message\": \"<one-paragraph markdown summary>\",\n" +
+            "  \"message\": \"<one-paragraph summary of what happened and what comes next>\",\n" +
             "  \"retry\": { \"afterSeconds\": <integer> }\n" +
-            "}\n\n" +
-            "Rules:\n" +
-            "- \"failed\" is true when the session ended with an error, network failure, usage-limit hit,\n" +
-            "  or an unrecoverable blocker that is not expected to resolve by itself.\n" +
-            "- \"done\" is true when the loop should stop entirely: all planned work is complete\n" +
-            "  (failed=false) OR there is a hard blocker the user must resolve (failed=true, no retry).\n" +
-            "- \"retry\" must be included (and \"done\" must be false) when the failure is transient and\n" +
-            "  retrying after a delay will likely succeed — e.g. an API usage-limit reset.\n" +
-            "  Set \"afterSeconds\" to the number of seconds to wait (e.g. 3600 for a 1-hour limit).\n" +
-            "  Omit \"retry\" entirely when no retry is appropriate.\n" +
-            "- \"message\" is a concise plain-text/markdown paragraph summarising what happened and\n" +
-            "  what the next session should do (if anything).\n\n" +
-            "Respond with ONLY the JSON object. No markdown fences. No prose before or after it.";
+            "}\n" +
+            "Rules: " +
+            "failed=true if the session ended with an error, hard blocker, or usage-limit hit. " +
+            "done=true if all planned work is complete (no more increments left) OR if there is an unrecoverable blocker. " +
+            "Include retry only when the failure is transient (e.g. usage-limit reset); set afterSeconds to the wait time. " +
+            "If a new handoff prompt exists, the session completed work and the loop should continue (done=false, failed=false). " +
+            "Respond with ONLY the JSON. No markdown fences. No prose before or after.";
     }
-
 }
