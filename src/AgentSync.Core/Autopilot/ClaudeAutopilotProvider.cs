@@ -14,7 +14,7 @@ public sealed class ClaudeAutopilotProvider : IAutopilotProvider
     {
         try
         {
-            var psi = StartWithShell("--version");
+            var psi = StartDirect("--version");
             psi.UseShellExecute = false;
             psi.RedirectStandardOutput = true;
             psi.RedirectStandardError = true;
@@ -39,7 +39,7 @@ public sealed class ClaudeAutopilotProvider : IAutopilotProvider
     /// </summary>
     public async Task<string> RunSessionAsync(TextWriter consoleOut, CancellationToken ct)
     {
-        var psi = StartWithShell("--dangerously-skip-permissions", "-p", "continue autopilot");
+        var psi = StartDirect("--dangerously-skip-permissions", "-p", "continue autopilot");
         psi.UseShellExecute = false;
         psi.RedirectStandardInput = true;
         // Stdout/stderr intentionally NOT redirected: claude writes directly to the terminal.
@@ -66,13 +66,17 @@ public sealed class ClaudeAutopilotProvider : IAutopilotProvider
     /// <summary>
     /// Asks Claude to inspect the repository state (recent commits and autopilot handoff
     /// files) and return a structured <see cref="AutopilotResult"/> verdict.
-    /// The prompt is passed via <c>-p</c>; stdout is redirected to capture the JSON response.
+    /// Uses <c>--output-format json --json-schema</c> so the verdict lands in the
+    /// <c>structured_output</c> field of the result envelope — no markdown stripping needed.
     /// </summary>
     public async Task<AutopilotResult> ParseResultAsync(string sessionOutput, CancellationToken ct)
     {
-        var prompt = BuildParsePrompt();
+        var psi = StartDirect(
+            "--dangerously-skip-permissions",
+            "--output-format", "json",
+            "--json-schema", ParseSchema,
+            "-p", BuildParsePrompt());
 
-        var psi = StartWithShell("--dangerously-skip-permissions", "-p", prompt);
         psi.UseShellExecute = false;
         psi.RedirectStandardInput = true;
         psi.RedirectStandardOutput = true;
@@ -89,7 +93,7 @@ public sealed class ClaudeAutopilotProvider : IAutopilotProvider
         await stderrTask;
         await process.WaitForExitAsync(ct);
 
-        return AutopilotResultParser.Parse(raw.Trim());
+        return AutopilotResultParser.ParseFromEnvelope(raw.Trim());
     }
 
     // -------------------------------------------------------------------------
@@ -101,7 +105,7 @@ public sealed class ClaudeAutopilotProvider : IAutopilotProvider
     /// so <c>claude.exe</c> is found on PATH. cmd.exe /c is intentionally avoided: it
     /// generates spurious CTRL+C signals back to the parent process on exit.
     /// </summary>
-    private static ProcessStartInfo StartWithShell(params string[] claudeArgs)
+    private static ProcessStartInfo StartDirect(params string[] claudeArgs)
     {
         var psi = new ProcessStartInfo("claude");
         foreach (var a in claudeArgs)
@@ -113,29 +117,31 @@ public sealed class ClaudeAutopilotProvider : IAutopilotProvider
     }
 
     /// <summary>
-    /// Builds a compact prompt (passed via <c>-p</c>) that asks Claude to inspect the
-    /// repository state and return a JSON verdict. Does not reference captured session output
-    /// because the session runs with stdout un-redirected (output goes to the terminal).
+    /// Builds the prompt for the parse step. The JSON schema is enforced by
+    /// <c>--json-schema</c>, so the prompt only needs to describe the task — no
+    /// "respond ONLY with JSON" instructions required.
     /// </summary>
-    private static string BuildParsePrompt()
-    {
-        return
-            "A headless autopilot session just completed in this repository. " +
-            "Determine the outcome by examining the current repo state:\n" +
-            "1. Run: git log --oneline -5\n" +
-            "2. List .agent/prompts/autopilot/ and read the newest prompt-*.txt file (if any).\n" +
-            "Then respond ONLY with a JSON object:\n" +
-            "{\n" +
-            "  \"failed\": <boolean>,\n" +
-            "  \"done\": <boolean>,\n" +
-            "  \"message\": \"<one-paragraph summary of what happened and what comes next>\",\n" +
-            "  \"retry\": { \"afterSeconds\": <integer> }\n" +
-            "}\n" +
-            "Rules: " +
-            "failed=true if the session ended with an error, hard blocker, or usage-limit hit. " +
-            "done=true if all planned work is complete (no more increments left) OR if there is an unrecoverable blocker. " +
-            "Include retry only when the failure is transient (e.g. usage-limit reset); set afterSeconds to the wait time. " +
-            "If a new handoff prompt exists, the session completed work and the loop should continue (done=false, failed=false). " +
-            "Respond with ONLY the JSON. No markdown fences. No prose before or after.";
-    }
+    private static string BuildParsePrompt() =>
+        "A headless autopilot session just completed in this repository. " +
+        "Determine the outcome by examining the current repo state:\n" +
+        "1. Run: git log --oneline -5\n" +
+        "2. List .agent/prompts/autopilot/ and read the newest prompt-*.txt file (if any).\n\n" +
+        "Report the verdict: whether the session failed, whether the autopilot is done, " +
+        "a one-paragraph summary of what happened and what comes next, and how many " +
+        "seconds to wait before retrying (0 if no retry is needed).\n\n" +
+        "Rules:\n" +
+        "- failed=true if the session ended with an error, hard blocker, or usage-limit hit.\n" +
+        "- done=true if all planned work is complete OR if there is an unrecoverable blocker.\n" +
+        "- retry.afterSeconds > 0 only for transient failures (e.g. usage-limit reset).\n" +
+        "- If a new handoff prompt exists, the session completed work; set done=false, failed=false.";
+
+    /// <summary>
+    /// JSON Schema for the parse-step verdict. Passed via <c>--json-schema</c>.
+    /// Constraints that the grammar cannot enforce (non-empty string, afterSeconds >= 0)
+    /// are restated in field descriptions and re-validated by the parser.
+    /// </summary>
+    private const string ParseSchema =
+        """
+        {"type":"object","additionalProperties":false,"required":["failed","done","message","retry"],"properties":{"failed":{"type":"boolean","description":"Whether the session ended with an error, hard blocker, or usage-limit hit."},"done":{"type":"boolean","description":"Whether the loop should stop: all work is complete, or there is an unrecoverable blocker."},"message":{"type":"string","description":"One-paragraph summary of what happened and what comes next. Must be non-empty."},"retry":{"type":"object","additionalProperties":false,"required":["afterSeconds"],"properties":{"afterSeconds":{"type":"integer","description":"Seconds to wait before retrying. Use 0 when no retry is needed (>= 0)."}}}}}
+        """;
 }
