@@ -5,18 +5,15 @@ Compact handoff for AI sessions. Pair with `.agent/NEXT_STEPS.md` and
 
 ## Release
 
-- **Latest tagged release:** `v0.3.0` — adds `agent autopilot claude` (headless Claude Code
-  CLI loop: runs `claude --dangerously-skip-permissions -p "continue autopilot"` repeatedly,
-  parses each session result via a second headless call, retries on transient failures such as
-  usage-limit resets, and stops when all work is complete or a hard blocker is hit) and
-  `agent init --with-samples` / `--no-samples` (installs a curated starter pack of 9 skills
-  — `autopilot`, `commit-governor`, `plan-governor`, `memory-curator`, `next-step`,
-  `operating-guide`, `adr-author`, `agentsync`, `dotnet-inspect` — 3 sub-agents (`planner`,
-  `verifier`, `git-ops-executor`), and 5 Git hooks; prompted interactively on a TTY or
-  set via flag for CI).
-- **Prior release:** `v0.2.0` — first stable release. Adds `toml_agent`, `references/`
-  directory projection, stale-marker-hash reconciliation, `--help` on every command, and
-  `.agent/backups/` default.
+- **Latest tagged release:** `v0.3.1` — fixes `agent autopilot claude` on TTY terminals:
+  stdin was not redirected, causing Claude to detect a live terminal and launch its
+  interactive UI instead of running headlessly. Now stdin is closed immediately after
+  process start, stderr is read concurrently (avoiding pipe deadlocks), and all providers
+  pass `RedirectStandardInput = true` consistently.
+- **Prior release:** `v0.3.0` — adds `agent autopilot claude` (headless Claude Code CLI
+  loop) and `agent init --with-samples` (9 skills, 3 sub-agents, 5 Git hooks).
+- **v0.2.0** — first stable release. Adds `toml_agent`, `references/` directory projection,
+  stale-marker-hash reconciliation, `--help` on every command, `.agent/backups/` default.
 - **Release type:** stable
 - **Repository:** https://github.com/nova-globen/agent (default branch `master`)
 

@@ -7,7 +7,7 @@ from the canonical skills under `.agent/skills/` — do not edit them by hand; e
 and run `agent sync`. For deeper detail, read `AGENTS.md` (imported above) and the specs
 under `.agent/` (`CURRENT_STATE.md`, `NEXT_STEPS.md`, `PRODUCT_SPEC.md`, `ARCHITECTURE.md`).
 
-<!-- agent-sync:start id=agent-sync-overview target=claude_md hash=sha256:6622af37e2bebdb34c6dbb1ddaae5dd7701f210c198cbec655d8e995b7586ce1 -->
+<!-- agent-sync:start id=agent-sync-overview target=claude_md hash=sha256:902d6d0366dcb5bf83ac24524c12b54a5622e468afe25b54468254aa93a2cb47 -->
 ## Agent Sync Overview
 
 What Agent Sync is, the product shape it must keep, its CLI commands, and how drift detection works. Read this first when orienting in this repository.
@@ -25,14 +25,13 @@ agent files that slowly diverge. Repository: https://github.com/nova-globen/agen
 
 ## Status
 
-- **Stable release.** The core workflow is solid end to end. Current release line: `v0.3.0`
-  — adds `agent autopilot claude` (headless Claude Code CLI loop that runs continuously until
-  all planned work is done, parsing each session's result and retrying on transient failures)
-  and `agent init --with-samples` (installs a curated starter pack: 9 skills including
-  `autopilot`, `commit-governor`, `plan-governor`, `memory-curator`, `operating-guide`, and
-  more; 3 sub-agents — `planner`, `verifier`, `git-ops-executor`; and 5 Git hooks). Target
-  framework: **.NET 10** (`net10.0`). The full release history and current-state notes live
-  under `.agent/CURRENT_STATE.md` and `.agent/NEXT_STEPS.md`.
+- **Stable release.** The core workflow is solid end to end. Current release line: `v0.3.1`
+  — fixes `agent autopilot claude` on TTY terminals (stdin was not redirected, causing
+  Claude to launch its interactive UI instead of running headlessly; now stdin is closed
+  immediately after process start so Claude always enters non-interactive mode). `v0.3.0`
+  added `agent autopilot claude` and `agent init --with-samples` (9 skills, 3 sub-agents,
+  5 Git hooks). Target framework: **.NET 10** (`net10.0`). The full release history and
+  current-state notes live under `.agent/CURRENT_STATE.md` and `.agent/NEXT_STEPS.md`.
 
 ## Core product invariant
 

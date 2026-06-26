@@ -16,14 +16,13 @@ agent files that slowly diverge. Repository: https://github.com/nova-globen/agen
 
 ## Status
 
-- **Stable release.** The core workflow is solid end to end. Current release line: `v0.3.0`
-  — adds `agent autopilot claude` (headless Claude Code CLI loop that runs continuously until
-  all planned work is done, parsing each session's result and retrying on transient failures)
-  and `agent init --with-samples` (installs a curated starter pack: 9 skills including
-  `autopilot`, `commit-governor`, `plan-governor`, `memory-curator`, `operating-guide`, and
-  more; 3 sub-agents — `planner`, `verifier`, `git-ops-executor`; and 5 Git hooks). Target
-  framework: **.NET 10** (`net10.0`). The full release history and current-state notes live
-  under `.agent/CURRENT_STATE.md` and `.agent/NEXT_STEPS.md`.
+- **Stable release.** The core workflow is solid end to end. Current release line: `v0.3.1`
+  — fixes `agent autopilot claude` on TTY terminals (stdin was not redirected, causing
+  Claude to launch its interactive UI instead of running headlessly; now stdin is closed
+  immediately after process start so Claude always enters non-interactive mode). `v0.3.0`
+  added `agent autopilot claude` and `agent init --with-samples` (9 skills, 3 sub-agents,
+  5 Git hooks). Target framework: **.NET 10** (`net10.0`). The full release history and
+  current-state notes live under `.agent/CURRENT_STATE.md` and `.agent/NEXT_STEPS.md`.
 
 ## Core product invariant
 
