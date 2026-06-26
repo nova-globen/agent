@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 namespace AgentSync.Core.Autopilot;
 
@@ -30,37 +31,89 @@ public sealed class ClaudeAutopilotProvider : IAutopilotProvider
         }
     }
 
-    /// <summary>
-    /// Runs <c>claude --dangerously-skip-permissions -p "continue autopilot"</c>.
-    /// Stdout and stderr are NOT redirected — claude writes directly to the user's terminal
-    /// so the full session output is visible in real-time. Only stdin is redirected (and
-    /// immediately closed) to signal non-interactive mode without attaching a TTY.
-    /// Returns an empty string; the parse step inspects the repository state for the verdict.
-    /// </summary>
-    public async Task<string> RunSessionAsync(TextWriter consoleOut, CancellationToken ct)
-    {
-        var psi = StartDirect("--dangerously-skip-permissions", "-p", "continue autopilot");
-        psi.UseShellExecute = false;
-        psi.RedirectStandardInput = true;
-        // Stdout/stderr intentionally NOT redirected: claude writes directly to the terminal.
+    private static readonly Regex AnsiEscape = new(@"\x1B\[[0-9;]*[mK]", RegexOptions.Compiled);
 
-        using var process = Process.Start(psi)
+    /// <summary>
+    /// Runs one headless claude session.
+    /// <para>
+    /// When <paramref name="observer"/> is non-null, uses
+    /// <c>--output-format stream-json</c> to stream NDJSON lines and fires typed events.
+    /// When <paramref name="observer"/> is null (headless/CI), stdout is not redirected
+    /// and output flows directly to the terminal (the original v0.3.2 behaviour).
+    /// </para>
+    /// </summary>
+    public async Task RunSessionAsync(IAutopilotSessionObserver? observer, CancellationToken ct)
+    {
+        if (observer is null)
+        {
+            // Headless/CI: no capture — claude writes raw to the terminal.
+            var psi = StartDirect("--dangerously-skip-permissions", "-p", "continue autopilot");
+            psi.UseShellExecute = false;
+            psi.RedirectStandardInput = true;
+
+            using var process = Process.Start(psi)
+                ?? throw new InvalidOperationException("Failed to start 'claude'.");
+
+            // Close stdin = /dev/null: immediate EOF; avoids 3-second wait and prevents
+            // claude from launching its interactive TUI. cmd.exe /c is NOT used because
+            // it caused spurious CTRL+C signals propagating back to the parent process.
+            process.StandardInput.Close();
+
+            await using var reg = ct.Register(() =>
+            {
+                try { process.Kill(entireProcessTree: true); } catch { }
+            });
+
+            await process.WaitForExitAsync(ct);
+            return;
+        }
+
+        // Streaming mode: parse NDJSON, fire observer events.
+        var streamPsi = StartDirect(
+            "--dangerously-skip-permissions",
+            "--output-format", "stream-json",
+            "--verbose",
+            "--include-partial-messages",
+            "-p", "continue autopilot");
+        streamPsi.UseShellExecute = false;
+        streamPsi.RedirectStandardInput = true;
+        streamPsi.RedirectStandardOutput = true;
+        streamPsi.RedirectStandardError = true;
+
+        using var streamProcess = Process.Start(streamPsi)
             ?? throw new InvalidOperationException("Failed to start 'claude'.");
 
-        // Close stdin immediately: this is the /dev/null equivalent that claude's own
-        // warning message recommends ("redirect stdin explicitly: < /dev/null to skip").
-        // EOF on stdin tells claude it is non-interactive without a 3-second wait.
-        // cmd.exe /c is NOT used as intermediary (see StartWithShell) because it was
-        // the source of spurious CTRL+C signals propagating back to our process.
-        process.StandardInput.Close();
+        streamProcess.StandardInput.Close();
 
-        await using var reg = ct.Register(() =>
+        // Drain stderr concurrently to avoid pipe-full deadlock.
+        var stderrTask = streamProcess.StandardError.ReadToEndAsync(ct);
+
+        var pendingTools = new Dictionary<string, string>();
+        var stats = new ClaudeStreamParser.Stats();
+        var sw = Stopwatch.StartNew();
+
+        await using var streamReg = ct.Register(() =>
         {
-            try { process.Kill(entireProcessTree: true); } catch { }
+            try { streamProcess.Kill(entireProcessTree: true); } catch { }
         });
 
-        await process.WaitForExitAsync(ct);
-        return string.Empty;
+        try
+        {
+            string? line;
+            while ((line = await streamProcess.StandardOutput.ReadLineAsync(ct)) is not null)
+            {
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                ClaudeStreamParser.DispatchLine(line, stats, observer, pendingTools);
+                observer.OnStats(stats.Snapshot(sw.Elapsed));
+            }
+
+            await streamProcess.WaitForExitAsync(ct);
+        }
+        finally
+        {
+            try { await stderrTask; } catch { }
+            observer.OnStats(stats.Snapshot(sw.Elapsed));
+        }
     }
 
     /// <summary>

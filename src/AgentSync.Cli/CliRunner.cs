@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
+using AgentSync.Cli.Autopilot;
 using AgentSync.Core;
 using AgentSync.Core.Authoring;
 using AgentSync.Core.Autopilot;
@@ -2469,18 +2470,39 @@ public sealed class CliRunner
             }
         }
 
-        var options = new AutopilotOptions(DelaySeconds: delaySeconds);
+        var options  = new AutopilotOptions(DelaySeconds: delaySeconds);
         var provider = new ClaudeAutopilotProvider();
-        var service = new AutopilotService();
+        var service  = new AutopilotService();
 
         using var cts = new CancellationTokenSource();
-        Console.CancelKeyPress += (_, e) =>
-        {
-            e.Cancel = true;
-            cts.Cancel();
-        };
+        Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-        return service.RunAsync(provider, options, _out, _err, cts.Token).GetAwaiter().GetResult();
+        using var tui     = new AutopilotTui();
+        var       observer = new AutopilotTuiObserver(tui);
+
+        // Run the autopilot loop on a background thread; the TUI blocks this thread.
+        var loopTask = Task.Run(async () =>
+        {
+            try
+            {
+                await service.RunAsync(provider, options, TextWriter.Null, _err, observer, cts.Token);
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex)
+            {
+                tui.SetStatus($"[error] {ex.GetType().Name}: {ex.Message}", Theme.StatusErr);
+                // Keep the TUI up briefly so the user can read the error.
+                await Task.Delay(10_000, CancellationToken.None);
+            }
+        });
+
+        tui.Run(cts.Token);   // blocks until Q is pressed
+        cts.Cancel();
+
+        try { loopTask.GetAwaiter().GetResult(); }
+        catch (OperationCanceledException) { }
+
+        return ExitCodes.Success;
     }
 
     /// <summary>Prints per-subcommand usage (options list) to stdout and returns success.</summary>

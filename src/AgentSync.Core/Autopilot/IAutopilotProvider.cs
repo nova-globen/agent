@@ -12,10 +12,12 @@ public interface IAutopilotProvider
     bool IsAvailable();
 
     /// <summary>
-    /// Runs one headless session, streaming output to <paramref name="consoleOut"/> in real-time.
-    /// Returns the full captured output when the session completes.
+    /// Runs one headless session. When <paramref name="observer"/> is non-null, streams
+    /// output via <c>--output-format stream-json</c> and fires typed events on the observer.
+    /// When <paramref name="observer"/> is null, falls back to the headless/CI path where
+    /// stdout goes directly to the terminal (no capture).
     /// </summary>
-    Task<string> RunSessionAsync(TextWriter consoleOut, CancellationToken ct);
+    Task RunSessionAsync(IAutopilotSessionObserver? observer, CancellationToken ct);
 
     /// <summary>
     /// Passes <paramref name="sessionOutput"/> to the provider's CLI and asks it to extract a
