@@ -242,13 +242,16 @@ Scaffold a repo, project the starter skills into every target, and wire the hook
 `agent init` seeds two canonical skills: a `code-review` skill (enabled for all targets)
 and `using-agent-sync`, a short guide that teaches AI agents how to work in an Agent Sync
 repo (it projects to `.claude/skills/` only, so it never bloats `AGENTS.md`/`CLAUDE.md`).
+Answer **y** at the prompt (or pass `--with-samples`) to also install a curated starter
+pack of skills, sub-agents, and Git hooks, including `autopilot`, `commit-governor`, and
+`plan-governor`.
 
 ```bash
 mkdir agent-sync-demo
 cd agent-sync-demo
 git init
 
-agent init
+agent init                  # or: agent init --with-samples
 agent sync
 agent status --fail-on-drift --ci
 agent install-hooks
@@ -280,7 +283,7 @@ agent status --fail-on-drift --ci
 ## Commands
 
 ```bash
-agent init            # scaffold .agent/ (code-review + using-agent-sync skills) and .githooks/
+agent init            # scaffold .agent/ and .githooks/ (--with-samples installs starter pack)
 agent status          # report state and drift (--json, --fail-on-drift, --ci)
 agent sync            # write missing/outdated projections (--check, --write, --force)
 agent diff            # show canonical-to-projection differences
@@ -292,6 +295,7 @@ agent skill           # manage canonical skills: add | edit | delete | list | sh
 agent target          # manage projection targets: add | edit | delete | list | show
 agent subagent        # manage canonical sub-agents: add | edit | delete | list | show
 agent sessions        # back up / restore agent session history: backup | restore | list | providers
+agent autopilot claude  # run Claude Code headlessly in a loop until all work is done
 agent ui              # launch the optional local web UI (auto-installs it on first run)
 agent install-hooks   # configure core.hooksPath and make hooks executable
 agent doctor          # diagnose Git repo, PATH, hooks, and config
@@ -455,6 +459,64 @@ vice-versa), with JSON contents kept valid. Restore never overwrites existing fi
 you pass `--force`, and writes are confined to the agent's own directory under your home.
 Copilot, Gemini, and Cursor support is experimental (their on-disk layouts are less stable).
 
+## Sample skill pack (`agent init --with-samples`)
+
+`agent init` prompts interactively on a TTY, or you can pass a flag:
+
+```bash
+agent init --with-samples   # install the starter pack without prompting
+agent init --no-samples     # skip it without prompting
+```
+
+The starter pack installs a curated set of skills, sub-agents, and Git hooks into the
+newly scaffolded `.agent/` directory:
+
+**Skills:** `autopilot`, `commit-governor`, `plan-governor`, `memory-curator`, `next-step`,
+`operating-guide`, `adr-author`, `agentsync`, `dotnet-inspect`
+
+**Sub-agents:** `planner`, `verifier`, `git-ops-executor`
+
+**Git hooks:** `pre-commit`, `commit-msg`, `pre-push`, `post-checkout`, `post-merge`
+
+These files are customizable starting points. Run `agent sync` after `agent init
+--with-samples` to project everything into your targets, then edit the canonical
+sources under `.agent/skills/` to suit your project.
+
+## Headless autopilot loop (`agent autopilot claude`)
+
+`agent autopilot claude` drives Claude Code CLI in a continuous headless loop, delegating
+to the **autopilot** skill in the repository to work through the planned backlog until all
+work is complete or a hard blocker is hit:
+
+```bash
+agent autopilot claude            # loop with default 5-second delay between sessions
+agent autopilot claude --delay 10 # wait 10 seconds between sessions
+```
+
+Each iteration runs:
+
+```bash
+claude --dangerously-skip-permissions -p "continue autopilot"
+```
+
+When that session ends, `agent autopilot claude` calls Claude again (via stdin) to extract
+a structured JSON verdict — `failed`, `done`, `message`, and optionally `retry.afterSeconds`.
+The outer loop then:
+
+- **Retries** automatically if the session hit a transient failure (e.g. an API usage-limit
+  reset); it waits the number of seconds Claude reported before trying again.
+- **Continues** to the next session when the work was partial (the autopilot skill wrote a
+  handoff prompt for the next run).
+- **Stops cleanly** when `done: true` is returned — either all work is complete or a hard
+  blocker was encountered that requires human intervention.
+
+Claude's live output is forwarded to the console as it runs. Press Ctrl+C to cancel cleanly.
+
+The **autopilot skill** (installed by `--with-samples`, or importable manually) contains the
+operating contract: it reads the newest `.agent/prompts/autopilot/prompt-*.txt` file to
+resume from the last handoff, runs the implement → verify → commit loop, and writes a new
+handoff prompt before stopping.
+
 ## Optional local web UI
 
 Agent Sync is a CLI first. An optional GUI is a **separate, independent product**: a
@@ -555,9 +617,10 @@ dotnet run --project src/AgentSync.Cli -- status --fail-on-drift --ci
 
 ## Git hooks
 
-`agent init` writes `.githooks/pre-commit` and `.githooks/pre-push`, and
-`agent install-hooks` points Git at them via `core.hooksPath`. If the hooks are
-installed but `agent` is missing, commits and pushes fail with:
+`agent init` writes `.githooks/pre-commit` and `.githooks/pre-push`. With `--with-samples`
+it also writes `commit-msg`, `post-checkout`, and `post-merge`. `agent install-hooks`
+points Git at them via `core.hooksPath`. If the hooks are installed but `agent` is
+missing, commits and pushes fail with:
 
 ```text
 Agent Sync is required for this repository.
