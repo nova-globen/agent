@@ -21,7 +21,6 @@ public sealed class ClaudeAutopilotProvider : IAutopilotProvider
             psi.RedirectStandardInput = true;
             using var p = Process.Start(psi);
             if (p is null) return false;
-            p.StandardInput.Close();
             p.WaitForExit(5000);
             return p.ExitCode == 0;
         }
@@ -48,8 +47,11 @@ public sealed class ClaudeAutopilotProvider : IAutopilotProvider
         using var process = Process.Start(psi)
             ?? throw new InvalidOperationException("Failed to start 'claude'.");
 
-        // Closing stdin immediately signals EOF so claude enters headless mode rather than
-        // waiting for interactive input.
+        // Close stdin immediately: this is the /dev/null equivalent that claude's own
+        // warning message recommends ("redirect stdin explicitly: < /dev/null to skip").
+        // EOF on stdin tells claude it is non-interactive without a 3-second wait.
+        // cmd.exe /c is NOT used as intermediary (see StartWithShell) because it was
+        // the source of spurious CTRL+C signals propagating back to our process.
         process.StandardInput.Close();
 
         await using var reg = ct.Register(() =>
@@ -94,33 +96,20 @@ public sealed class ClaudeAutopilotProvider : IAutopilotProvider
 
     /// <summary>
     /// Creates a <see cref="ProcessStartInfo"/> for <c>claude [args]</c>.
-    /// On Windows uses <c>cmd.exe /c</c> so PATHEXT is honoured (.exe, .cmd, .ps1 wrappers).
-    /// Callers set <see cref="ProcessStartInfo.UseShellExecute"/> and redirect flags themselves.
+    /// Runs <c>claude</c> (or <c>claude.exe</c>) directly without a shell intermediary.
+    /// On Windows, <c>CreateProcess</c> appends <c>.exe</c> when the name has no extension,
+    /// so <c>claude.exe</c> is found on PATH. cmd.exe /c is intentionally avoided: it
+    /// generates spurious CTRL+C signals back to the parent process on exit.
     /// </summary>
     private static ProcessStartInfo StartWithShell(params string[] claudeArgs)
     {
-        if (OperatingSystem.IsWindows())
+        var psi = new ProcessStartInfo("claude");
+        foreach (var a in claudeArgs)
         {
-            var psi = new ProcessStartInfo("cmd.exe");
-            psi.ArgumentList.Add("/c");
-            psi.ArgumentList.Add("claude");
-            foreach (var a in claudeArgs)
-            {
-                psi.ArgumentList.Add(a);
-            }
-
-            return psi;
+            psi.ArgumentList.Add(a);
         }
-        else
-        {
-            var psi = new ProcessStartInfo("claude");
-            foreach (var a in claudeArgs)
-            {
-                psi.ArgumentList.Add(a);
-            }
 
-            return psi;
-        }
+        return psi;
     }
 
     /// <summary>
