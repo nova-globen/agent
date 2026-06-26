@@ -33,7 +33,17 @@ var loopTask = Task.Run(() => RunLoopAsync(tui, prompt, repoPath, delaySeconds, 
 tui.Run(cts.Token);
 
 cts.Cancel();
-try { await loopTask; } catch (OperationCanceledException) { }
+try
+{
+    await loopTask;
+}
+catch (OperationCanceledException) { }
+catch (Exception ex)
+{
+    // Surface any loop crash after the TUI exits
+    Console.Error.WriteLine($"[autopilot error] {ex.Message}");
+    Console.Error.WriteLine(ex.StackTrace);
+}
 
 tui.Dispose();
 return 0;
@@ -45,6 +55,8 @@ static async Task RunLoopAsync(
 {
     var sessionNumber = 0;
 
+    try
+    {
     while (!ct.IsCancellationRequested)
     {
         sessionNumber++;
@@ -54,10 +66,10 @@ static async Task RunLoopAsync(
         tui.SetStatus($"[session {sessionNumber}] running …");
 
         var stream = new ClaudeStream();
-        stream.TextDelta     += text  => tui.AppendText(rec, text, TextKind.Text);
+        stream.TextDelta     += text      => tui.AppendText(rec, text, TextKind.Text);
         stream.ToolStarted   += (name, _) => tui.AppendText(rec, $"\n[tool: {name}]\n", TextKind.Tool);
-        stream.ToolCompleted += (_, err)  => tui.AppendText(rec, err ? "[✗ tool]\n" : "[✓ tool]\n", TextKind.Tool);
-        stream.StatsUpdated  += s     => tui.UpdateStats(rec, s);
+        stream.ToolCompleted += (_, err)  => tui.AppendText(rec, err ? "[x tool]\n" : "[v tool]\n", TextKind.Tool);
+        stream.StatsUpdated  += s         => tui.UpdateStats(rec, s);
 
         try
         {
@@ -85,5 +97,13 @@ static async Task RunLoopAsync(
         tui.SetStatus($"[wait] {waitSec}s before next session …");
         try { await Task.Delay(TimeSpan.FromSeconds(waitSec), ct); }
         catch (OperationCanceledException) { return; }
+    }
+    }
+    catch (OperationCanceledException) { }
+    catch (Exception ex)
+    {
+        tui.SetStatus($"[error] {ex.GetType().Name}: {ex.Message}");
+        // Give the TUI a moment to display the error before the loop exits
+        await Task.Delay(10_000, CancellationToken.None);
     }
 }

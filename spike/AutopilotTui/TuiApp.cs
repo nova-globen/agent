@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Terminal.Gui;
 using TGAttr = Terminal.Gui.Attribute;
 
@@ -5,6 +6,27 @@ namespace AutopilotTui;
 
 public sealed class TuiApp : IDisposable
 {
+    // ---- cross-thread update queue -------------------------------------------
+    // Application.MainLoop.Invoke() from background threads is unreliable in TG v1
+    // inside VS Code's integrated terminal. Use a ConcurrentQueue drained by an
+    // idle handler instead — the idle handler runs on every main-loop iteration.
+
+    private readonly ConcurrentQueue<Action> _uiQueue = new();
+
+    private void Enqueue(Action action) => _uiQueue.Enqueue(action);
+
+    private bool DrainQueue()
+    {
+        var any = false;
+        while (_uiQueue.TryDequeue(out var action))
+        {
+            action();
+            any = true;
+        }
+        if (any) Application.Refresh();
+        return true; // keep idle handler alive
+    }
+
     // ---- state ---------------------------------------------------------------
 
     private readonly List<SessionRecord> _sessions = [];
@@ -35,6 +57,7 @@ public sealed class TuiApp : IDisposable
     {
         Application.Init();
         BuildLayout();
+        Application.MainLoop.AddIdle(DrainQueue);
         Application.Run();
         Application.Shutdown();
     }
@@ -42,7 +65,7 @@ public sealed class TuiApp : IDisposable
     public SessionRecord StartSession(int number)
     {
         var rec = new SessionRecord(number);
-        Application.MainLoop.Invoke(() =>
+        Enqueue(() =>
         {
             _sessions.Add(rec);
             _sessionCount++;
@@ -56,13 +79,13 @@ public sealed class TuiApp : IDisposable
     {
         rec.AppendText(text, kind);
         if (IsSelected(rec))
-            Application.MainLoop.Invoke(() => AppendToTranscript(text));
+            Enqueue(() => AppendToTranscript(text));
     }
 
     public void UpdateStats(SessionRecord rec, SessionStats stats)
     {
         rec.Stats = stats;
-        Application.MainLoop.Invoke(() =>
+        Enqueue(() =>
         {
             RefreshAggregateStats();
             RefreshSessionList();
@@ -73,18 +96,17 @@ public sealed class TuiApp : IDisposable
     {
         rec.Verdict = verdict;
         rec.Stats.IsRunning = false;
-        Application.MainLoop.Invoke(() =>
+        Enqueue(() =>
         {
             RefreshAggregateStats();
             RefreshSessionList();
-            SetStatus(verdict.Done
+            SetStatusText(verdict.Done
                 ? (verdict.Failed ? "[stopped] hard blocker" : "[done] all work complete")
                 : $"[continue] next session in {rec.DelaySeconds}s …");
         });
     }
 
-    public void SetStatus(string message) =>
-        Application.MainLoop.Invoke(() => _lblStatus.Text = message);
+    public void SetStatus(string message) => Enqueue(() => SetStatusText(message));
 
     public void Dispose() { }
 
@@ -198,8 +220,11 @@ public sealed class TuiApp : IDisposable
         _selectedSession = index;
         _transcript.Text = "";
         var rec = _sessions[index];
-        foreach (var (text, _) in rec.Lines)
-            _transcript.Text += text;
+        lock (rec.Lines)
+        {
+            foreach (var (text, _) in rec.Lines)
+                _transcript.Text += text;
+        }
         _transcript.MoveEnd();
     }
 
@@ -247,6 +272,8 @@ public sealed class TuiApp : IDisposable
     }
 
     // ---- helpers -------------------------------------------------------------
+
+    private void SetStatusText(string message) => _lblStatus.Text = message;
 
     private static ColorScheme MakeColors(Color fg, Color bg) => new()
     {
