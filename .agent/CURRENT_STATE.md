@@ -5,15 +5,16 @@ Compact handoff for AI sessions. Pair with `.agent/NEXT_STEPS.md` and
 
 ## Release
 
-- **Latest tagged release:** `v0.3.1` — fixes `agent autopilot claude` on TTY terminals:
-  stdin was not redirected, causing Claude to detect a live terminal and launch its
-  interactive UI instead of running headlessly. Now stdin is closed immediately after
-  process start, stderr is read concurrently (avoiding pipe deadlocks), and all providers
-  pass `RedirectStandardInput = true` consistently.
-- **Prior release:** `v0.3.0` — adds `agent autopilot claude` (headless Claude Code CLI
-  loop) and `agent init --with-samples` (9 skills, 3 sub-agents, 5 Git hooks).
-- **v0.2.0** — first stable release. Adds `toml_agent`, `references/` directory projection,
-  stale-marker-hash reconciliation, `--help` on every command, `.agent/backups/` default.
+- **Latest tagged release:** `v0.3.2` — completes `agent autopilot claude` fixes: runs
+  `claude.exe` directly (no cmd.exe wrapper that caused spurious CTRL+C signals), closes
+  stdin immediately for `/dev/null` semantics (no 3-second wait), lets session output flow
+  to the terminal while the parse step inspects the repository state (git log +
+  `.agent/prompts/autopilot/`) for the verdict. Verified end-to-end: sessions run, commits
+  land, the loop advances across features automatically.
+- **v0.3.1** — earlier autopilot fixes (stdin redirect, stderr concurrent read).
+- **v0.3.0** — adds `agent autopilot claude` and `agent init --with-samples` (9 skills,
+  3 sub-agents, 5 Git hooks).
+- **v0.2.0** — first stable release.
 - **Release type:** stable
 - **Repository:** https://github.com/nova-globen/agent (default branch `master`)
 

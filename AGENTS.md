@@ -10,7 +10,7 @@ skills, instructions, and configuration files.
 > (`PRODUCT_SPEC.md`, `ARCHITECTURE.md`, `CLI_CONTRACT.md`, `CURRENT_STATE.md`,
 > `NEXT_STEPS.md`, `features/`).
 
-<!-- agent-sync:start id=agent-sync-overview target=agents_md hash=sha256:902d6d0366dcb5bf83ac24524c12b54a5622e468afe25b54468254aa93a2cb47 -->
+<!-- agent-sync:start id=agent-sync-overview target=agents_md hash=sha256:1469ca71dfbc3f7fe639a378a0189392cf3f17bd32b8d4a775ed1e7c76380e72 -->
 ## Agent Sync Overview
 
 What Agent Sync is, the product shape it must keep, its CLI commands, and how drift detection works. Read this first when orienting in this repository.
@@ -28,13 +28,14 @@ agent files that slowly diverge. Repository: https://github.com/nova-globen/agen
 
 ## Status
 
-- **Stable release.** The core workflow is solid end to end. Current release line: `v0.3.1`
-  — fixes `agent autopilot claude` on TTY terminals (stdin was not redirected, causing
-  Claude to launch its interactive UI instead of running headlessly; now stdin is closed
-  immediately after process start so Claude always enters non-interactive mode). `v0.3.0`
-  added `agent autopilot claude` and `agent init --with-samples` (9 skills, 3 sub-agents,
-  5 Git hooks). Target framework: **.NET 10** (`net10.0`). The full release history and
-  current-state notes live under `.agent/CURRENT_STATE.md` and `.agent/NEXT_STEPS.md`.
+- **Stable release.** The core workflow is solid end to end. Current release line: `v0.3.2`
+  — completes `agent autopilot claude` fixes: runs `claude.exe` directly (no cmd.exe
+  wrapper that caused spurious CTRL+C signals), closes stdin immediately for `/dev/null`
+  semantics (no 3-second wait), and lets session output flow to the terminal while the
+  parse step inspects the repository state for the verdict. `v0.3.0` added autopilot and
+  `agent init --with-samples` (9 skills, 3 sub-agents, 5 Git hooks). Target framework:
+  **.NET 10** (`net10.0`). The full release history and current-state notes live under
+  `.agent/CURRENT_STATE.md` and `.agent/NEXT_STEPS.md`.
 
 ## Core product invariant
 

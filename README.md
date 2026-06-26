@@ -21,11 +21,11 @@ engine for those who prefer a screen:
 
 <p align="center"><em>The optional local web UI — bound to <code>127.0.0.1</code>, driving the same canonical-skill engine as the CLI.</em></p>
 
-## Status: stable (v0.3.1)
+## Status: stable (v0.3.2)
 
 The core workflow — author canonical skills, project them to every target, and catch
 drift via Git hooks and CI — is solid end to end and has been tested across real
-repositories. `v0.3.1` fixes `agent autopilot claude` on TTY terminals (see [Headless autopilot loop](#headless-autopilot-loop-agent-autopilot-claude)); `v0.3.0` added autopilot and `--with-samples`.
+repositories. `v0.3.2` fixes `agent autopilot claude` on TTY terminals (see [Headless autopilot loop](#headless-autopilot-loop-agent-autopilot-claude)); `v0.3.0` added autopilot and `--with-samples`.
 
 Known gaps (not blockers):
 
@@ -111,7 +111,7 @@ curl -fsSL https://raw.githubusercontent.com/nova-globen/agent/master/scripts/in
 Install a specific version:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.sh | bash -s -- v0.3.1
+curl -fsSL https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.sh | bash -s -- v0.3.2
 ```
 
 By default this installs into `$HOME/.agent-sync/bin`. Override with
@@ -129,7 +129,7 @@ Prefer to review the script before running it (recommended):
 ```powershell
 irm https://raw.githubusercontent.com/nova-globen/agent/master/scripts/install.ps1 -OutFile install.ps1
 # review install.ps1, then:
-.\install.ps1            # or: .\install.ps1 -Version v0.3.1
+.\install.ps1            # or: .\install.ps1 -Version v0.3.2
 ```
 
 Override the Windows install directory with `$env:AGENT_SYNC_INSTALL_DIR`. Installs
@@ -167,8 +167,8 @@ This produces a committed `.config/dotnet-tools.json`:
   "version": 1,
   "isRoot": true,
   "tools": {
-    "agentsync": { "version": "0.3.1", "commands": ["agent"] },
-    "agentsync.git": { "version": "0.3.1", "commands": ["git-agent"] }
+    "agentsync": { "version": "0.3.2", "commands": ["agent"] },
+    "agentsync.git": { "version": "0.3.2", "commands": ["git-agent"] }
   }
 }
 ```
@@ -200,7 +200,7 @@ git agent --version
 
 1. Go to the [GitHub Releases](https://github.com/nova-globen/agent/releases) page.
 2. Download the archive for your OS/architecture, e.g.
-   `agent-sync-v0.3.1-linux-x64.tar.gz` (or `...-win-x64.zip` on Windows).
+   `agent-sync-v0.3.2-linux-x64.tar.gz` (or `...-win-x64.zip` on Windows).
 3. Extract it.
 4. Put both `agent` and `git-agent` (or `agent.exe` and `git-agent.exe`) on your `PATH`.
 5. Verify:
