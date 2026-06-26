@@ -2434,21 +2434,22 @@ public sealed class CliRunner
         if (WantsHelp(args)) return SubUsage("autopilot");
         if (args.Length == 0)
         {
-            _err.WriteLine("error: 'autopilot' requires a provider: claude.");
+            _err.WriteLine("error: 'autopilot' requires a provider: claude | copilot.");
             _err.WriteLine("Run 'agent autopilot --help' for usage.");
             return ExitCodes.InvalidUsage;
         }
 
-        var sub = args[0];
+        var sub  = args[0];
         var rest = args.Skip(1).ToArray();
         return sub switch
         {
-            "claude" => RunAutopilotClaude(rest),
-            _ => UnknownSubcommand("autopilot", sub),
+            "claude"  => RunAutopilotCore(new ClaudeAutopilotProvider(),  rest, "claude"),
+            "copilot" => RunAutopilotCore(new CopilotAutopilotProvider(), rest, "copilot"),
+            _         => UnknownSubcommand("autopilot", sub),
         };
     }
 
-    private int RunAutopilotClaude(string[] args)
+    private int RunAutopilotCore(IAutopilotProvider provider, string[] args, string providerName)
     {
         if (WantsHelp(args)) return SubUsage("autopilot");
         var delaySeconds = 5;
@@ -2466,18 +2467,17 @@ public sealed class CliRunner
 
                     break;
                 default:
-                    return UnknownOption("autopilot claude", args[i]);
+                    return UnknownOption($"autopilot {providerName}", args[i]);
             }
         }
 
-        var options  = new AutopilotOptions(DelaySeconds: delaySeconds);
-        var provider = new ClaudeAutopilotProvider();
-        var service  = new AutopilotService();
+        var options = new AutopilotOptions(DelaySeconds: delaySeconds);
+        var service = new AutopilotService();
 
         using var cts = new CancellationTokenSource();
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-        using var tui     = new AutopilotTui();
+        using var tui      = new AutopilotTui();
         var       observer = new AutopilotTuiObserver(tui);
 
         // Run the autopilot loop on a background thread; the TUI blocks this thread.
