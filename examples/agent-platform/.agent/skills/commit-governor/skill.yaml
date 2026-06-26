@@ -1,0 +1,14 @@
+id: commit-governor
+name: commit-governor
+description: "Use this skill when the user asks to create commit(s), split commits, or validate commit quality before committing. Enforces Conventional Commits, no AI/tool tokens, pre-commit-validate.sh gate, and splitting by concern."
+version: 0.1.0
+
+targets:
+  agents_md:
+    enabled: false
+  claude_md:
+    enabled: false
+  gemini:
+    enabled: false
+  claude_skill:
+    enabled: true

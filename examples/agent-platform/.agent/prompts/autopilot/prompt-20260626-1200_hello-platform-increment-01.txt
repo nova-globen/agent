@@ -1,0 +1,59 @@
+Use the autopilot skill to continue a multi-session implementation effort already in progress. Run
+continuously, checkpoint at a clean boundary when context grows large, and stop only on a hard blocker.
+Never push.
+
+BOOTSTRAP: read AGENTS.md (Always-Load Core + Definition of Done); read .agent/memory/active-context.md
+(its "In Flight" block is the live resume pointer) and skim docs/plans/backlog.md. The autopilot skill's
+CONTEXT DISCIPLINE is BINDING: delegate any wide read (>2 files, a subsystem survey, a long log) to an
+Explore/general-purpose sub-agent; build and test ONLY through the verifier agent; batch edits then verify
+once; read state files once per loop.
+
+ALREADY COMPLETE (do NOT redo):
+- (none — this is the first autopilot session for this repository)
+
+KEY FACTS TO CARRY:
+- This is the "hello-platform" worked example for the AI-agent platform kit. The goal is to prove one
+  complete autopilot cycle: implement → verify → commit → write next handoff prompt.
+- Plan lives at: docs/plans/tier-00_foundations/01-hello-platform/
+- Feature spec: docs/features/01.hello-platform.md
+- The Platform.Hello project and test project are scaffolded but empty (no class, no test yet).
+- Solution: Platform.slnx; build: dotnet build Platform.slnx -v q -clp:ErrorsOnly -nologo
+- Test: dotnet test tests/Platform.Hello.Tests -v q --nologo
+
+RESUME AT: feature 01 hello-platform, increment 1 (implement Greeter class and unit test).
+Read the plan at docs/plans/tier-00_foundations/01-hello-platform/PLAN_hello-platform.md and the feature
+spec at docs/features/01.hello-platform.md first. Then implement the two increments in order:
+  1. Create src/Platform.Hello/Greeter.cs with a public Greeter class and a Greet(string name) method
+     that returns "Hello, {name}!".
+  2. Create tests/Platform.Hello.Tests/GreeterTests.cs with a single xUnit [Fact] that calls
+     Greeter.Greet("World") and asserts the result equals "Hello, World!". Add `using Xunit;` —
+     ImplicitUsings does not cover xUnit namespaces.
+Verify via the verifier agent after both files exist. Commit both source + test + PROGRESS_*.md +
+backlog.md together as feat(hello-platform): add Greeter class and unit test [skip-progress-check]
+initial worked example — no prior backlog entry. Then proceed with the close-out steps from plan-governor:
+update PROGRESS_hello-platform.md to complete, update backlog.md (remove the hello-platform item), and
+update .agent/memory/active-context.md to reflect done.
+
+NEXT AFTER: this is the only planned feature in the worked example. After it completes, the kit is ready
+for the developer to replace Platform.Hello with their actual project and define their own features.
+
+CARRY-FORWARD DEFERRALS (don't drop):
+- None at this stage. The worked example is intentionally minimal.
+
+GOTCHAS:
+- The commit-msg gate rejects standalone ai|codex|claude|chatgpt|gpt|llm tokens (word-boundary). Use
+  [skip-progress-check] with a reason for the initial commit since there is no prior backlog entry.
+- pre-commit-validate.sh runs build + test on every commit staging src/ or tests/. Keep the build fast.
+- The solution file is Platform.slnx (not .sln) — dotnet build works with both formats.
+- After the verifier confirms PASS, write the handoff prompt before committing — or include it in the
+  same final docs commit.
+
+HANDOFF (at session end — a hard blocker, scope complete, or clean context-exhaustion checkpoint): write
+the NEXT session's prompt to a NEW file at .agent/prompts/autopilot/prompt-<yyyyMMdd-HHmm>_<slug>.txt
+(timestamp `date +%Y%m%d-%H%M`; slug = the next resume point) — one prompt per session; never overwrite a
+prior session's file (the chain is kept as history). First run CONDITIONAL consolidation (memory-curator
+only if an effort/plan completed this session or active-context drifted into a changelog; adr-author only
+for a genuinely architectural decision). Then write this file in the same format as the one you resumed
+from (every ALL-CAPS section, including this HANDOFF instruction), with RESUME AT set to the next
+unstarted slice, carrying forward the durable knowledge the next fresh session needs. Commit it with the
+session's final docs commit. NEVER push.

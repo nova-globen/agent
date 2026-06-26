@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# Only run on branch checkouts (flag == 1), not individual file checkouts.
+branch_checkout_flag="${3:-0}"
+if [[ "${branch_checkout_flag}" != "1" ]]; then exit 0; fi
+
+repo_root="$(git rev-parse --show-toplevel)"
+( cd "${repo_root}" && dotnet agent sync ) >/dev/null 2>&1 \
+  || echo "[post-checkout] agent sync skipped (run 'dotnet agent sync' manually)"

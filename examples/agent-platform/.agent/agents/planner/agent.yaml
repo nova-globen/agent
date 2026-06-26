@@ -1,0 +1,12 @@
+id: planner
+name: planner
+description: "Architect and maintain implementation plans for large, multi-step efforts. Use when starting or resuming a feature/capability/migration/refactor that spans more than one commit, when asked to plan/scaffold/track work, or when the cross-plan backlog (docs/plans/backlog.md) needs reconciling. Follows the plan-governor skill: creates the four plan-governor files per feature, keeps PROGRESS_*.md and backlog.md in sync, and runs the backlog consistency check."
+model: claude-sonnet-4-6
+tools:
+  - Read
+  - Write
+  - Edit
+  - Bash
+  - Grep
+  - Glob
+  - Skill

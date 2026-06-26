@@ -1,0 +1,9 @@
+id: verifier
+name: verifier
+description: "Use to verify a change by running the repository's test tiers and reporting a COMPACT pass/fail. Runs dotnet build and dotnet test, returns only the verdict, per-suite counts, and failing tests with minimal excerpts — never full build logs. Use after implementing an increment, before a commit, or whenever asked to run the gate or tests."
+model: claude-haiku-4-5-20251001
+tools:
+  - Bash
+  - Glob
+  - Grep
+  - Read

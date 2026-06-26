@@ -1,0 +1,14 @@
+id: plan-governor
+name: plan-governor
+description: "Use this skill when starting a non-trivial, multi-step effort (a feature, capability, module, migration, or refactor that spans more than one commit) and you need to create a plan, execute it in verifiable increments, and keep it documented in docs/plans/ and the agent memory files. Use it again when resuming or updating an existing plan."
+version: 0.1.0
+
+targets:
+  agents_md:
+    enabled: false
+  claude_md:
+    enabled: false
+  gemini:
+    enabled: false
+  claude_skill:
+    enabled: true

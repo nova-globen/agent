@@ -1,0 +1,14 @@
+id: memory-curator
+name: memory-curator
+description: "Use when updating the agent memory files — when an effort or plan increment completes, or when active-context.md is growing into a changelog. Keeps active-context.md thin (current state, in-flight, next, risks) and rotates completed-effort narrative into delivery-log.md and durable decisions into docs/adr or decision-log.md."
+version: 0.1.0
+
+targets:
+  agents_md:
+    enabled: false
+  claude_md:
+    enabled: false
+  gemini:
+    enabled: false
+  claude_skill:
+    enabled: true

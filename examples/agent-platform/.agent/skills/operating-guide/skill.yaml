@@ -1,0 +1,14 @@
+id: operating-guide
+name: Agent Operating Guide
+description: Build, test, architecture, commit, and verification policy for AI coding agents in this repository. Always-on base instructions projected into AGENTS.md, CLAUDE.md, and .gemini/GEMINI.md.
+version: 0.1.0
+
+targets:
+  agents_md:
+    enabled: true
+  claude_md:
+    enabled: true
+  gemini:
+    enabled: true
+  claude_skill:
+    enabled: false

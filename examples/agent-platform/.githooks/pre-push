@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+repo_root="$(git rev-parse --show-toplevel)"
+cd "${repo_root}"
+
+if dotnet tool run agent --version >/dev/null 2>&1; then
+  dotnet agent status --fail-on-drift --ci
+elif command -v agent >/dev/null 2>&1; then
+  agent status --fail-on-drift --ci
+else
+  echo "AgentSync is required for this repository."
+  echo "Run: dotnet tool restore"
+  exit 3
+fi

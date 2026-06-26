@@ -1,0 +1,10 @@
+id: git-ops-executor
+name: git-ops-executor
+description: "Policy-driven git operations agent: commit, branch, tag, stash, cherry-pick. Validates Conventional Commits format, runs pre-commit-validate.sh before each commit, and records durable git decisions to decision-log.md. Use for structured git operations that must pass repository policy."
+model: claude-haiku-4-5-20251001
+tools:
+  - Bash
+  - Glob
+  - Grep
+  - Read
+  - Skill

@@ -1,0 +1,14 @@
+id: autopilot
+name: autopilot
+description: "Use when the developer asks for continuous, unattended, or overnight development — 'keep going', 'work through the backlog', 'continue while I'm away', 'autonomous/continuous development', 'don't stop until done'. Runs a non-stop implement -> verify -> commit loop across the planned backlog, keeps docs/plans/backlog.md and the per-plan PROGRESS_*.md current, delegates to sub-agents, and stops only on a hard blocker. Commits but never pushes."
+version: 0.1.0
+
+targets:
+  agents_md:
+    enabled: false
+  claude_md:
+    enabled: false
+  gemini:
+    enabled: false
+  claude_skill:
+    enabled: true

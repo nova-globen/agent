@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "isRoot": true,
+  "tools": {
+    "agentsync": {
+      "version": "0.3.2",
+      "commands": ["agent"],
+      "rollForward": false
+    },
+    "agentsync.git": {
+      "version": "0.3.2",
+      "commands": ["git-agent"],
+      "rollForward": false
+    }
+  }
+}
