@@ -22,6 +22,8 @@ public static class ClaudeStreamParser
         public int RateLimitHits;
         public decimal CostUsd;
         public bool IsError;
+        /// <summary>Captured from the <c>system/init</c> NDJSON line.</summary>
+        public string? SessionId;
 
         public AutopilotSessionStats Snapshot(TimeSpan elapsed) => new(
             InputTokens, CacheReadTokens, CacheCreationTokens,
@@ -61,7 +63,7 @@ public static class ClaudeStreamParser
                     break;
 
                 case "system":
-                    HandleSystemEvent(root, observer);
+                    HandleSystemEvent(root, stats, observer);
                     break;
 
                 case "result":
@@ -113,15 +115,27 @@ public static class ClaudeStreamParser
         }
     }
 
-    private static void HandleSystemEvent(JsonElement root, IAutopilotSessionObserver? observer)
+    private static void HandleSystemEvent(JsonElement root, Stats stats, IAutopilotSessionObserver? observer)
     {
         if (!root.TryGetProperty("subtype", out var sub)) return;
 
-        if (sub.GetString() == "task_notification" &&
-            root.TryGetProperty("tool_use_id", out var tid) &&
-            root.TryGetProperty("status", out var st))
+        switch (sub.GetString())
         {
-            observer?.OnToolCompleted(tid.GetString() ?? "", st.GetString() != "completed");
+            case "init":
+                // Capture the session_id assigned by claude to this session.
+                // Every subsequent NDJSON line also carries session_id in the outer
+                // envelope, but the init line is the authoritative first occurrence.
+                if (root.TryGetProperty("session_id", out var sid))
+                    stats.SessionId = sid.GetString();
+                break;
+
+            case "task_notification":
+                if (root.TryGetProperty("tool_use_id", out var tid) &&
+                    root.TryGetProperty("status", out var st))
+                {
+                    observer?.OnToolCompleted(tid.GetString() ?? "", st.GetString() != "completed");
+                }
+                break;
         }
     }
 

@@ -7,6 +7,43 @@ public sealed class ClaudeStreamParserTests
     private static (ClaudeStreamParser.Stats, FakeObserver, Dictionary<string, string>) Setup()
         => (new ClaudeStreamParser.Stats(), new FakeObserver(), []);
 
+    // ---- system/init — session_id capture ------------------------------------
+
+    [Fact]
+    public void DispatchLine_SystemInit_CapturesSessionId()
+    {
+        var (stats, observer, tools) = Setup();
+        var line = """{"type":"system","subtype":"init","cwd":"/repo","session_id":"abc-123","tools":[]}""";
+
+        ClaudeStreamParser.DispatchLine(line, stats, observer, tools);
+
+        Assert.Equal("abc-123", stats.SessionId);
+    }
+
+    [Fact]
+    public void DispatchLine_SystemInit_MissingSessionId_LeavesNull()
+    {
+        var (stats, observer, tools) = Setup();
+        var line = """{"type":"system","subtype":"init","cwd":"/repo"}""";
+
+        ClaudeStreamParser.DispatchLine(line, stats, observer, tools);
+
+        Assert.Null(stats.SessionId);
+    }
+
+    [Fact]
+    public void DispatchLine_NonInitSystemEvent_DoesNotOverwriteSessionId()
+    {
+        var (stats, observer, tools) = Setup();
+        stats.SessionId = "already-set";
+        var line = """{"type":"system","subtype":"status","status":"requesting","session_id":"other"}""";
+
+        ClaudeStreamParser.DispatchLine(line, stats, observer, tools);
+
+        // status subtype is not "init" — SessionId must not be overwritten
+        Assert.Equal("already-set", stats.SessionId);
+    }
+
     // ---- text_delta ----------------------------------------------------------
 
     [Fact]

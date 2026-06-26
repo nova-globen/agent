@@ -59,7 +59,7 @@ public sealed class AutopilotService
 
             try
             {
-                await provider.RunSessionAsync(observer, ct);
+                await provider.RunSessionAsync(observer, resumeSessionId: null, ct);
             }
             catch (OperationCanceledException)
             {

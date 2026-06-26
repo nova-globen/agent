@@ -129,12 +129,12 @@ public sealed class AutopilotServiceTests
 
         public bool IsAvailable() => Available;
 
-        public Task RunSessionAsync(IAutopilotSessionObserver? observer, CancellationToken ct)
+        public Task<string?> RunSessionAsync(IAutopilotSessionObserver? observer, string? resumeSessionId, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
             SessionCount++;
             OnSessionComplete?.Invoke();
-            return Task.CompletedTask;
+            return Task.FromResult<string?>(null);
         }
 
         public Task<AutopilotResult> ParseResultAsync(string sessionOutput, CancellationToken ct)

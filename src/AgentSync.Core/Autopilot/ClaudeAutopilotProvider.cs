@@ -34,47 +34,64 @@ public sealed class ClaudeAutopilotProvider : IAutopilotProvider
     private static readonly Regex AnsiEscape = new(@"\x1B\[[0-9;]*[mK]", RegexOptions.Compiled);
 
     /// <summary>
-    /// Runs one headless claude session.
+    /// Runs one headless claude session and returns the <c>session_id</c> assigned by claude.
     /// <para>
-    /// When <paramref name="observer"/> is non-null, uses
-    /// <c>--output-format stream-json</c> to stream NDJSON lines and fires typed events.
-    /// When <paramref name="observer"/> is null (headless/CI), stdout is not redirected
-    /// and output flows directly to the terminal (the original v0.3.2 behaviour).
+    /// When <paramref name="observer"/> is non-null, uses <c>--output-format stream-json</c>
+    /// to stream NDJSON lines, fires typed events, and captures the session_id from the
+    /// <c>system/init</c> envelope. When <paramref name="observer"/> is null (headless/CI),
+    /// stdout flows directly to the terminal and the session_id is not captured (returns null).
+    /// </para>
+    /// <para>
+    /// Pass a <paramref name="resumeSessionId"/> to append <c>--resume &lt;id&gt;</c> and
+    /// continue an existing conversation rather than starting a fresh one. Works in both modes.
     /// </para>
     /// </summary>
-    public async Task RunSessionAsync(IAutopilotSessionObserver? observer, CancellationToken ct)
+    public async Task<string?> RunSessionAsync(
+        IAutopilotSessionObserver? observer,
+        string? resumeSessionId,
+        CancellationToken ct)
     {
         if (observer is null)
         {
             // Headless/CI: no capture — claude writes raw to the terminal.
-            var psi = StartDirect("--dangerously-skip-permissions", "-p", "continue autopilot");
-            psi.UseShellExecute = false;
-            psi.RedirectStandardInput = true;
+            var headlessPsi = StartDirect("--dangerously-skip-permissions", "-p", "continue autopilot");
+            if (resumeSessionId is not null)
+            {
+                headlessPsi.ArgumentList.Add("--resume");
+                headlessPsi.ArgumentList.Add(resumeSessionId);
+            }
+            headlessPsi.UseShellExecute = false;
+            headlessPsi.RedirectStandardInput = true;
 
-            using var process = Process.Start(psi)
+            using var headlessProcess = Process.Start(headlessPsi)
                 ?? throw new InvalidOperationException("Failed to start 'claude'.");
 
             // Close stdin = /dev/null: immediate EOF; avoids 3-second wait and prevents
             // claude from launching its interactive TUI. cmd.exe /c is NOT used because
             // it caused spurious CTRL+C signals propagating back to the parent process.
-            process.StandardInput.Close();
+            headlessProcess.StandardInput.Close();
 
-            await using var reg = ct.Register(() =>
+            await using var headlessReg = ct.Register(() =>
             {
-                try { process.Kill(entireProcessTree: true); } catch { }
+                try { headlessProcess.Kill(entireProcessTree: true); } catch { }
             });
 
-            await process.WaitForExitAsync(ct);
-            return;
+            await headlessProcess.WaitForExitAsync(ct);
+            return null;  // session_id not captured in headless mode
         }
 
-        // Streaming mode: parse NDJSON, fire observer events.
+        // Streaming mode: parse NDJSON, fire observer events, capture session_id.
         var streamPsi = StartDirect(
             "--dangerously-skip-permissions",
             "--output-format", "stream-json",
             "--verbose",
             "--include-partial-messages",
             "-p", "continue autopilot");
+        if (resumeSessionId is not null)
+        {
+            streamPsi.ArgumentList.Add("--resume");
+            streamPsi.ArgumentList.Add(resumeSessionId);
+        }
         streamPsi.UseShellExecute = false;
         streamPsi.RedirectStandardInput = true;
         streamPsi.RedirectStandardOutput = true;
@@ -114,6 +131,8 @@ public sealed class ClaudeAutopilotProvider : IAutopilotProvider
             try { await stderrTask; } catch { }
             observer.OnStats(stats.Snapshot(sw.Elapsed));
         }
+
+        return stats.SessionId;
     }
 
     /// <summary>

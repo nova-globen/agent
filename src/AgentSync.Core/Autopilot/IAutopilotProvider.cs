@@ -12,12 +12,23 @@ public interface IAutopilotProvider
     bool IsAvailable();
 
     /// <summary>
-    /// Runs one headless session. When <paramref name="observer"/> is non-null, streams
-    /// output via <c>--output-format stream-json</c> and fires typed events on the observer.
-    /// When <paramref name="observer"/> is null, falls back to the headless/CI path where
-    /// stdout goes directly to the terminal (no capture).
+    /// Runs one headless session and returns the <c>session_id</c> assigned by claude
+    /// (captured from the <c>system/init</c> NDJSON line in streaming mode; <c>null</c>
+    /// in the headless/CI path where stdout is not redirected).
+    /// <para>
+    /// When <paramref name="observer"/> is non-null, uses <c>--output-format stream-json</c>
+    /// and fires typed events on the observer. When <paramref name="observer"/> is null,
+    /// stdout flows directly to the terminal (no capture).
+    /// </para>
+    /// <para>
+    /// Pass a <paramref name="resumeSessionId"/> to append <c>--resume &lt;id&gt;</c> and
+    /// continue an existing conversation rather than starting a fresh one.
+    /// </para>
     /// </summary>
-    Task RunSessionAsync(IAutopilotSessionObserver? observer, CancellationToken ct);
+    Task<string?> RunSessionAsync(
+        IAutopilotSessionObserver? observer,
+        string? resumeSessionId,
+        CancellationToken ct);
 
     /// <summary>
     /// Passes <paramref name="sessionOutput"/> to the provider's CLI and asks it to extract a
