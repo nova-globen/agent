@@ -10,10 +10,13 @@ either writes the next handoff or stops when all five tasks are done.
 
 ## How to run
 
-### Step 0 — One-time setup
+### Step 0 — One-time setup (REQUIRED — do this before running autopilot)
 
-The autopilot commits to git, so the folder must be a git repo and Claude must
-trust it. Run these once from inside the `autopilot-test` folder:
+> **Important:** skip this and the autopilot will commit to the parent repository
+> instead of the test repo, polluting its history.
+
+Run these commands **from inside** the `autopilot-test` folder to create its own
+independent git repository:
 
 ```bash
 cd examples/autopilot-test
