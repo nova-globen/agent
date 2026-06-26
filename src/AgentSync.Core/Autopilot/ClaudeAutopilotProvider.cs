@@ -43,7 +43,11 @@ public sealed class ClaudeAutopilotProvider : IAutopilotProvider
         psi.ArgumentList.Add("-p");
         psi.ArgumentList.Add("continue autopilot");
 
-        return await RunAndStreamAsync(psi, consoleOut, ct);
+        // stdin must be redirected (closed immediately after start) so claude detects a
+        // non-TTY environment and enters headless mode instead of launching its interactive UI.
+        psi.RedirectStandardInput = true;
+
+        return await RunAndStreamAsync(psi, consoleOut, ct, closeStdin: true);
     }
 
     /// <summary>
@@ -87,6 +91,7 @@ public sealed class ClaudeAutopilotProvider : IAutopilotProvider
         var psi = StartWithShell("--version");
         psi.RedirectStandardOutput = true;
         psi.RedirectStandardError = true;
+        psi.RedirectStandardInput = true;  // prevent TTY detection
         return psi;
     }
 
@@ -136,10 +141,18 @@ public sealed class ClaudeAutopilotProvider : IAutopilotProvider
     private static async Task<string> RunAndStreamAsync(
         ProcessStartInfo psi,
         TextWriter consoleOut,
-        CancellationToken ct)
+        CancellationToken ct,
+        bool closeStdin = false)
     {
         using var process = Process.Start(psi)
             ?? throw new InvalidOperationException("Failed to start 'claude'.");
+
+        // Close stdin immediately when not writing a prompt, so the child process sees EOF
+        // and cannot block waiting for user input (which would happen if stdin were a TTY).
+        if (closeStdin)
+        {
+            process.StandardInput.Close();
+        }
 
         var capture = new StringBuilder();
 
@@ -149,11 +162,21 @@ public sealed class ClaudeAutopilotProvider : IAutopilotProvider
             try { process.Kill(entireProcessTree: true); } catch { }
         });
 
+        // Read stdout and stderr concurrently so neither pipe fills and deadlocks.
+        var stderrTask = process.StandardError.ReadToEndAsync(ct);
+
         string? line;
         while ((line = await process.StandardOutput.ReadLineAsync(ct)) is not null)
         {
             consoleOut.WriteLine(line);
             capture.AppendLine(line);
+        }
+
+        // Append stderr to the capture so the parse step can see error messages.
+        var stderr = await stderrTask;
+        if (!string.IsNullOrWhiteSpace(stderr))
+        {
+            capture.AppendLine(stderr);
         }
 
         await process.WaitForExitAsync(ct);
