@@ -2434,7 +2434,7 @@ public sealed class CliRunner
         if (WantsHelp(args)) return SubUsage("autopilot");
         if (args.Length == 0)
         {
-            _err.WriteLine("error: 'autopilot' requires a provider: claude | copilot.");
+            _err.WriteLine("error: 'autopilot' requires a provider: claude | copilot | codex.");
             _err.WriteLine("Run 'agent autopilot --help' for usage.");
             return ExitCodes.InvalidUsage;
         }
@@ -2445,6 +2445,7 @@ public sealed class CliRunner
         {
             "claude"  => RunAutopilotCore(new ClaudeAutopilotProvider(),  rest, "claude"),
             "copilot" => RunAutopilotCore(new CopilotAutopilotProvider(), rest, "copilot"),
+            "codex"   => RunAutopilotCore(new CodexAutopilotProvider(),   rest, "codex"),
             _         => UnknownSubcommand("autopilot", sub),
         };
     }
@@ -2469,6 +2470,43 @@ public sealed class CliRunner
                 default:
                     return UnknownOption($"autopilot {providerName}", args[i]);
             }
+        }
+
+        // ── Pre-flight check ──────────────────────────────────────────────────
+        var root            = GitRepository.Discover(_workingDirectory) ?? _workingDirectory;
+        var preflightResult = new AutopilotPreflightChecker(root).Check();
+        if (preflightResult.HasIssues)
+        {
+            var action = RunPreflightDialog(preflightResult);
+            switch (action)
+            {
+                case PreflightAction.Abort:
+                    return ExitCodes.EnvironmentProblem;
+
+                case PreflightAction.Setup:
+                    _out.WriteLine();
+                    _out.WriteLine("Running 'agent init --with-samples'...");
+                    var initCode = RunInit(["--with-samples"]);
+                    if (initCode != ExitCodes.Success) return initCode;
+                    _out.WriteLine();
+                    _out.WriteLine("Running 'agent sync'...");
+                    var syncCode = RunSync([]);
+                    if (syncCode != ExitCodes.Success) return syncCode;
+                    _out.WriteLine();
+                    break;
+
+                case PreflightAction.Continue:
+                    // User accepted the warnings; proceed.
+                    break;
+            }
+        }
+
+        // ── Provider availability check ───────────────────────────────────────
+        if (!provider.IsAvailable())
+        {
+            _err.WriteLine($"error: '{providerName}' CLI not found on PATH.");
+            _err.WriteLine($"Install it and ensure it is accessible, then re-run.");
+            return ExitCodes.EnvironmentProblem;
         }
 
         var options = new AutopilotOptions(DelaySeconds: delaySeconds);
@@ -2503,6 +2541,54 @@ public sealed class CliRunner
         catch (OperationCanceledException) { }
 
         return ExitCodes.Success;
+    }
+
+    private enum PreflightAction { Abort, Setup, Continue }
+
+    /// <summary>
+    /// Prints pre-flight issues and prompts the user to choose: add missing pieces,
+    /// continue anyway, or abort. Blockers default to abort; warnings default to continue.
+    /// </summary>
+    private PreflightAction RunPreflightDialog(AutopilotPreflightResult result)
+    {
+        _out.WriteLine();
+        _out.WriteLine("Pre-flight check:");
+        foreach (var issue in result.Issues)
+        {
+            var label = issue.Severity == PreflightIssueSeverity.Blocker ? "BLOCKER" : "WARN   ";
+            _out.WriteLine($"  [{label}] {issue.Message}");
+            if (issue.FixCommand is not null)
+                _out.WriteLine($"           Fix: {issue.FixCommand}");
+        }
+
+        _out.WriteLine();
+        _out.WriteLine("Options:");
+        _out.WriteLine("  [a] Add missing pieces automatically (agent init --with-samples + agent sync)");
+
+        if (result.HasBlockers)
+        {
+            _out.WriteLine("  [c] Continue anyway (not recommended — autopilot may not function correctly)");
+            _out.WriteLine("  [x] Abort (default)");
+            _out.Write("Choice [a/c/x]: ");
+        }
+        else
+        {
+            _out.WriteLine("  [c] Continue anyway (default)");
+            _out.WriteLine("  [x] Abort");
+            _out.Write("Choice [a/c/x]: ");
+        }
+
+        string? answer;
+        try   { answer = _in.ReadLine()?.Trim().ToLowerInvariant(); }
+        catch { answer = null; }
+
+        return answer switch
+        {
+            "a" => PreflightAction.Setup,
+            "c" => PreflightAction.Continue,
+            "x" => PreflightAction.Abort,
+            _   => result.HasBlockers ? PreflightAction.Abort : PreflightAction.Continue,
+        };
     }
 
     /// <summary>Prints per-subcommand usage (options list) to stdout and returns success.</summary>
@@ -2779,16 +2865,28 @@ public sealed class CliRunner
             "Usage: agent autopilot <provider> [options]",
             "",
             "Providers:",
-            "  claude               Drive Claude Code CLI in a headless loop.",
+            "  claude    Drive Claude Code CLI (claude --model best --dangerously-skip-permissions).",
+            "  copilot   Drive GitHub Copilot CLI (copilot -p ... -s --allow-all --no-ask-user).",
+            "  codex     Drive OpenAI Codex CLI   (codex exec --model best --sandbox workspace-write).",
             "",
-            "Options (claude):",
+            "Options:",
             "  --delay <seconds>    Seconds to wait between sessions (default: 5).",
             "",
-            "The loop calls the provider with the prompt \"continue autopilot\" and",
-            "--dangerously-skip-permissions, then uses a second headless call to parse",
-            "the result as JSON. It retries automatically on transient failures (e.g.",
-            "usage-limit resets) and stops when the session signals completion or a",
-            "hard blocker. Press Ctrl+C to cancel cleanly.",
+            "Before the loop starts, a pre-flight check verifies that the repository has:",
+            "  - .agent/agent.yaml (Agent Sync initialized)",
+            "  - Autopilot skill installed",
+            "  - .agent/prompts/autopilot/ directory with at least one handoff prompt",
+            "  - No AgentSync drift",
+            "",
+            "If anything is missing the check reports issues and prompts you to:",
+            "  [a] Add the missing pieces automatically (agent init --with-samples + agent sync)",
+            "  [c] Continue anyway",
+            "  [x] Abort",
+            "",
+            "The loop calls the provider with the prompt \"continue autopilot\", then uses a",
+            "second headless call to parse the result as JSON. It retries on transient",
+            "failures (e.g. rate-limit resets) and stops when the session signals completion",
+            "or a hard blocker. Press Ctrl+C to cancel cleanly.",
         },
     };
 
@@ -2813,7 +2911,7 @@ public sealed class CliRunner
         _out.WriteLine("  target              Manage projection targets: add | edit | delete | list | show.");
         _out.WriteLine("  subagent            Manage canonical sub-agents: add | edit | delete | list | show.");
         _out.WriteLine("  sessions            Back up / restore agent session history: backup | restore | list | providers.");
-        _out.WriteLine("  autopilot <prov>    Headless autopilot loop (providers: claude).");
+        _out.WriteLine("  autopilot <prov>    Headless autopilot loop (providers: claude | copilot | codex).");
         _out.WriteLine("  ui                  Launch the optional local web UI (separate install; CLI stays GUI-free) (--no-open).");
         _out.WriteLine("  install-hooks       Configure core.hooksPath and make hooks executable.");
         _out.WriteLine("  doctor              Diagnose Git repo, PATH, hooks, and config (--json).");

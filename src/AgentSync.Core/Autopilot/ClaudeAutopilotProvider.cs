@@ -9,6 +9,12 @@ namespace AgentSync.Core.Autopilot;
 /// </summary>
 public sealed class ClaudeAutopilotProvider : IAutopilotProvider
 {
+    private readonly string? _model;
+
+    /// <param name="model">Model override passed via <c>--model</c>. Defaults to <c>"best"</c>
+    /// (highest-capability model available on the account).</param>
+    public ClaudeAutopilotProvider(string? model = "best") => _model = model;
+
     public string Name => "claude";
 
     public bool IsAvailable()
@@ -55,6 +61,12 @@ public sealed class ClaudeAutopilotProvider : IAutopilotProvider
         {
             // Headless/CI: no capture — claude writes raw to the terminal.
             var headlessPsi = StartDirect("--dangerously-skip-permissions", "-p", "continue autopilot");
+            if (_model is not null)
+            {
+                headlessPsi.ArgumentList.Add("--model");
+                headlessPsi.ArgumentList.Add(_model);
+            }
+
             if (resumeSessionId is not null)
             {
                 headlessPsi.ArgumentList.Add("--resume");
@@ -87,6 +99,12 @@ public sealed class ClaudeAutopilotProvider : IAutopilotProvider
             "--verbose",
             "--include-partial-messages",
             "-p", "continue autopilot");
+        if (_model is not null)
+        {
+            streamPsi.ArgumentList.Add("--model");
+            streamPsi.ArgumentList.Add(_model);
+        }
+
         if (resumeSessionId is not null)
         {
             streamPsi.ArgumentList.Add("--resume");
@@ -148,6 +166,11 @@ public sealed class ClaudeAutopilotProvider : IAutopilotProvider
             "--output-format", "json",
             "--json-schema", ParseSchema,
             "-p", BuildParsePrompt());
+        if (_model is not null)
+        {
+            psi.ArgumentList.Add("--model");
+            psi.ArgumentList.Add(_model);
+        }
 
         psi.UseShellExecute = false;
         psi.RedirectStandardInput = true;
