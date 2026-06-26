@@ -1,0 +1,15 @@
+AUTOPILOT SESSION 1 OF 5
+
+Task: Write a haiku about software development.
+
+Steps:
+1. Create haiku.md containing a haiku (5-7-5 syllable structure) about software
+   development. Be creative — mention bugs, commits, refactoring, or shipping.
+2. Mark Task 1 as done in TODO.md (change `- [ ] **Task 1**` to `- [x] **Task 1**`).
+3. Commit: `feat: write haiku about software development`
+4. Write the next handoff: create .agent/prompts/autopilot/prompt-002.txt with
+   clear instructions to complete Task 2 (git workflow best practices → git-tips.md).
+   Model it on this file's format.
+5. Commit: `chore: write autopilot handoff for task 2`
+
+Do not attempt Task 2 now. Stop after the two commits.
