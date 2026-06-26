@@ -1,0 +1,18 @@
+AUTOPILOT SESSION 5 OF 5 (FINAL)
+
+Task: Write a brief retrospective of what the autopilot accomplished.
+
+Steps:
+1. Create retrospective.md containing a short retrospective (5-8 sentences) that
+   summarises the five tasks the autopilot completed across this session series:
+   - Task 1: wrote a haiku about software development (haiku.md)
+   - Task 2: listed 5 git workflow best practices (git-tips.md)
+   - Task 3: wrote 3 unit-testing principles (testing-tips.md)
+   - Task 4: explained "clean code" in one paragraph (clean-code.md)
+   - Task 5: this retrospective (retrospective.md)
+   Reflect briefly on what the autopilot loop demonstrated: multi-session coordination,
+   incremental handoffs, and clean commit discipline.
+2. Mark Task 5 as done in TODO.md (change `- [ ] **Task 5**` to `- [x] **Task 5**`).
+3. Commit: `feat: write autopilot retrospective`
+4. ALL tasks in TODO.md are now checked — do NOT write another prompt file.
+   The autopilot loop will detect this and stop.
