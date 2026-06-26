@@ -1,0 +1,17 @@
+AUTOPILOT SESSION 2 OF 5
+
+Task: List 5 git workflow best practices.
+
+Steps:
+1. Create git-tips.md containing exactly 5 numbered git workflow best practices.
+   Each tip should have a short title and 1-2 sentence explanation.
+   Topics might include: branching strategy, commit messages, pull requests,
+   rebasing vs merging, or keeping history clean.
+2. Mark Task 2 as done in TODO.md (change `- [ ] **Task 2**` to `- [x] **Task 2**`).
+3. Commit: `feat: list git workflow best practices`
+4. Write the next handoff: create .agent/prompts/autopilot/prompt-003.txt with
+   clear instructions to complete Task 3 (unit-testing principles → testing-tips.md).
+   Model it on this file's format.
+5. Commit: `chore: write autopilot handoff for task 3`
+
+Do not attempt Task 3 now. Stop after the two commits.
