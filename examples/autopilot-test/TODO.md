@@ -7,4 +7,4 @@ marks it done, and hands off to the next — or stops if this is the last.
 - [x] **Task 2** — List 5 git workflow best practices → `git-tips.md`
 - [x] **Task 3** — Write 3 unit-testing principles → `testing-tips.md`
 - [x] **Task 4** — Explain "clean code" in one paragraph → `clean-code.md`
-- [ ] **Task 5** — Write a brief retrospective of what the autopilot accomplished → `retrospective.md`
+- [x] **Task 5** — Write a brief retrospective of what the autopilot accomplished → `retrospective.md`
