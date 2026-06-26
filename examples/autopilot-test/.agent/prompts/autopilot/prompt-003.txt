@@ -1,0 +1,17 @@
+AUTOPILOT SESSION 3 OF 5
+
+Task: Write 3 unit-testing principles.
+
+Steps:
+1. Create testing-tips.md containing exactly 3 unit-testing principles.
+   Each principle should have a short title and 2-3 sentence explanation.
+   Topics might include: test isolation, naming conventions, arrange-act-assert,
+   testing behaviour over implementation, or keeping tests fast.
+2. Mark Task 3 as done in TODO.md (change `- [ ] **Task 3**` to `- [x] **Task 3**`).
+3. Commit: `feat: write unit-testing principles`
+4. Write the next handoff: create .agent/prompts/autopilot/prompt-004.txt with
+   clear instructions to complete Task 4 (clean code explanation → clean-code.md).
+   Model it on this file's format.
+5. Commit: `chore: write autopilot handoff for task 4`
+
+Do not attempt Task 4 now. Stop after the two commits.
