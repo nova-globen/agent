@@ -36,3 +36,4 @@ release/checksums.txt
 
 # Agent session data (local only)
 .agent/sessions/
+/agent-sessions-*.zip
